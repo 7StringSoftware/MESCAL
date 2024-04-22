@@ -5,9 +5,11 @@
 class Direct2DEdgeDetectionEffect : public Direct2DEffect
 {
 public:
-    ~Direct2DEdgeDetectionEffect() override = default;
-
-    void applyEffect(juce::Image& sourceImage, juce::Graphics& destContext, float scaleFactor, float alpha) override;
+    Direct2DEdgeDetectionEffect();
+    ~Direct2DEdgeDetectionEffect() override;
 
 private:
+    struct EdgeDetectionPimpl;
+    std::unique_ptr<EdgeDetectionPimpl> pimpl;
+    Pimpl* getPimpl() const noexcept override;
 };

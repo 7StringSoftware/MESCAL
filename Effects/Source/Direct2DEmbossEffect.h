@@ -5,9 +5,11 @@
 class Direct2DEmbossEffect : public Direct2DEffect
 {
 public:
-    ~Direct2DEmbossEffect() override = default;
-
-    void applyEffect(juce::Image& sourceImage, juce::Graphics& destContext, float scaleFactor, float alpha) override;
+    Direct2DEmbossEffect();
+    ~Direct2DEmbossEffect() override;
 
 private:
+    struct EmbossPimpl;
+    std::unique_ptr<EmbossPimpl> pimpl;
+    Pimpl* getPimpl() const noexcept override;
 };
