@@ -21,8 +21,7 @@
 
 #pragma once
 
-
-
+#include <JuceHeader.h>
 
 /*
 
@@ -71,50 +70,61 @@
 
 */
 
-class ControlPointComponent : public juce::Button, public juce::ChangeListener
+struct GridPosition
 {
-public:
-    ControlPointComponent(int row_, int column_, juce::Value colorValue_);
-    ~ControlPointComponent() override = default;
-
-    void clicked(const ModifierKeys& modifiers) override;
-    void paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
-
-    void mouseDown(const juce::MouseEvent& e) override;
-    void mouseDrag(const juce::MouseEvent& e) override;
-    void mouseUp(const juce::MouseEvent& e) override;
-
-    void moved() override;
-
-    std::function<void()> onMouseEnter;
-    std::function<void()> onMove;
-
-    void changeListenerCallback(ChangeBroadcaster* source) override;
-
-    int const row, column;
-
-private:
-    juce::ComponentDragger dragger;
-    juce::Value colorValue;
-    juce::Component::SafePointer<juce::ColourSelector> colorSelector;
+    int row = 0, column = 0;
 };
 
-class GradientMeshTest : public juce::Component
+class GradientMesh
 {
 public:
-    GradientMeshTest();
-    ~GradientMeshTest() override = default;
+    GradientMesh();
+    ~GradientMesh();
 
-    void resized() override;
+    class Patch
+    {
+    public:
+        Patch();
+        Patch(Patch const& other) = default;
+        ~Patch();
 
-    void paint(juce::Graphics& g) override;
+        enum
+        {
+            numRows = 4,
+            numColumns = 4,
+            numControlPoints = numRows * numColumns,
+            numColors = 4
+        };
+
+        static GridPosition indexToGridPosition(int index)
+        {
+            return GridPosition{ index / numRows, index % numColumns };
+        }
+
+        juce::Point<float> getNormalizedControlPointPosition(GridPosition gridPosition) const;
+        void setControlPointPosition(GridPosition gridPosition, juce::Point<float> pos);
+        std::optional<juce::Value> getControlPointColorValue(GridPosition gridPosition) const;
+        void setControlPointColor(GridPosition gridPosition, juce::Colour color);
+
+    private:
+        struct PatchPimpl;
+        std::unique_ptr<PatchPimpl> pimpl;
+
+        JUCE_LEAK_DETECTOR(Patch)
+    };
+
+    void draw(juce::Graphics& g, juce::AffineTransform transform);
+
+    auto const& getPatches() const
+    {
+        return patches;
+    }
 
 private:
     struct Pimpl;
     std::unique_ptr<Pimpl> pimpl;
 
-    juce::OwnedArray<ControlPointComponent> controlPointComponents;
+    std::vector<std::unique_ptr<Patch>> patches;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GradientMeshTest)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GradientMesh)
 };
-

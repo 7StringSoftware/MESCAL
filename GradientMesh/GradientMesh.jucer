@@ -4,6 +4,25 @@
               id="NJ5XEl" jucerFormatVersion="1">
   <MAINGROUP id="fTgw8y" name="GradientMesh">
     <GROUP id="{07B94160-CF67-DC8B-7081-698B080E7B38}" name="Source">
+      <FILE id="aXNKtb" name="Base.h" compile="0" resource="0" file="Source/Base.h"/>
+      <FILE id="jEsi8N" name="Commander.cpp" compile="1" resource="0" file="Source/Commander.cpp"/>
+      <FILE id="tv7bbM" name="Commander.h" compile="0" resource="0" file="Source/Commander.h"/>
+      <FILE id="HlLsqe" name="Controller.cpp" compile="1" resource="0" file="Source/Controller.cpp"/>
+      <FILE id="iydeUM" name="Controller.h" compile="0" resource="0" file="Source/Controller.h"/>
+      <FILE id="NqhFCY" name="Document.cpp" compile="1" resource="0" file="Source/Document.cpp"/>
+      <FILE id="OkT2uZ" name="Document.h" compile="0" resource="0" file="Source/Document.h"/>
+      <FILE id="PqVM7L" name="GradientMeshEditor.cpp" compile="1" resource="0"
+            file="Source/GradientMeshEditor.cpp"/>
+      <FILE id="TtcuWW" name="GradientMeshEditor.h" compile="0" resource="0"
+            file="Source/GradientMeshEditor.h"/>
+      <FILE id="aFJGvp" name="ControlPointComponent.cpp" compile="1" resource="0"
+            file="Source/ControlPointComponent.cpp"/>
+      <FILE id="f18cgm" name="ControlPointComponent.h" compile="0" resource="0"
+            file="Source/ControlPointComponent.h"/>
+      <FILE id="K0tCu8" name="ContentComponent.cpp" compile="1" resource="0"
+            file="Source/ContentComponent.cpp"/>
+      <FILE id="ouDHOJ" name="ContentComponent.h" compile="0" resource="0"
+            file="Source/ContentComponent.h"/>
       <FILE id="liRd3t" name="GradientMesh.h" compile="0" resource="0" file="Source/GradientMesh.h"/>
       <FILE id="ij4tC3" name="GradientMesh.cpp" compile="1" resource="0"
             file="Source/GradientMesh.cpp"/>

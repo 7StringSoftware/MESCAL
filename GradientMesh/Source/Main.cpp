@@ -1,19 +1,9 @@
-/*
-  ==============================================================================
-
-    This file contains the startup code for a PIP.
-
-  ==============================================================================
-*/
-
-
-#include <JuceHeader.h>
-#include "GradientMesh.h"
+#include "Base.h"
+#include "ContentComponent.h"
 
 class Application    : public juce::JUCEApplication
 {
 public:
-    //==============================================================================
     Application() = default;
 
     const juce::String getApplicationName() override       { return "GradientMesh"; }
@@ -21,7 +11,7 @@ public:
 
     void initialise (const juce::String&) override
     {
-        mainWindow.reset (new MainWindow ("GradientMesh", new GradientMeshTest, *this));
+        mainWindow.reset (new MainWindow ("GradientMesh", new ContentComponent, *this));
     }
 
     void shutdown() override                         { mainWindow = nullptr; }
@@ -39,13 +29,9 @@ private:
             setUsingNativeTitleBar (true);
             setContentOwned (c, true);
 
-           #if JUCE_ANDROID || JUCE_IOS
-            setFullScreen (true);
-           #else
             setResizable (true, false);
             setResizeLimits (300, 250, 10000, 10000);
             centreWithSize (getWidth(), getHeight());
-           #endif
 
             setVisible (true);
         }
@@ -58,12 +44,10 @@ private:
     private:
         JUCEApplication& app;
 
-        //==============================================================================
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainWindow)
     };
 
     std::unique_ptr<MainWindow> mainWindow;
 };
 
-//==============================================================================
 START_JUCE_APPLICATION (Application)

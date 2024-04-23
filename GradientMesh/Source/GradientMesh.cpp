@@ -23,45 +23,21 @@ juce::Value colorToValue(juce::Colour c)
     return juce::Value{ (int)c.getARGB() };
 }
 
+#if 0
 struct GradientMeshTest::Pimpl
 {
     static constexpr int numColumns = 4;
     static constexpr int numRows = 4;
     static constexpr int numControlPoints = numRows * numColumns;
 
-    struct GridPoint
+    struct GridPosition
     {
         int row = 0, column = 0;
     };
 
-    struct OuterCorner
-    {
-        GridPoint corner;
-        GridPoint clockwiseCubicSpineControl;
-        GridPoint counterclockWiseCubicSplineControl;
-    };
 
-    static constexpr std::array<OuterCorner, 4> outerCorners
-    {
-        OuterCorner{ { 0, 0 }, { 0, 1 }, { 1, 0 } }, // top left
-        { { 0, 3 }, { 0, 2 }, { 1, 3 }, }, // top right
-        { { 3, 3 }, { 3, 2 }, { 2, 3 }, }, // bottom right
-        { { 3, 0 }, { 3, 1 }, { 2, 0 }, }  // bottom left
-    };
 
-    static constexpr std::array<GridPoint, 4> innerPointIndices{ GridPoint{ 1, 1 }, { 1, 2 }, { 2, 2 }, { 2, 1} };
 
-    struct ControlPoint
-    {
-        ControlPoint(int column, int row) :
-            gridPosition{ row, column }
-        {
-        }
-
-        GridPoint const gridPosition;
-        juce::Point<float> position;
-        juce::Value colorValue;
-    };
 
     class ControlPoints
     {
@@ -100,30 +76,18 @@ struct GradientMeshTest::Pimpl
             return false;
         }
 
-        std::array<ControlPoint, numControlPoints> points
-        {
-            ControlPoint{ 0, 0 },
-            ControlPoint{ 0, 1 },
-            ControlPoint{ 0, 2 },
-            ControlPoint{ 0, 3 },
-            ControlPoint{ 1, 0 },
-            ControlPoint{ 1, 1 },
-            ControlPoint{ 1, 2 },
-            ControlPoint{ 1, 3 },
-            ControlPoint{ 2, 0 },
-            ControlPoint{ 2, 1 },
-            ControlPoint{ 2, 2 },
-            ControlPoint{ 2, 3 },
-            ControlPoint{ 3, 0 },
-            ControlPoint{ 3, 1 },
-            ControlPoint{ 3, 2 },
-            ControlPoint{ 3, 3 }
-        };
+        std::vector<ControlPoint> points;;
 
     } controlPoints;
 
     Pimpl(GradientMeshTest& owner_) : owner(owner_)
     {
+        for (int row = 0; row < numRows; ++row)
+            for (int column = 0; column < numColumns; ++column)
+            {
+                controlPoints.points.push_back({ row, column });
+            }
+
         controlPoints.getColorValue(0, 0) = (int)juce::Colours::red.getARGB();
         controlPoints.getColorValue(0, 3) = (int)juce::Colours::blue.getARGB();
         controlPoints.getColorValue(3, 0) = (int)juce::Colours::green.getARGB();
@@ -247,7 +211,7 @@ GradientMeshTest::GradientMeshTest()
     for (int controlPointIndex = 0; controlPointIndex < Pimpl::numControlPoints; ++controlPointIndex)
     {
         auto comp = std::make_unique<ControlPointComponent>(row, column, pimpl->controlPoints.getColorValue(row, column));
-        
+
         juce::String name;
         name << row << column;
         comp->setName(name);
@@ -288,7 +252,7 @@ void GradientMeshTest::resized()
                 auto y = comp->row * yGap + yGap;
                 comp->setSize(32, 32);
                 comp->setCentrePosition(x, y);
-                
+
                 pimpl->controlPoints.setPosition(comp->row, comp->column, comp->getBounds().getCentre().toFloat());
                 continue;
             }
@@ -312,7 +276,7 @@ void GradientMeshTest::paint(juce::Graphics& g)
         return controlPointComponents[row * Pimpl::numColumns + column];
     };
 
-    auto drawLine = [&](Pimpl::GridPoint const& gp1, Pimpl::GridPoint const& gp2)
+    auto drawLine = [&](Pimpl::GridPosition const& gp1, Pimpl::GridPosition const& gp2)
         {
             auto c1 = getComp(gp1.row, gp1.column)->getBounds().getCentre().toFloat();
             auto c2 = getComp(gp2.row, gp2.column)->getBounds().getCentre().toFloat();;
@@ -330,114 +294,108 @@ void GradientMeshTest::paint(juce::Graphics& g)
         drawLine(cornerPoint.corner, cornerPoint.counterclockWiseCubicSplineControl);
     }
 }
+#endif
 
-ControlPointComponent::ControlPointComponent(int row_, int column_, juce::Value colorValue_)
-    : Button({}),
-    column(column_), row(row_), colorValue(colorValue_)
+struct GradientMesh::Patch::PatchPimpl
 {
-}
-
-void ControlPointComponent::clicked(const ModifierKeys& modifiers)
-{
-    if (colorValue.getValue().isVoid())
+    PatchPimpl()
     {
-        return;
-    }
-
-    auto content = std::make_unique<juce::ColourSelector>();
-    content->addChangeListener(this);
-    colorSelector = content.get();
-    content->setCurrentColour(juce::Colour{ (uint32)(int)colorValue.getValue() }, juce::dontSendNotification);
-    content->setSize(300, 300);
-
-    juce::CallOutBox::launchAsynchronously(std::move(content),
-        getScreenBounds(),
-        nullptr);
-}
-
-void ControlPointComponent::paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
-{
-    float radius = juce::jmin(getWidth() * 0.45f, getHeight() * 0.45f);
-    if (shouldDrawButtonAsDown)
-        radius *= 0.9f;
-
-    bool showColorWheel = colorValue.getValue().isInt() && (shouldDrawButtonAsHighlighted || colorSelector != nullptr);
-    if (showColorWheel)
-    {
-        const std::array<juce::Colour, 7> colors = { juce::Colours::red, juce::Colours::orange, juce::Colours::yellow,
-juce::Colours::green, juce::Colours::blue, juce::Colours::indigo, juce::Colours::violet };
-
-        juce::Path p;
-        float angleStep = juce::MathConstants<float>::twoPi / (float)colors.size();
-        auto center = getLocalBounds().getCentre().toFloat();
-        p.startNewSubPath(center);
-        p.lineTo(center - juce::Point<float>{ 0.0f, radius });
-        p.addCentredArc(getWidth() * 0.5f, getHeight() * 0.5f, radius, radius, 0.0f, 0.0f, angleStep, false);
-        p.closeSubPath();
-
-        float angle = 0.0f;
-        for (auto const& color : colors)
+        GridPosition gridPosition;
+        Point<float> normalizedPosition;
+        for (int i = 0; i < numControlPoints; ++i)
         {
-            g.setColour(color);
-            g.fillPath(p, juce::AffineTransform::rotation(angle, center.x, center.y));
-            angle += angleStep;
+            controlPoints.emplace_back(ControlPoint{ gridPosition, normalizedPosition });
+
+            gridPosition.column++;
+            normalizedPosition += { 1.0f / (float)(numColumns - 1), 0.0f };
+            if (gridPosition.column >= numColumns)
+            {
+                gridPosition.column = 0;
+                gridPosition.row++;
+                normalizedPosition = { 0.0f, normalizedPosition.y + 1.0f / (float)(numRows - 1) };
+            }
         }
 
-        radius *= 0.7f;
+        for (auto const& outerCorner : outerCorners)
+        {
+            auto controlPoint = getControlPoint(outerCorner.gridPosition);
+            controlPoint.colorValue = colorToValue(juce::Colours::red);
+        }
     }
 
-    auto c = juce::Colour{ (uint32)(int)colorValue.getValue() };
-    g.setColour(c);
-
-    auto ellipseBounds = getLocalBounds().toFloat().withSizeKeepingCentre(radius * 2.0f, radius * 2.0f);
-    g.fillEllipse(ellipseBounds);
-    g.setColour(c.contrasting());
-    g.drawText(getName(), getLocalBounds(), juce::Justification::centred);
-
-    if (!showColorWheel)
+    ~PatchPimpl()
     {
-        auto thickness = shouldDrawButtonAsHighlighted ? 3.0f : 1.0f;
-        g.drawEllipse(ellipseBounds, thickness);
     }
-}
 
-void ControlPointComponent::mouseDown(const juce::MouseEvent& e)
-{
-    Button::mouseDown(e);
-
-    dragger.startDraggingComponent(this, e);
-}
-
-void ControlPointComponent::mouseDrag(const juce::MouseEvent& e)
-{
-    Button::mouseDrag(e);
-
-    dragger.dragComponent(this, e, nullptr);
-}
-
-void ControlPointComponent::mouseUp(const juce::MouseEvent& e)
-{
-    if (e.getDistanceFromDragStart() >= 5.0f)
+    struct OuterCorner
     {
-        return;
+        GridPosition gridPosition;
+        GridPosition clockwiseCubicSpineControl;
+        GridPosition counterclockWiseCubicSplineControl;
+    };
+
+    static constexpr std::array<OuterCorner, 4> outerCorners
+    {
+        OuterCorner{ { 0, 0 }, { 0, 1 }, { 1, 0 } }, // top left
+        { { 0, 3 }, { 0, 2 }, { 1, 3 }, }, // top right
+        { { 3, 3 }, { 3, 2 }, { 2, 3 }, }, // bottom right
+        { { 3, 0 }, { 3, 1 }, { 2, 0 }, }  // bottom left
+    };
+
+    struct ControlPoint
+    {
+        GridPosition const gridPosition;
+        juce::Point<float> normalizedPosition{};
+        std::optional<juce::Value> colorValue;
+    };
+
+    ControlPoint& getControlPoint(GridPosition gridPosition)
+    {
+        return controlPoints[gridPosition.row * numColumns + gridPosition.column];
     }
 
-    Button::mouseUp(e);
+    std::vector<ControlPoint> controlPoints;
+};
+
+struct GradientMesh::Pimpl
+{
+    Pimpl(GradientMesh& owner_) : owner(owner_)
+    {
+    }
+
+    GradientMesh& owner;
+};
+
+GradientMesh::GradientMesh() :
+    pimpl(std::make_unique<Pimpl>(*this))
+{
+    patches.emplace_back(std::make_unique<Patch>());
 }
 
-void ControlPointComponent::moved()
+GradientMesh::~GradientMesh()
 {
-    if (onMove)
-    {
-        onMove();
-    }
 }
 
-void ControlPointComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
+void GradientMesh::draw(juce::Graphics& g, juce::AffineTransform transform)
 {
-    if (colorSelector)
-    {
-        colorValue = (int)colorSelector->getCurrentColour().getARGB();
-        moved();
-    }
+
+}
+
+GradientMesh::Patch::Patch() :
+    pimpl(std::make_unique<PatchPimpl>())
+{
+}
+
+GradientMesh::Patch::~Patch()
+{
+}
+
+juce::Point<float> GradientMesh::Patch::getControlPointPosition(GridPosition gridPosition) const
+{
+    return pimpl->getControlPoint(gridPosition).normalizedPosition;
+}
+
+std::optional<juce::Value> GradientMesh::Patch::getControlPointColorValue(GridPosition gridPosition) const
+{
+    return pimpl->getControlPoint(gridPosition).colorValue;
 }
