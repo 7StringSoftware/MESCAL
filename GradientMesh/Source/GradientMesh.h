@@ -71,41 +71,32 @@
 
 */
 
-class ColorSelectorButton : public juce::Button
-{
-public:
-    ColorSelectorButton();
-    ~ColorSelectorButton() override = default;
-
-    void clicked(const ModifierKeys& modifiers) override;
-    void paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
-
-    juce::Value colorValue;
-};
-
-class ControlPointComponent : public juce::Component
+class ControlPointComponent : public juce::Button, public juce::ChangeListener
 {
 public:
     ControlPointComponent(int row_, int column_, juce::Value colorValue_);
     ~ControlPointComponent() override = default;
 
-    void paint(juce::Graphics& g) override;
+    void clicked(const ModifierKeys& modifiers) override;
+    void paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
 
-    void mouseEnter(const MouseEvent& event) override;
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
+    void mouseUp(const juce::MouseEvent& e) override;
 
     void moved() override;
 
     std::function<void()> onMouseEnter;
     std::function<void()> onMove;
 
-    std::unique_ptr<ColorSelectorButton> colorSelector;
-    juce::Value colorValue;
+    void changeListenerCallback(ChangeBroadcaster* source) override;
+
+    int const row, column;
 
 private:
     juce::ComponentDragger dragger;
-    int column, row;
+    juce::Value colorValue;
+    juce::Component::SafePointer<juce::ColourSelector> colorSelector;
 };
 
 class GradientMeshTest : public juce::Component
@@ -121,6 +112,8 @@ public:
 private:
     struct Pimpl;
     std::unique_ptr<Pimpl> pimpl;
+
+    juce::OwnedArray<ControlPointComponent> controlPointComponents;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GradientMeshTest)
 };
