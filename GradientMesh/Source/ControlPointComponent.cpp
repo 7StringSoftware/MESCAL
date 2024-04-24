@@ -38,6 +38,7 @@ void ControlPointComponent::clicked(const ModifierKeys& modifiers)
 
 void ControlPointComponent::paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
 {
+#if 0
     float radius = juce::jmin(getWidth() * 0.45f, getHeight() * 0.45f);
     if (shouldDrawButtonAsDown)
         radius *= 0.9f;
@@ -88,6 +89,7 @@ void ControlPointComponent::paintButton(Graphics& g, bool shouldDrawButtonAsHigh
         auto thickness = shouldDrawButtonAsHighlighted ? 3.0f : 1.0f;
         g.drawEllipse(ellipseBounds, thickness);
     }
+#endif
 }
 
 void ControlPointComponent::mouseDown(const juce::MouseEvent& e)

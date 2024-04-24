@@ -78,13 +78,96 @@ struct GridPosition
 class GradientMesh
 {
 public:
-    GradientMesh();
+    GradientMesh(juce::Rectangle<float> initialPatchArea);
     ~GradientMesh();
+
+    enum class Corner : size_t
+    {
+        topLeft, topRight, bottomRight, bottomLeft
+    };
+
+    enum class Direction : size_t
+    {
+        north, east, south, west
+    };
+
+    enum class Orientation : size_t
+    {
+        horizontal,
+        vertical
+    };
+
+    struct Edge;
+    struct Face;
+
+    struct Vertex
+    {
+        Vertex(int gridX, int gridY, juce::Point<float> pos) :
+            gridIndex{ gridX, gridY },
+            position(pos)
+        {
+        }
+
+        juce::Point<int> gridIndex;
+        juce::Point<float> position;
+
+        std::array<juce::WeakReference<Edge>, 4> edges; // top, right, bottom, left
+
+#if JUCE_DEBUG
+        juce::String name;
+        juce::String dump() const;
+#endif
+
+        JUCE_DECLARE_WEAK_REFERENCEABLE(Vertex)
+    };
+
+    struct Edge
+    {
+        Edge(GradientMesh::Orientation orientation_, Point<float> cp1, Point<float> cp2, Vertex* v1, Vertex* v2) :
+            orientation(orientation_),
+            edgeControlPoints{ cp1, cp2 },
+            vertices{ v1, v2 }
+        {
+        }
+
+        GradientMesh::Orientation orientation;
+        std::array<juce::Point<float>, 2> edgeControlPoints;
+        std::array<juce::WeakReference<Vertex>, 2> vertices;
+
+        juce::Line<float> toLine() const noexcept
+        {
+            return { vertices[0]->position, vertices[1]->position };
+        }
+
+#if JUCE_DEBUG
+        juce::String name;
+        juce::String dump() const;
+#endif
+
+        JUCE_DECLARE_WEAK_REFERENCEABLE(Edge)
+    };
+
+    struct Face
+    {
+        std::array<juce::WeakReference<Vertex>, 4> vertices; // top left, top right, bottom right, bottom left
+        std::array<juce::WeakReference<Edge>, 4> edges; // top, right, bottom, left
+        std::array<juce::Colour, 4> colors;
+        std::array<juce::Point<float>, 4> innerControlPoints;
+
+        void setInnerControlPoints();
+
+#if JUCE_DEBUG
+        juce::String name;
+        juce::String dump() const;
+#endif
+
+        JUCE_DECLARE_WEAK_REFERENCEABLE(Face)
+    };
 
     class Patch : public juce::ReferenceCountedObject
     {
     public:
-        Patch(juce::Rectangle<float> area);
+        Patch(Face* face_);
         Patch(Patch const& other) = default;
         ~Patch();
 
@@ -96,15 +179,7 @@ public:
             numColors = 4
         };
 
-        static GridPosition indexToGridPosition(int index)
-        {
-            return GridPosition{ index / numRows, index % numColumns };
-        }
-
         juce::Rectangle<float> getBounds() const noexcept;
-
-        juce::Point<float> getControlPointPosition(GridPosition gridPosition) const;
-        std::optional<juce::Colour> getControlPointColor(GridPosition gridPosition) const;
 
         using Ptr = juce::ReferenceCountedObjectPtr<Patch>;
 
@@ -113,26 +188,19 @@ public:
 
         struct PatchPimpl;
         std::unique_ptr<PatchPimpl> pimpl;
+        juce::WeakReference<Face> face;
 
-        juce::WeakReference<Patch> leftNeighbor;
-        juce::WeakReference<Patch> rightNeighbor;
-        juce::WeakReference<Patch> topNeighbor;
-        juce::WeakReference<Patch> bottomNeighbor;
-
-        void setControlPointPosition(GridPosition gridPosition, juce::Point<float> pos);
-        void setControlPointColor(GridPosition gridPosition, juce::Colour color);
+        static const std::array<juce::Colour, 4> defaultColors;
 
         JUCE_LEAK_DETECTOR(Patch)
-        JUCE_DECLARE_WEAK_REFERENCEABLE(Patch)
     };
 
     juce::Rectangle<float> getBounds() const noexcept;
 
-    void setControlPointPosition(Patch::Ptr patch, GridPosition gridPosition, juce::Point<float> pos);
-    void setControlPointColor(Patch::Ptr patch, GridPosition gridPosition, juce::Colour color);
     void draw(juce::Image image, juce::AffineTransform transform);
 
-    void addPatch(juce::Rectangle<float> area);
+    Patch::Ptr addConnectedPatch(Patch::Ptr existingPatch, Direction direction, std::array<juce::Colour, 4> colors);
+
     auto const& getPatches() const
     {
         return patches;

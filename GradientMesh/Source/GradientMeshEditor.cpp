@@ -1,15 +1,16 @@
 #include "GradientMeshEditor.h"
 
-GradientMeshEditor::GradientMeshEditor()
+GradientMeshEditor::GradientMeshEditor() :
+    mesh(juce::Rectangle<float>{ 50.0f, 50.0f, 400.0f, 400.0f })
 {
     setOpaque(false);
 
-    juce::Rectangle<float> patchBounds{ 50.0f, 50.0f, 200.0f, 200.0f };
-    mesh.addPatch(patchBounds);
+    mesh.addConnectedPatch(nullptr, GradientMesh::Direction::east,
+        { juce::Colours::yellow, juce::Colours::red, juce::Colours::violet, juce::Colours::blue });
+    mesh.addConnectedPatch(nullptr, GradientMesh::Direction::south,
+        { juce::Colours::blue, juce::Colours::violet, juce::Colours::red, juce::Colours::yellow });
 
-    patchBounds.translate(200.0f, 0.0f);
-    mesh.addPatch(patchBounds);
-
+#if 0
     auto patch = mesh.getPatches().getFirst();
 
     for (int index = 0; index < GradientMesh::Patch::numControlPoints; ++index)
@@ -38,6 +39,7 @@ GradientMeshEditor::GradientMeshEditor()
         addAndMakeVisible(controlPointComponent.get());
         controlPointComponents.emplace_back(std::move(controlPointComponent));
     }
+#endif
 
     for (auto patch : mesh.getPatches())
     {
@@ -53,7 +55,8 @@ GradientMeshEditor::~GradientMeshEditor()
 
 juce::Rectangle<int> GradientMeshEditor::getPreferredSize()
 {
-    return mesh.getBounds().toNearestInt().expanded(50);
+    return { 2048, 1024 };
+    //return mesh.getBounds().toNearestInt().expanded(50);
 }
 
 void GradientMeshEditor::paint(juce::Graphics& g)
@@ -66,6 +69,7 @@ void GradientMeshEditor::paint(juce::Graphics& g)
 
 void GradientMeshEditor::resized()
 {
+#if 0
     auto const firstPatch = mesh.getPatches().getFirst();
 
     for (auto& controlPointComponent : controlPointComponents)
@@ -75,13 +79,15 @@ void GradientMeshEditor::resized()
         controlPointComponent->setCentrePosition(pos.x, pos.y);
     }
 
-    meshImage = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
-
     for (auto& patchComponent : patchComponents)
     {
         auto bounds = patchComponent->patch->getBounds().toNearestInt();
         patchComponent->setBounds(bounds);
     }
+#endif
+
+    meshImage = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
+
 }
 
 void GradientMeshEditor::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel)
@@ -98,6 +104,7 @@ GradientMeshEditor::PatchComponent::PatchComponent(GradientMesh::Patch::Ptr patc
     patch(patch_)
 {
     setOpaque(false);
+    setRepaintsOnMouseActivity(true);
 }
 
 bool GradientMeshEditor::PatchComponent::hitTest(int x, int y)
@@ -119,6 +126,7 @@ void GradientMeshEditor::PatchComponent::paint(juce::Graphics& g)
 {
     if (isMouseOver(true))
     {
+        g.fillAll(juce::Colours::lightgrey.withAlpha(0.15f));
         g.setColour(juce::Colours::white);
         g.drawRect(getLocalBounds());
     }

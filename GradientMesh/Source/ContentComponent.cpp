@@ -5,7 +5,7 @@ ContentComponent::ContentComponent()
     addAndMakeVisible(viewport);
     viewport.setViewedComponent(&meshEditor);
 
-    setSize(1024, 1024);
+    setSize(2048, 1024);
 }
 
 void ContentComponent::paint(juce::Graphics& g)

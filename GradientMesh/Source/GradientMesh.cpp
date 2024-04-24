@@ -18,10 +18,98 @@
 #include <juce_graphics/native/juce_Direct2DImage_windows.h>
 #include "GradientMesh.h"
 
+const std::array<juce::Colour, 4> GradientMesh::Patch::defaultColors =
+{
+    juce::Colours::red,
+    juce::Colours::yellow,
+    juce::Colours::blue,
+    juce::Colours::violet
+};
+
+#if JUCE_DEBUG
+juce::String GradientMesh::Vertex::dump() const
+{
+    juce::String text = name + "\n";
+    text << "   Position: " << position.toString() << "\n";
+    text << "   Grid index: " << gridIndex.toString() << "\n";
+    text << "   Edges: ";
+    for (auto const& edge : edges)
+    {
+        if (edge != nullptr)
+        {
+            text << edge->name << " ";
+        }
+    }
+
+    return text;
+}
+
+juce::String GradientMesh::Edge::dump() const
+{
+    juce::String text = name + "\n";
+    text << "   Orientation: " << ((orientation == GradientMesh::Orientation::horizontal) ? "horizontal" : "vertical") << "\n";
+    text << "   Control points: " << edgeControlPoints[0].toString() << ", " << edgeControlPoints[1].toString() << "\n";
+    for (auto const& vertex : vertices)
+    {
+        if (vertex != nullptr)
+        {
+            text << vertex->name << " ";
+        }
+    }
+
+    return text;
+}
+
+void GradientMesh::Face::setInnerControlPoints()
+{
+    innerControlPoints[0] = vertices[0]->position;
+    innerControlPoints[1] = vertices[1]->position;
+    innerControlPoints[2] = vertices[2]->position;
+    innerControlPoints[3] = vertices[3]->position;
+
+#if 0
+    juce::Line<float> line{ vertices[(size_t)Corner::topLeft]->position, vertices[(size_t)Corner::bottomRight]->position };
+    innerControlPoints[(size_t)Corner::topLeft] = line.getPointAlongLineProportionally(0.25f);
+    innerControlPoints[(size_t)Corner::bottomRight] = line.getPointAlongLineProportionally(0.75f);
+
+    line = { vertices[(size_t)Corner::topRight]->position, vertices[(size_t)Corner::bottomLeft]->position };
+    innerControlPoints[(size_t)Corner::topRight] = line.getPointAlongLineProportionally(0.25f);
+    innerControlPoints[(size_t)Corner::bottomLeft] = line.getPointAlongLineProportionally(0.75f);
+#endif
+}
+
+juce::String GradientMesh::Face::dump() const
+{
+    juce::String text = name + "\n";
+    text << "---Vertices\n";
+    for (auto const& vertex : vertices)
+    {
+        if (vertex != nullptr)
+        {
+            text << vertex->dump() << "\n";
+        }
+    }
+    text << "---Edges:\n";
+    for (auto const& edge : edges)
+    {
+        if (edge != nullptr)
+        {
+            text << edge->dump() << "\n";
+        }
+    }
+
+    return text;
+}
+
+#endif
+
+
 struct GradientMesh::Patch::PatchPimpl
 {
-    PatchPimpl(juce::Rectangle<float> area)
+    PatchPimpl(Patch& owner_) :
+        owner(owner_)
     {
+#if 0
         GridPosition gridPosition;
         juce::Point<float> position = area.getTopLeft();
         float y = area.getY();
@@ -52,112 +140,50 @@ struct GradientMesh::Patch::PatchPimpl
             auto& counterclockwiseControlPoint = getControlPoint(outerCorner.counterclockWiseCubicSplineControl);
             counterclockwiseControlPoint.edgeFlags = outerCorner.counterclockwiseEdgeFlags;
         }
+#endif
     }
 
     ~PatchPimpl()
     {
     }
 
-    enum class EdgeFlags
-    {
-        unknown = 0,
-        leftEdge = 1,
-        topEdge = 2,
-        rightEdge = 4,
-        bottomEdge = 8,
-
-        topLeftCorner = leftEdge | topEdge,
-        topRightCorner = topEdge | rightEdge,
-        bottomRightCorner = rightEdge | bottomEdge,
-        bottomLeftCorner = bottomEdge | leftEdge
-    };
-
-    struct OuterCorner
-    {
-        GridPosition gridPosition;
-        EdgeFlags edgeFlags;
-        
-        GridPosition clockwiseCubicSpineControl;
-        EdgeFlags clockwiseEdgeFlags;
-
-        GridPosition counterclockWiseCubicSplineControl;
-        EdgeFlags counterclockwiseEdgeFlags;
-        
-        juce::Colour defaultColor;
-    };
-
-    std::array<OuterCorner, 4> const outerCorners
-    {
-        OuterCorner{ { 0, 0 }, EdgeFlags::topLeftCorner,
-            { 0, 1 }, EdgeFlags::topEdge,
-            { 1, 0 }, EdgeFlags::leftEdge,
-            juce::Colours::red }, // top left
-
-        OuterCorner{ { 0, 3 }, EdgeFlags::topRightCorner,
-            { 1, 3 }, EdgeFlags::rightEdge,
-            { 0, 2 }, EdgeFlags::topEdge,
-            juce::Colours::yellow }, // top right
-
-        OuterCorner{ { 3, 3 }, EdgeFlags::bottomRightCorner,
-            { 3, 2 }, EdgeFlags::bottomEdge,
-            { 2, 3 }, EdgeFlags::rightEdge,
-            juce::Colours::indigo }, // bottom right
-
-        OuterCorner{ { 3, 0 }, EdgeFlags::bottomLeftCorner,
-            { 3, 1 }, EdgeFlags::bottomEdge,
-            { 2, 0 }, EdgeFlags::leftEdge,
-            juce::Colours::violet } // bottom left
-    };
-
-    struct ControlPoint
-    {
-        GridPosition const gridPosition;
-        juce::Point<float> position{};
-        std::optional<juce::Colour> color;
-        EdgeFlags edgeFlags = EdgeFlags::unknown;
-    };
-
-    ControlPoint& getControlPoint(GridPosition gridPosition)
-    {
-        return controlPoints[gridPosition.row * numColumns + gridPosition.column];
-    }
-
-    D2D1_POINT_2F getControlPointPositionPOINT2F(GridPosition gridPosition)
-    {
-        auto p = getControlPoint(gridPosition).position;
-        return D2D1::Point2F(p.x, p.y);
-    }
-
     void toD2DPatch(D2D1_GRADIENT_MESH_PATCH* d2dPatch)
     {
-        d2dPatch->point00 = getControlPointPositionPOINT2F({ 0, 0 });
-        d2dPatch->point01 = getControlPointPositionPOINT2F({ 0, 1 });
-        d2dPatch->point02 = getControlPointPositionPOINT2F({ 0, 2 });
-        d2dPatch->point03 = getControlPointPositionPOINT2F({ 0, 3 });
-        d2dPatch->point10 = getControlPointPositionPOINT2F({ 1, 0 });
-        d2dPatch->point11 = getControlPointPositionPOINT2F({ 1, 1 });
-        d2dPatch->point12 = getControlPointPositionPOINT2F({ 1, 2 });
-        d2dPatch->point13 = getControlPointPositionPOINT2F({ 1, 3 });
-        d2dPatch->point20 = getControlPointPositionPOINT2F({ 2, 0 });
-        d2dPatch->point21 = getControlPointPositionPOINT2F({ 2, 1 });
-        d2dPatch->point22 = getControlPointPositionPOINT2F({ 2, 2 });
-        d2dPatch->point23 = getControlPointPositionPOINT2F({ 2, 3 });
-        d2dPatch->point30 = getControlPointPositionPOINT2F({ 3, 0 });
-        d2dPatch->point31 = getControlPointPositionPOINT2F({ 3, 1 });
-        d2dPatch->point32 = getControlPointPositionPOINT2F({ 3, 2 });
-        d2dPatch->point33 = getControlPointPositionPOINT2F({ 3, 3 });
-
-        auto getColorF = [&](GridPosition gridPosition)
+        auto toPoint2F = [&](juce::Point<float> p)
             {
-                auto color = getControlPoint(gridPosition).color;
-                jassert(color.has_value());
-                return juce::D2DUtilities::toCOLOR_F(*color);
+                return D2D1::Point2F(p.x, p.y);
             };
 
-        d2dPatch->color00 = getColorF(GridPosition{ 0, 0 });
-        d2dPatch->color03 = getColorF(GridPosition{ 0, 3 });
-        d2dPatch->color30 = getColorF(GridPosition{ 3, 0 });
-        d2dPatch->color33 = getColorF(GridPosition{ 3, 3 });
+        d2dPatch->point00 = toPoint2F(owner.face->vertices[(size_t)Corner::topLeft]->position);
+        d2dPatch->point03 = toPoint2F(owner.face->vertices[(size_t)Corner::topRight]->position);
+        d2dPatch->point30 = toPoint2F(owner.face->vertices[(size_t)Corner::bottomLeft]->position);
+        d2dPatch->point33 = toPoint2F(owner.face->vertices[(size_t)Corner::bottomRight]->position);
+
+        auto topEdge = owner.face->edges[(size_t)Direction::north];
+        d2dPatch->point01 = toPoint2F(topEdge->edgeControlPoints[0]);
+        d2dPatch->point02 = toPoint2F(topEdge->edgeControlPoints[1]);
+
+        auto rightEdge = owner.face->edges[(size_t)Direction::east];
+        d2dPatch->point13 = toPoint2F(rightEdge->edgeControlPoints[0]);
+        d2dPatch->point23 = toPoint2F(rightEdge->edgeControlPoints[1]);
+
+        auto bottomEdge = owner.face->edges[(size_t)Direction::south];
+        d2dPatch->point32 = toPoint2F(bottomEdge->edgeControlPoints[0]);
+        d2dPatch->point31 = toPoint2F(bottomEdge->edgeControlPoints[1]);
+
+        auto leftEdge = owner.face->edges[(size_t)Direction::west];
+        d2dPatch->point10 = toPoint2F(leftEdge->edgeControlPoints[0]);
+        d2dPatch->point20 = toPoint2F(leftEdge->edgeControlPoints[1]);
+
+        d2dPatch->point11 = toPoint2F(owner.face->innerControlPoints[(size_t)Corner::topLeft]);
+        d2dPatch->point12 = toPoint2F(owner.face->innerControlPoints[(size_t)Corner::topRight]);
+        d2dPatch->point22 = toPoint2F(owner.face->innerControlPoints[(size_t)Corner::bottomRight]);
+        d2dPatch->point21 = toPoint2F(owner.face->innerControlPoints[(size_t)Corner::bottomLeft]);
+
+        d2dPatch->color00 = juce::D2DUtilities::toCOLOR_F(owner.face->colors[(size_t)Corner::topLeft]);
+        d2dPatch->color03 = juce::D2DUtilities::toCOLOR_F(owner.face->colors[(size_t)Corner::topRight]);
+        d2dPatch->color30 = juce::D2DUtilities::toCOLOR_F(owner.face->colors[(size_t)Corner::bottomLeft]);
+        d2dPatch->color33 = juce::D2DUtilities::toCOLOR_F(owner.face->colors[(size_t)Corner::bottomRight]);
 
         d2dPatch->leftEdgeMode = D2D1_PATCH_EDGE_MODE_ANTIALIASED;
         d2dPatch->topEdgeMode = D2D1_PATCH_EDGE_MODE_ANTIALIASED;
@@ -165,7 +191,7 @@ struct GradientMesh::Patch::PatchPimpl
         d2dPatch->bottomEdgeMode = D2D1_PATCH_EDGE_MODE_ANTIALIASED;
     }
 
-    std::vector<ControlPoint> controlPoints;
+    Patch& owner;
 };
 
 struct GradientMesh::Pimpl
@@ -197,16 +223,82 @@ struct GradientMesh::Pimpl
         }
     }
 
+    auto addVertex(int x, int y, juce::Point<float> position)
+    {
+        auto vertex = vertices.emplace_back(std::make_unique<Vertex>(x, y, position)).get();
+#if JUCE_DEBUG
+        vertex->name = "Vertex " + juce::String(vertices.size());
+#endif
+        return vertex;
+    }
+
+    auto addEdge(Orientation orientation, Vertex* v1, Vertex* v2)
+    {
+        juce::Line<float> line{ v1->position, v2->position };
+        auto cp1 = line.getPointAlongLineProportionally(0.25f);
+        auto cp2 = line.getPointAlongLineProportionally(0.75f);
+        auto edge = edges.emplace_back(std::make_unique<Edge>(orientation,
+            cp1, cp2,
+            v1, v2)).get();
+#if JUCE_DEBUG
+        edge->name = "Edge " + juce::String(edges.size());
+#endif
+        return edge;
+    }
+
+    auto addFace(Vertex* v0, Vertex* v1, Vertex* v2, Vertex* v3,
+        Edge* e0, Edge* e1, Edge* e2, Edge* e3)
+    {
+        auto face = faces.emplace_back(std::make_unique<Face>()).get();
+        face->vertices = { v0, v1, v2, v3 };
+        face->edges = { e0, e1, e2, e3 };
+#if JUCE_DEBUG
+        face->name = "Face" + juce::String(faces.size());
+#endif
+        return face;
+    }
+
     GradientMesh& owner;
     winrt::com_ptr<ID2D1DeviceContext2> deviceContext;
     winrt::com_ptr<ID2D1GradientMesh> gradientMesh;
 
-    juce::HeapBlock< D2D1_GRADIENT_MESH_PATCH> d2dPatches;
+    std::vector<std::unique_ptr<Vertex>> vertices; // top left, top right, bottom right, bottom left
+    std::vector<std::unique_ptr<Edge>> edges; // top, right, bottom, left
+    std::vector<std::unique_ptr<Face>> faces;
 };
 
-GradientMesh::GradientMesh() :
+GradientMesh::GradientMesh(juce::Rectangle<float> initialPatchArea) :
     pimpl(std::make_unique<Pimpl>(*this))
 {
+    auto topLeft = pimpl->addVertex(0, 0, initialPatchArea.getTopLeft());
+    auto topRight = pimpl->addVertex(1, 0, initialPatchArea.getTopRight());
+    auto bottomRight = pimpl->addVertex(1, 1, initialPatchArea.getBottomRight());
+    auto bottomLeft = pimpl->addVertex(0, 1, initialPatchArea.getBottomLeft());
+
+    auto topEdge = pimpl->addEdge(Orientation::horizontal, topLeft, topRight);
+    auto rightEdge = pimpl->addEdge(Orientation::vertical, topRight, bottomRight);
+    auto bottomEdge = pimpl->addEdge(Orientation::horizontal, bottomRight, bottomLeft);
+    auto leftEdge = pimpl->addEdge(Orientation::vertical, bottomLeft, topLeft);
+
+    topLeft->edges[(size_t)Direction::east] = topEdge;
+    topLeft->edges[(size_t)Direction::south] = leftEdge;
+    topRight->edges[(size_t)Direction::west] = topEdge;
+    topRight->edges[(size_t)Direction::south] = rightEdge;
+    bottomRight->edges[(size_t)Direction::north] = rightEdge;
+    bottomRight->edges[(size_t)Direction::west] = bottomEdge;
+    bottomLeft->edges[(size_t)Direction::north] = leftEdge;
+    bottomLeft->edges[(size_t)Direction::east] = bottomEdge;
+
+    auto face = pimpl->addFace(topLeft, topRight, bottomRight, bottomLeft,
+        topEdge, rightEdge, bottomEdge, leftEdge);
+    face->colors = Patch::defaultColors;
+    face->setInnerControlPoints();
+
+#if JUCE_DEBUG
+    face->name = "Face 0";
+#endif
+
+    patches.add(new Patch{ face });
 }
 
 GradientMesh::~GradientMesh()
@@ -224,33 +316,75 @@ juce::Rectangle<float> GradientMesh::getBounds() const noexcept
     return bounds;
 }
 
-void GradientMesh::setControlPointPosition(Patch::Ptr patch, GridPosition gridPosition, juce::Point<float> pos)
-{
-    patch->setControlPointPosition(gridPosition, pos);
-    pimpl->gradientMesh = nullptr;
-}
-
-void GradientMesh::setControlPointColor(Patch::Ptr patch, GridPosition gridPosition, juce::Colour color)
-{
-    patch->setControlPointColor(gridPosition, color);
-    pimpl->gradientMesh = nullptr;
-}
 
 void GradientMesh::updateMesh()
 {
     if (pimpl->deviceContext && !pimpl->gradientMesh)
     {
-        D2D1_GRADIENT_MESH_PATCH* d2d1Patch = pimpl->d2dPatches.getData();
+        std::vector<D2D1_GRADIENT_MESH_PATCH> d2dPatches;
+        d2dPatches.reserve(patches.size());
 
-        memset(d2d1Patch, 0, sizeof(D2D1_GRADIENT_MESH_PATCH) * patches.size());
-
+        auto d2dPatch = d2dPatches.data();
         for (auto const& patch : patches)
         {
-            patch->pimpl->toD2DPatch(d2d1Patch);
-            d2d1Patch++;
+            patch->pimpl->toD2DPatch(d2dPatch);
+            d2dPatch++;
         }
 
-        pimpl->deviceContext->CreateGradientMesh(pimpl->d2dPatches.getData(), patches.size(), pimpl->gradientMesh.put());
+#if 1
+        DBG("");
+        auto const firstPatch = d2dPatches.data();
+        d2dPatch = d2dPatches.data();
+        for (auto i = 0; i < patches.size(); ++i)
+        {
+            DBG("Patch " << i);
+#if 1
+            DBG("   Point00: " << d2dPatch->point00.x - firstPatch->point00.x << ", " << d2dPatch->point00.y - firstPatch->point00.y);
+            DBG("   Point01: " << d2dPatch->point01.x - firstPatch->point01.x << ", " << d2dPatch->point01.y - firstPatch->point01.y);
+            DBG("   Point02: " << d2dPatch->point02.x - firstPatch->point02.x << ", " << d2dPatch->point02.y - firstPatch->point02.y);
+            DBG("   Point03: " << d2dPatch->point03.x - firstPatch->point03.x << ", " << d2dPatch->point03.y - firstPatch->point03.y);
+            DBG("   Point10: " << d2dPatch->point10.x - firstPatch->point10.x << ", " << d2dPatch->point10.y - firstPatch->point10.y);
+            DBG("   Point11: " << d2dPatch->point11.x - firstPatch->point11.x << ", " << d2dPatch->point11.y - firstPatch->point11.y);
+            DBG("   Point12: " << d2dPatch->point12.x - firstPatch->point12.x << ", " << d2dPatch->point12.y - firstPatch->point12.y);
+            DBG("   Point13: " << d2dPatch->point13.x - firstPatch->point13.x << ", " << d2dPatch->point13.y - firstPatch->point13.y);
+            DBG("   Point20: " << d2dPatch->point20.x - firstPatch->point20.x << ", " << d2dPatch->point20.y - firstPatch->point20.y);
+            DBG("   Point21: " << d2dPatch->point21.x - firstPatch->point21.x << ", " << d2dPatch->point21.y - firstPatch->point21.y);
+            DBG("   Point22: " << d2dPatch->point22.x - firstPatch->point22.x << ", " << d2dPatch->point22.y - firstPatch->point22.y);
+            DBG("   Point23: " << d2dPatch->point23.x - firstPatch->point23.x << ", " << d2dPatch->point23.y - firstPatch->point23.y);
+            DBG("   Point30: " << d2dPatch->point30.x - firstPatch->point30.x << ", " << d2dPatch->point30.y - firstPatch->point30.y);
+            DBG("   Point31: " << d2dPatch->point31.x - firstPatch->point31.x << ", " << d2dPatch->point31.y - firstPatch->point31.y);
+            DBG("   Point32: " << d2dPatch->point32.x - firstPatch->point32.x << ", " << d2dPatch->point32.y - firstPatch->point32.y);
+            DBG("   Point33: " << d2dPatch->point33.x - firstPatch->point33.x << ", " << d2dPatch->point33.y - firstPatch->point33.y);
+#endif
+
+#if 0
+            DBG("   Point00: " << d2dPatch->point00.x << ", " << d2dPatch->point00.y);
+            DBG("   Point01: " << d2dPatch->point01.x << ", " << d2dPatch->point01.y);
+            DBG("   Point02: " << d2dPatch->point02.x << ", " << d2dPatch->point02.y);
+            DBG("   Point03: " << d2dPatch->point03.x << ", " << d2dPatch->point03.y);
+            DBG("   Point10: " << d2dPatch->point10.x << ", " << d2dPatch->point10.y);
+            DBG("   Point11: " << d2dPatch->point11.x << ", " << d2dPatch->point11.y);
+            DBG("   Point12: " << d2dPatch->point12.x << ", " << d2dPatch->point12.y);
+            //DBG("   Point13: " << d2dPatch->point13.x << ", " << d2dPatch->point13.y);
+            //DBG("   Point20: " << d2dPatch->point20.x << ", " << d2dPatch->point20.y);
+            DBG("   Point21: " << d2dPatch->point21.x << ", " << d2dPatch->point21.y);
+            DBG("   Point22: " << d2dPatch->point22.x << ", " << d2dPatch->point22.y);
+            DBG("   Point23: " << d2dPatch->point23.x << ", " << d2dPatch->point23.y);
+            DBG("   Point30: " << d2dPatch->point30.x << ", " << d2dPatch->point30.y);
+            DBG("   Point31: " << d2dPatch->point31.x << ", " << d2dPatch->point31.y);
+            DBG("   Point32: " << d2dPatch->point32.x << ", " << d2dPatch->point32.y);
+            DBG("   Point33: " << d2dPatch->point33.x << ", " << d2dPatch->point33.y);
+            DBG("   Color00: " << d2dPatch->color00.r << ", " << d2dPatch->color00.g << ", " << d2dPatch->color00.b << ", " << d2dPatch->color00.a);
+            DBG("   Color03: " << d2dPatch->color03.r << ", " << d2dPatch->color03.g << ", " << d2dPatch->color03.b << ", " << d2dPatch->color03.a);
+            DBG("   Color30: " << d2dPatch->color30.r << ", " << d2dPatch->color30.g << ", " << d2dPatch->color30.b << ", " << d2dPatch->color30.a);
+            DBG("   Color33: " << d2dPatch->color33.r << ", " << d2dPatch->color33.g << ", " << d2dPatch->color33.b << ", " << d2dPatch->color33.a);
+#endif
+
+            d2dPatch++;
+        }
+#endif
+
+        pimpl->deviceContext->CreateGradientMesh(d2dPatches.data(), patches.size(), pimpl->gradientMesh.put());
     }
 }
 
@@ -268,6 +402,7 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
             {
                 pimpl->deviceContext->SetTarget(bitmap);
                 pimpl->deviceContext->BeginDraw();
+                pimpl->deviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
                 pimpl->deviceContext->Clear({ 0.0f, 0.0f, 0.0f, 0.0f });
 
                 if (pimpl->gradientMesh)
@@ -280,24 +415,114 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
             }
         }
     }
-}
 
-void GradientMesh::addPatch(juce::Rectangle<float> area)
-{
-    auto existingPatch = patches.getLast();
-    auto newPatch = patches.add(new Patch{ area });
+#if 1
+    juce::Graphics g{ image };
 
-    if (existingPatch)
+    auto drawDot = [&](juce::Point<float> pos, juce::Colour c, juce::StringRef text)
+        {
+            juce::Rectangle<float> r{ 200.0f, 30.0f };
+            r.setCentre(pos);
+            g.setColour(c);
+            g.fillRect(r);
+            g.setColour(juce::Colours::black);
+            g.drawText(pos.toString(), r, juce::Justification::centred);
+        };
+
+    for (auto& vertex : pimpl->vertices)
     {
-        existingPatch->rightNeighbor = newPatch;
-        newPatch->leftNeighbor = existingPatch.get();
+        drawDot(vertex->position, juce::Colours::white, vertex->name);
     }
 
-    pimpl->d2dPatches.realloc(patches.size());
+    g.setColour(juce::Colours::lightgrey);
+    for (auto& edge : pimpl->edges)
+    {
+        drawDot(edge->edgeControlPoints[0], juce::Colours::lightgrey, edge->name);
+        drawDot(edge->edgeControlPoints[1], juce::Colours::lightgrey, edge->name);
+    }
+
+    for (auto& face : pimpl->faces)
+    {
+        for (auto& cp : face->innerControlPoints)
+        {
+            drawDot(cp, juce::Colours::lightblue, face->name);
+        }
+    }
+#endif
 }
 
-GradientMesh::Patch::Patch(juce::Rectangle<float> area) :
-    pimpl(std::make_unique<PatchPimpl>(area))
+GradientMesh::Patch::Ptr GradientMesh::addConnectedPatch(Patch::Ptr existingPatch, Direction direction, std::array<juce::Colour, 4> colors)
+{
+    if (!existingPatch)
+        existingPatch = patches.getLast();
+
+    auto existingFace = existingPatch->face;
+
+    switch (direction)
+    {
+    case GradientMesh::Direction::east:
+    {
+        auto topLeft = existingFace->vertices[(size_t)Corner::topRight];
+        auto bottomLeft = existingFace->vertices[(size_t)Corner::bottomRight];
+
+        auto existingTopEdge = existingFace->edges[(size_t)Direction::north]->toLine();
+        auto topRightPosition = existingTopEdge.getPointAlongLineProportionally(2.0f);
+
+        auto existingBottomEdge = existingFace->edges[(size_t)Direction::south]->toLine();
+        auto bottomRightPosition = existingBottomEdge.getPointAlongLineProportionally(-1.0f);
+
+        auto topRight = pimpl->addVertex(topLeft->gridIndex.x + 1, topLeft->gridIndex.y, topRightPosition);
+        auto bottomRight = pimpl->addVertex(bottomLeft->gridIndex.x + 1, bottomLeft->gridIndex.y, bottomRightPosition);
+
+        auto topEdge = pimpl->addEdge(Orientation::horizontal, topLeft, topRight);
+        auto rightEdge = pimpl->addEdge(Orientation::vertical, topRight, bottomRight);
+        auto bottomEdge = pimpl->addEdge(Orientation::horizontal, bottomLeft, bottomRight);
+        auto leftEdge = existingFace->edges[(size_t)Direction::east];
+
+        auto face = pimpl->addFace(topLeft, topRight, bottomRight, bottomLeft,
+            topEdge, rightEdge, bottomEdge, leftEdge);
+        face->colors = colors;
+        face->setInnerControlPoints();
+
+        patches.add(new Patch{ face });
+        break;
+    }
+
+    case GradientMesh::Direction::south:
+    {
+        auto topLeft = existingFace->vertices[(size_t)Corner::bottomLeft];
+        auto topRight = existingFace->vertices[(size_t)Corner::bottomRight];
+
+        auto existingLeftEdge = existingFace->edges[(size_t)Direction::west]->toLine();
+        auto bottomLeftPosition = existingLeftEdge.getPointAlongLineProportionally(2.0f);
+
+        auto existingRightEdge = existingFace->edges[(size_t)Direction::east]->toLine();
+        auto bottomRightPosition = existingRightEdge.getPointAlongLineProportionally(2.0f);
+
+        auto bottomLeft = pimpl->addVertex(topLeft->gridIndex.x, topLeft->gridIndex.y + 1, bottomLeftPosition);
+        auto bottomRight = pimpl->addVertex(topRight->gridIndex.x, topRight->gridIndex.y + 1, bottomRightPosition);
+
+        auto topEdge = existingFace->edges[(size_t)Direction::south];
+        auto rightEdge = pimpl->addEdge(Orientation::vertical, topRight, bottomRight);
+        auto bottomEdge = pimpl->addEdge(Orientation::horizontal, bottomRight, bottomLeft);
+        auto leftEdge = pimpl->addEdge(Orientation::vertical, bottomLeft, topLeft);
+
+        auto face = pimpl->addFace(topLeft, topRight, bottomRight, bottomLeft,
+            topEdge, rightEdge, bottomEdge, leftEdge);
+        face->colors = colors;
+        face->setInnerControlPoints();
+
+        patches.add(new Patch{ face });
+        break;
+    }
+    }
+
+    return nullptr;
+}
+
+GradientMesh::Patch::Patch(Face* face_) :
+    pimpl(std::make_unique<PatchPimpl>(*this)),
+    face(face_)
 {
 }
 
@@ -307,6 +532,21 @@ GradientMesh::Patch::~Patch()
 
 juce::Rectangle<float> GradientMesh::Patch::getBounds() const noexcept
 {
+    float x = std::numeric_limits<float>::max();
+    float y = std::numeric_limits<float>::max();
+    float right = 0.0f;
+    float bottom = 0.0f;
+    for (auto& vertex : face->vertices)
+    {
+        x = juce::jmin(x, vertex->position.x);
+        y = juce::jmin(y, vertex->position.y);
+        right = juce::jmax(right, vertex->position.x);
+        bottom = juce::jmax(bottom, vertex->position.y);
+    }
+
+    return juce::Rectangle<float>::leftTopRightBottom(x, y, right, bottom);
+
+#if 0
     auto iter = pimpl->controlPoints.begin();
     auto first = iter->position;
     iter++;
@@ -323,8 +563,10 @@ juce::Rectangle<float> GradientMesh::Patch::getBounds() const noexcept
     }
 
     return r;
+#endif
 }
 
+#if 0
 juce::Point<float> GradientMesh::Patch::getControlPointPosition(GridPosition gridPosition) const
 {
     return pimpl->getControlPoint(gridPosition).position;
@@ -333,14 +575,6 @@ juce::Point<float> GradientMesh::Patch::getControlPointPosition(GridPosition gri
 void GradientMesh::Patch::setControlPointPosition(GridPosition gridPosition, juce::Point<float> pos)
 {
     pimpl->getControlPoint(gridPosition).position = pos;
-    if (rightNeighbor)
-    {
-        auto neighborPos = rightNeighbor->getControlPointPosition(gridPosition);
-        if (!approximatelyEqual(pos, neighborPos))
-        {
-            rightNeighbor->setControlPointPosition(gridPosition, pos);
-        }
-    }
 }
 
 std::optional<juce::Colour> GradientMesh::Patch::getControlPointColor(GridPosition gridPosition) const
@@ -352,3 +586,4 @@ void GradientMesh::Patch::setControlPointColor(GridPosition gridPosition, juce::
 {
     pimpl->getControlPoint(gridPosition).color = color;
 }
+#endif
