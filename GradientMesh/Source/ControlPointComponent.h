@@ -6,7 +6,7 @@
 class ControlPointComponent : public juce::Button, public juce::ChangeListener
 {
 public:
-    ControlPointComponent(GridPosition gridPosition_, std::optional<juce::Value> colorValue_);
+    ControlPointComponent(GridPosition gridPosition_, std::optional<juce::Colour> color_);
     ~ControlPointComponent() override = default;
 
     void clicked(const ModifierKeys& modifiers) override;
@@ -24,7 +24,7 @@ public:
     void changeListenerCallback(ChangeBroadcaster* source) override;
 
     GridPosition const gridPosition;
-    std::optional<juce::Value> colorValue;
+    std::optional<juce::Colour> color;
 
 private:
     juce::ComponentDragger dragger;

@@ -11,26 +11,24 @@
 #include "ControlPointComponent.h"
 
 
-ControlPointComponent::ControlPointComponent(GridPosition gridPosition_, std::optional<juce::Value> colorValue_)
+ControlPointComponent::ControlPointComponent(GridPosition gridPosition_, std::optional<juce::Colour> color_)
     : Button({}),
     gridPosition(gridPosition_),
-    colorValue(-1)
+    color(color_)
 {
 }
 
 void ControlPointComponent::clicked(const ModifierKeys& modifiers)
 {
-    if (! colorValue.has_value())
+    if (! color.has_value())
     {
         return;
     }
 
-    auto color = juce::Colour{ (uint32)(int)colorValue->getValue() };
-
     auto content = std::make_unique<juce::ColourSelector>();
     content->addChangeListener(this);
     colorSelector = content.get();
-    content->setCurrentColour(color, juce::dontSendNotification);
+    content->setCurrentColour(*color, juce::dontSendNotification);
     content->setSize(300, 300);
 
     juce::CallOutBox::launchAsynchronously(std::move(content),
@@ -44,7 +42,7 @@ void ControlPointComponent::paintButton(Graphics& g, bool shouldDrawButtonAsHigh
     if (shouldDrawButtonAsDown)
         radius *= 0.9f;
 
-    bool showColorWheel = colorValue.has_value() && (shouldDrawButtonAsHighlighted || colorSelector != nullptr);
+    bool showColorWheel = color.has_value() && (shouldDrawButtonAsHighlighted || colorSelector != nullptr);
     if (showColorWheel)
     {
         const std::array<juce::Colour, 7> colors =
@@ -77,7 +75,7 @@ void ControlPointComponent::paintButton(Graphics& g, bool shouldDrawButtonAsHigh
         radius *= 0.7f;
     }
 
-    auto c = colorValue.has_value() ? juce::Colour{ (uint32)(int)colorValue->getValue() } : juce::Colours::white;
+    auto c = color.has_value() ? *color : juce::Colours::white;
     g.setColour(c);
 
     auto ellipseBounds = getLocalBounds().toFloat().withSizeKeepingCentre(radius * 2.0f, radius * 2.0f);
@@ -128,7 +126,7 @@ void ControlPointComponent::changeListenerCallback(juce::ChangeBroadcaster* sour
 {
     if (colorSelector)
     {
-        colorValue = (int)colorSelector->getCurrentColour().getARGB();
+        *color = colorSelector->getCurrentColour();
         moved();
     }
 }

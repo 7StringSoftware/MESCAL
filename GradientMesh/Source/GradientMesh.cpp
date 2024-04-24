@@ -18,91 +18,164 @@
 #include <juce_graphics/native/juce_Direct2DImage_windows.h>
 #include "GradientMesh.h"
 
-juce::Value colorToValue(juce::Colour c)
+struct GradientMesh::Patch::PatchPimpl
 {
-    return juce::Value{ (int)c.getARGB() };
-}
-
-#if 0
-struct GradientMeshTest::Pimpl
-{
-    static constexpr int numColumns = 4;
-    static constexpr int numRows = 4;
-    static constexpr int numControlPoints = numRows * numColumns;
-
-    struct GridPosition
+    PatchPimpl(juce::Rectangle<float> area)
     {
-        int row = 0, column = 0;
-    };
-
-
-
-
-
-    class ControlPoints
-    {
-    public:
-        auto getPosition(int row, int column) const noexcept
+        GridPosition gridPosition;
+        juce::Point<float> position = area.getTopLeft();
+        float y = area.getY();
+        for (int i = 0; i < numControlPoints; ++i)
         {
-            return points[row * numColumns + column].position;
-        }
+            controlPoints.emplace_back(ControlPoint{ gridPosition, position });
 
-        auto getPositionPOINT2F(int row, int column) const noexcept
-        {
-            auto p = getPosition(row, column);
-            return D2D1::Point2F(p.x, p.y);
-        }
-
-        void setPosition(int row, int column, juce::Point<float> p) noexcept
-        {
-            points[row * numColumns + column].position = p;
-        }
-
-        juce::Value& getColorValue(int row, int column) noexcept
-        {
-            return points[row * numColumns + column].colorValue;
-        }
-
-        bool isOuterCorner(int row, int column) const noexcept
-        {
-            for (auto const& corner : outerCorners)
+            gridPosition.column++;
+            position += { area.getWidth() / (float)(numColumns - 1), 0.0f };
+            if (gridPosition.column >= numColumns)
             {
-                if (corner.corner.row == row && corner.corner.column == column)
-                {
-                    return true;
-                }
+                gridPosition.column = 0;
+                gridPosition.row++;
+                y += area.getHeight() / (float)(numRows - 1);
+                position = { area.getX(), y };
             }
-
-            return false;
         }
 
-        std::vector<ControlPoint> points;;
+        for (auto const& outerCorner : outerCorners)
+        {
+            auto& controlPoint = getControlPoint(outerCorner.gridPosition);
+            controlPoint.color = outerCorner.defaultColor;
+            controlPoint.edgeFlags = outerCorner.edgeFlags;
 
-    } controlPoints;
+            auto& clockwiseControlPoint = getControlPoint(outerCorner.clockwiseCubicSpineControl);
+            clockwiseControlPoint.edgeFlags = outerCorner.clockwiseEdgeFlags;
 
-    Pimpl(GradientMeshTest& owner_) : owner(owner_)
-    {
-        for (int row = 0; row < numRows; ++row)
-            for (int column = 0; column < numColumns; ++column)
-            {
-                controlPoints.points.push_back({ row, column });
-            }
-
-        controlPoints.getColorValue(0, 0) = (int)juce::Colours::red.getARGB();
-        controlPoints.getColorValue(0, 3) = (int)juce::Colours::blue.getARGB();
-        controlPoints.getColorValue(3, 0) = (int)juce::Colours::green.getARGB();
-        controlPoints.getColorValue(3, 3) = (int)juce::Colours::aliceblue.getARGB();
-
-        makeGradient();
+            auto& counterclockwiseControlPoint = getControlPoint(outerCorner.counterclockWiseCubicSplineControl);
+            counterclockwiseControlPoint.edgeFlags = outerCorner.counterclockwiseEdgeFlags;
+        }
     }
 
-    void createResources()
+    ~PatchPimpl()
     {
-        if (image.isNull())
-        {
-            image = juce::Image(juce::Image::ARGB, 1024, 1024, true);
-        }
+    }
 
+    enum class EdgeFlags
+    {
+        unknown = 0,
+        leftEdge = 1,
+        topEdge = 2,
+        rightEdge = 4,
+        bottomEdge = 8,
+
+        topLeftCorner = leftEdge | topEdge,
+        topRightCorner = topEdge | rightEdge,
+        bottomRightCorner = rightEdge | bottomEdge,
+        bottomLeftCorner = bottomEdge | leftEdge
+    };
+
+    struct OuterCorner
+    {
+        GridPosition gridPosition;
+        EdgeFlags edgeFlags;
+        
+        GridPosition clockwiseCubicSpineControl;
+        EdgeFlags clockwiseEdgeFlags;
+
+        GridPosition counterclockWiseCubicSplineControl;
+        EdgeFlags counterclockwiseEdgeFlags;
+        
+        juce::Colour defaultColor;
+    };
+
+    std::array<OuterCorner, 4> const outerCorners
+    {
+        OuterCorner{ { 0, 0 }, EdgeFlags::topLeftCorner,
+            { 0, 1 }, EdgeFlags::topEdge,
+            { 1, 0 }, EdgeFlags::leftEdge,
+            juce::Colours::red }, // top left
+
+        OuterCorner{ { 0, 3 }, EdgeFlags::topRightCorner,
+            { 1, 3 }, EdgeFlags::rightEdge,
+            { 0, 2 }, EdgeFlags::topEdge,
+            juce::Colours::yellow }, // top right
+
+        OuterCorner{ { 3, 3 }, EdgeFlags::bottomRightCorner,
+            { 3, 2 }, EdgeFlags::bottomEdge,
+            { 2, 3 }, EdgeFlags::rightEdge,
+            juce::Colours::indigo }, // bottom right
+
+        OuterCorner{ { 3, 0 }, EdgeFlags::bottomLeftCorner,
+            { 3, 1 }, EdgeFlags::bottomEdge,
+            { 2, 0 }, EdgeFlags::leftEdge,
+            juce::Colours::violet } // bottom left
+    };
+
+    struct ControlPoint
+    {
+        GridPosition const gridPosition;
+        juce::Point<float> position{};
+        std::optional<juce::Colour> color;
+        EdgeFlags edgeFlags = EdgeFlags::unknown;
+    };
+
+    ControlPoint& getControlPoint(GridPosition gridPosition)
+    {
+        return controlPoints[gridPosition.row * numColumns + gridPosition.column];
+    }
+
+    D2D1_POINT_2F getControlPointPositionPOINT2F(GridPosition gridPosition)
+    {
+        auto p = getControlPoint(gridPosition).position;
+        return D2D1::Point2F(p.x, p.y);
+    }
+
+    void toD2DPatch(D2D1_GRADIENT_MESH_PATCH* d2dPatch)
+    {
+        d2dPatch->point00 = getControlPointPositionPOINT2F({ 0, 0 });
+        d2dPatch->point01 = getControlPointPositionPOINT2F({ 0, 1 });
+        d2dPatch->point02 = getControlPointPositionPOINT2F({ 0, 2 });
+        d2dPatch->point03 = getControlPointPositionPOINT2F({ 0, 3 });
+        d2dPatch->point10 = getControlPointPositionPOINT2F({ 1, 0 });
+        d2dPatch->point11 = getControlPointPositionPOINT2F({ 1, 1 });
+        d2dPatch->point12 = getControlPointPositionPOINT2F({ 1, 2 });
+        d2dPatch->point13 = getControlPointPositionPOINT2F({ 1, 3 });
+        d2dPatch->point20 = getControlPointPositionPOINT2F({ 2, 0 });
+        d2dPatch->point21 = getControlPointPositionPOINT2F({ 2, 1 });
+        d2dPatch->point22 = getControlPointPositionPOINT2F({ 2, 2 });
+        d2dPatch->point23 = getControlPointPositionPOINT2F({ 2, 3 });
+        d2dPatch->point30 = getControlPointPositionPOINT2F({ 3, 0 });
+        d2dPatch->point31 = getControlPointPositionPOINT2F({ 3, 1 });
+        d2dPatch->point32 = getControlPointPositionPOINT2F({ 3, 2 });
+        d2dPatch->point33 = getControlPointPositionPOINT2F({ 3, 3 });
+
+        auto getColorF = [&](GridPosition gridPosition)
+            {
+                auto color = getControlPoint(gridPosition).color;
+                jassert(color.has_value());
+                return juce::D2DUtilities::toCOLOR_F(*color);
+            };
+
+        d2dPatch->color00 = getColorF(GridPosition{ 0, 0 });
+        d2dPatch->color03 = getColorF(GridPosition{ 0, 3 });
+        d2dPatch->color30 = getColorF(GridPosition{ 3, 0 });
+        d2dPatch->color33 = getColorF(GridPosition{ 3, 3 });
+
+        d2dPatch->leftEdgeMode = D2D1_PATCH_EDGE_MODE_ANTIALIASED;
+        d2dPatch->topEdgeMode = D2D1_PATCH_EDGE_MODE_ANTIALIASED;
+        d2dPatch->rightEdgeMode = D2D1_PATCH_EDGE_MODE_ANTIALIASED;
+        d2dPatch->bottomEdgeMode = D2D1_PATCH_EDGE_MODE_ANTIALIASED;
+    }
+
+    std::vector<ControlPoint> controlPoints;
+};
+
+struct GradientMesh::Pimpl
+{
+    Pimpl(GradientMesh& owner_) : owner(owner_)
+    {
+    }
+
+    void createResources(juce::Image image)
+    {
         if (!deviceContext)
         {
             if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
@@ -124,265 +197,107 @@ struct GradientMeshTest::Pimpl
         }
     }
 
-    void makeGradient()
-    {
-        createResources();
-
-        D2D1_GRADIENT_MESH_PATCH patch;
-        patch.point00 = controlPoints.getPositionPOINT2F(0, 0);
-        patch.point01 = controlPoints.getPositionPOINT2F(0, 1);
-        patch.point02 = controlPoints.getPositionPOINT2F(0, 2);
-        patch.point03 = controlPoints.getPositionPOINT2F(0, 3);
-        patch.point10 = controlPoints.getPositionPOINT2F(1, 0);
-        patch.point11 = controlPoints.getPositionPOINT2F(1, 1);
-        patch.point12 = controlPoints.getPositionPOINT2F(1, 2);
-        patch.point13 = controlPoints.getPositionPOINT2F(1, 3);
-        patch.point20 = controlPoints.getPositionPOINT2F(2, 0);
-        patch.point21 = controlPoints.getPositionPOINT2F(2, 1);
-        patch.point22 = controlPoints.getPositionPOINT2F(2, 2);
-        patch.point23 = controlPoints.getPositionPOINT2F(2, 3);
-        patch.point30 = controlPoints.getPositionPOINT2F(3, 0);
-        patch.point31 = controlPoints.getPositionPOINT2F(3, 1);
-        patch.point32 = controlPoints.getPositionPOINT2F(3, 2);
-        patch.point33 = controlPoints.getPositionPOINT2F(3, 3);
-
-        auto getColorF = [&](int row, int column)
-            {
-                auto colorValue = controlPoints.getColorValue(row, column);
-                return juce::D2DUtilities::toCOLOR_F(juce::Colour{ (uint32)(int)colorValue.getValue() });
-            };
-
-        patch.color00 = getColorF(0, 0);
-        patch.color03 = getColorF(0, 3);
-        patch.color30 = getColorF(3, 0);
-        patch.color33 = getColorF(3, 3);
-
-        patch.leftEdgeMode = D2D1_PATCH_EDGE_MODE_ANTIALIASED;
-        patch.topEdgeMode = D2D1_PATCH_EDGE_MODE_ANTIALIASED;
-        patch.rightEdgeMode = D2D1_PATCH_EDGE_MODE_ANTIALIASED;
-        patch.bottomEdgeMode = D2D1_PATCH_EDGE_MODE_ANTIALIASED;
-
-        if (deviceContext)
-        {
-            auto hr = deviceContext->CreateGradientMesh(&patch, 1, gradientMesh.put());
-            jassert(SUCCEEDED(hr));
-        }
-
-        owner.repaint();
-    }
-
-    void paintGradient(juce::Graphics& g)
-    {
-        if (deviceContext && image.isValid())
-        {
-            if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
-            {
-                if (auto bitmap = pixelData->getAdapterD2D1Bitmap())
-                {
-                    deviceContext->SetTarget(bitmap);
-                    deviceContext->BeginDraw();
-                    deviceContext->Clear({ 0.0f, 0.0f, 0.0f, 1.0f });
-
-                    if (gradientMesh)
-                    {
-                        deviceContext->DrawGradientMesh(gradientMesh.get());
-                    }
-
-                    deviceContext->EndDraw();
-                    deviceContext->SetTarget(nullptr);
-                }
-            }
-
-            g.drawImageAt(image, 0, 0);
-        }
-    }
-
-    GradientMeshTest& owner;
+    GradientMesh& owner;
     winrt::com_ptr<ID2D1DeviceContext2> deviceContext;
     winrt::com_ptr<ID2D1GradientMesh> gradientMesh;
-    juce::Image image;
-};
 
-GradientMeshTest::GradientMeshTest()
-{
-    pimpl = std::make_unique<Pimpl>(*this);
-
-    int row = 0, column = 0;
-    for (int controlPointIndex = 0; controlPointIndex < Pimpl::numControlPoints; ++controlPointIndex)
-    {
-        auto comp = std::make_unique<ControlPointComponent>(row, column, pimpl->controlPoints.getColorValue(row, column));
-
-        juce::String name;
-        name << row << column;
-        comp->setName(name);
-
-        comp->onMove = [=]
-            {
-                auto c = controlPointComponents[controlPointIndex];
-                pimpl->controlPoints.setPosition(c->row, c->column, c->getBounds().getCentre().toFloat());
-                pimpl->makeGradient();
-            };
-
-        addAndMakeVisible(comp.get());
-
-        ++row;
-        if (row >= Pimpl::numRows)
-        {
-            row = 0;
-            ++column;
-        }
-
-        controlPointComponents.add(std::move(comp));
-    }
-
-    setSize(1024, 1024);
-}
-
-void GradientMeshTest::resized()
-{
-    for (auto& comp : controlPointComponents)
-    {
-        if (comp)
-        {
-            if (comp->getWidth() == 0)
-            {
-                auto xGap = getWidth() / (Pimpl::numColumns + 1);
-                auto x = comp->column * xGap + xGap;
-                auto yGap = getHeight() / (Pimpl::numRows + 1);
-                auto y = comp->row * yGap + yGap;
-                comp->setSize(32, 32);
-                comp->setCentrePosition(x, y);
-
-                pimpl->controlPoints.setPosition(comp->row, comp->column, comp->getBounds().getCentre().toFloat());
-                continue;
-            }
-
-            auto p = pimpl->controlPoints.getPosition(comp->row, comp->column);
-            comp->setCentrePosition(p.roundToInt());
-        }
-    }
-}
-
-void GradientMeshTest::paint(juce::Graphics& g)
-{
-    pimpl->createResources();
-
-    g.fillAll(juce::Colour{ 0xff111111 });
-
-    pimpl->paintGradient(g);
-
-    auto getComp = [&](int row, int column) -> ControlPointComponent*
-    {
-        return controlPointComponents[row * Pimpl::numColumns + column];
-    };
-
-    auto drawLine = [&](Pimpl::GridPosition const& gp1, Pimpl::GridPosition const& gp2)
-        {
-            auto c1 = getComp(gp1.row, gp1.column)->getBounds().getCentre().toFloat();
-            auto c2 = getComp(gp2.row, gp2.column)->getBounds().getCentre().toFloat();;
-
-
-            g.setColour(juce::Colours::black);
-            g.drawLine(juce::Line<float>{ c1, c2 }, 6.0f);
-            g.setColour(juce::Colours::white);
-            g.drawLine(juce::Line<float>{ c1, c2 }, 3.0f);
-        };
-
-    for (auto const& cornerPoint : pimpl->outerCorners)
-    {
-        drawLine(cornerPoint.corner, cornerPoint.clockwiseCubicSpineControl);
-        drawLine(cornerPoint.corner, cornerPoint.counterclockWiseCubicSplineControl);
-    }
-}
-#endif
-
-struct GradientMesh::Patch::PatchPimpl
-{
-    PatchPimpl()
-    {
-        GridPosition gridPosition;
-        Point<float> normalizedPosition;
-        for (int i = 0; i < numControlPoints; ++i)
-        {
-            controlPoints.emplace_back(ControlPoint{ gridPosition, normalizedPosition });
-
-            gridPosition.column++;
-            normalizedPosition += { 1.0f / (float)(numColumns - 1), 0.0f };
-            if (gridPosition.column >= numColumns)
-            {
-                gridPosition.column = 0;
-                gridPosition.row++;
-                normalizedPosition = { 0.0f, normalizedPosition.y + 1.0f / (float)(numRows - 1) };
-            }
-        }
-
-        for (auto const& outerCorner : outerCorners)
-        {
-            auto controlPoint = getControlPoint(outerCorner.gridPosition);
-            controlPoint.colorValue = colorToValue(juce::Colours::red);
-        }
-    }
-
-    ~PatchPimpl()
-    {
-    }
-
-    struct OuterCorner
-    {
-        GridPosition gridPosition;
-        GridPosition clockwiseCubicSpineControl;
-        GridPosition counterclockWiseCubicSplineControl;
-    };
-
-    static constexpr std::array<OuterCorner, 4> outerCorners
-    {
-        OuterCorner{ { 0, 0 }, { 0, 1 }, { 1, 0 } }, // top left
-        { { 0, 3 }, { 0, 2 }, { 1, 3 }, }, // top right
-        { { 3, 3 }, { 3, 2 }, { 2, 3 }, }, // bottom right
-        { { 3, 0 }, { 3, 1 }, { 2, 0 }, }  // bottom left
-    };
-
-    struct ControlPoint
-    {
-        GridPosition const gridPosition;
-        juce::Point<float> normalizedPosition{};
-        std::optional<juce::Value> colorValue;
-    };
-
-    ControlPoint& getControlPoint(GridPosition gridPosition)
-    {
-        return controlPoints[gridPosition.row * numColumns + gridPosition.column];
-    }
-
-    std::vector<ControlPoint> controlPoints;
-};
-
-struct GradientMesh::Pimpl
-{
-    Pimpl(GradientMesh& owner_) : owner(owner_)
-    {
-    }
-
-    GradientMesh& owner;
+    juce::HeapBlock< D2D1_GRADIENT_MESH_PATCH> d2dPatches;
 };
 
 GradientMesh::GradientMesh() :
     pimpl(std::make_unique<Pimpl>(*this))
 {
-    patches.emplace_back(std::make_unique<Patch>());
 }
 
 GradientMesh::~GradientMesh()
 {
 }
 
-void GradientMesh::draw(juce::Graphics& g, juce::AffineTransform transform)
+juce::Rectangle<float> GradientMesh::getBounds() const noexcept
 {
+    juce::Rectangle<float> bounds;
+    for (auto patch : patches)
+    {
+        bounds = bounds.getUnion(patch->getBounds());
+    }
 
+    return bounds;
 }
 
-GradientMesh::Patch::Patch() :
-    pimpl(std::make_unique<PatchPimpl>())
+void GradientMesh::setControlPointPosition(Patch::Ptr patch, GridPosition gridPosition, juce::Point<float> pos)
+{
+    patch->setControlPointPosition(gridPosition, pos);
+    pimpl->gradientMesh = nullptr;
+}
+
+void GradientMesh::setControlPointColor(Patch::Ptr patch, GridPosition gridPosition, juce::Colour color)
+{
+    patch->setControlPointColor(gridPosition, color);
+    pimpl->gradientMesh = nullptr;
+}
+
+void GradientMesh::updateMesh()
+{
+    if (pimpl->deviceContext && !pimpl->gradientMesh)
+    {
+        D2D1_GRADIENT_MESH_PATCH* d2d1Patch = pimpl->d2dPatches.getData();
+
+        memset(d2d1Patch, 0, sizeof(D2D1_GRADIENT_MESH_PATCH) * patches.size());
+
+        for (auto const& patch : patches)
+        {
+            patch->pimpl->toD2DPatch(d2d1Patch);
+            d2d1Patch++;
+        }
+
+        pimpl->deviceContext->CreateGradientMesh(pimpl->d2dPatches.getData(), patches.size(), pimpl->gradientMesh.put());
+    }
+}
+
+void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
+{
+    pimpl->createResources(image);
+
+    updateMesh();
+
+    if (pimpl->deviceContext && image.isValid() && pimpl->gradientMesh)
+    {
+        if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
+        {
+            if (auto bitmap = pixelData->getAdapterD2D1Bitmap())
+            {
+                pimpl->deviceContext->SetTarget(bitmap);
+                pimpl->deviceContext->BeginDraw();
+                pimpl->deviceContext->Clear({ 0.0f, 0.0f, 0.0f, 0.0f });
+
+                if (pimpl->gradientMesh)
+                {
+                    pimpl->deviceContext->DrawGradientMesh(pimpl->gradientMesh.get());
+                }
+
+                pimpl->deviceContext->EndDraw();
+                pimpl->deviceContext->SetTarget(nullptr);
+            }
+        }
+    }
+}
+
+void GradientMesh::addPatch(juce::Rectangle<float> area)
+{
+    auto existingPatch = patches.getLast();
+    auto newPatch = patches.add(new Patch{ area });
+
+    if (existingPatch)
+    {
+        existingPatch->rightNeighbor = newPatch;
+        newPatch->leftNeighbor = existingPatch.get();
+    }
+
+    pimpl->d2dPatches.realloc(patches.size());
+}
+
+GradientMesh::Patch::Patch(juce::Rectangle<float> area) :
+    pimpl(std::make_unique<PatchPimpl>(area))
 {
 }
 
@@ -390,12 +305,50 @@ GradientMesh::Patch::~Patch()
 {
 }
 
-juce::Point<float> GradientMesh::Patch::getControlPointPosition(GridPosition gridPosition) const
+juce::Rectangle<float> GradientMesh::Patch::getBounds() const noexcept
 {
-    return pimpl->getControlPoint(gridPosition).normalizedPosition;
+    auto iter = pimpl->controlPoints.begin();
+    auto first = iter->position;
+    iter++;
+    auto second = iter->position;
+    iter++;
+
+    juce::Rectangle<float> r{ first, second };
+    while (iter != pimpl->controlPoints.end())
+    {
+        auto p = iter->position;
+        iter++;
+
+        r = r.getUnion(juce::Rectangle<float>{ first, p });
+    }
+
+    return r;
 }
 
-std::optional<juce::Value> GradientMesh::Patch::getControlPointColorValue(GridPosition gridPosition) const
+juce::Point<float> GradientMesh::Patch::getControlPointPosition(GridPosition gridPosition) const
 {
-    return pimpl->getControlPoint(gridPosition).colorValue;
+    return pimpl->getControlPoint(gridPosition).position;
+}
+
+void GradientMesh::Patch::setControlPointPosition(GridPosition gridPosition, juce::Point<float> pos)
+{
+    pimpl->getControlPoint(gridPosition).position = pos;
+    if (rightNeighbor)
+    {
+        auto neighborPos = rightNeighbor->getControlPointPosition(gridPosition);
+        if (!approximatelyEqual(pos, neighborPos))
+        {
+            rightNeighbor->setControlPointPosition(gridPosition, pos);
+        }
+    }
+}
+
+std::optional<juce::Colour> GradientMesh::Patch::getControlPointColor(GridPosition gridPosition) const
+{
+    return pimpl->getControlPoint(gridPosition).color;
+}
+
+void GradientMesh::Patch::setControlPointColor(GridPosition gridPosition, juce::Colour color)
+{
+    pimpl->getControlPoint(gridPosition).color = color;
 }

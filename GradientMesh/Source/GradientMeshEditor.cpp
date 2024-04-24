@@ -2,39 +2,48 @@
 
 GradientMeshEditor::GradientMeshEditor()
 {
-    setOpaque(true);
+    setOpaque(false);
 
-    auto const& patch = mesh.getPatches().front();
+    juce::Rectangle<float> patchBounds{ 50.0f, 50.0f, 200.0f, 200.0f };
+    mesh.addPatch(patchBounds);
+
+    patchBounds.translate(200.0f, 0.0f);
+    mesh.addPatch(patchBounds);
+
+    auto patch = mesh.getPatches().getFirst();
 
     for (int index = 0; index < GradientMesh::Patch::numControlPoints; ++index)
     {
         auto gridPosition = GradientMesh::Patch::indexToGridPosition(index);
-        auto controlPointComponent = std::make_unique<ControlPointComponent>(gridPosition, patch->getControlPointColorValue(gridPosition));
+        auto controlPointComponent = std::make_unique<ControlPointComponent>(gridPosition, patch->getControlPointColor(gridPosition));
 
         String name;
         name << gridPosition.row << gridPosition.column;
         controlPointComponent->setName(name);
 
         juce::Component::SafePointer<ControlPointComponent> compSafePointer = controlPointComponent.get();
-        controlPointComponent->onMove([=]()
+        controlPointComponent->onMove = [=]()
             {
                 if (compSafePointer != nullptr)
                 {
-                    auto pos = compSafePointer->getCentrePosition();
-                    auto normalizedPos = juce::Point<float>{ pos.x, pos.y }.toFloat() / getLocalBounds().toFloat().reduced(100);
-                    patch->setControlPointPosition(gridPosition, normalizedPos);
-                }
-            });
+                    auto pos = compSafePointer->getBounds().toFloat().getCentre();
+                    mesh.setControlPointPosition(patch, gridPosition, pos.toFloat());
+                    if (compSafePointer->color.has_value())
+                        mesh.setControlPointColor(patch, gridPosition, *(compSafePointer->color));
 
-            void[=]()
-            {
-                auto gridPosition = controlPointComponent->gridPosition;
-                auto pos = patch->getNormalizedControlPointPosition(gridPosition);
-                controlPointComponent->setCentrePosition(pos.x, pos.y);
-            });
+                    repaint();
+                }
+            };
 
         addAndMakeVisible(controlPointComponent.get());
         controlPointComponents.emplace_back(std::move(controlPointComponent));
+    }
+
+    for (auto patch : mesh.getPatches())
+    {
+        auto patchComponent = std::make_unique<PatchComponent>(patch);
+        addAndMakeVisible(patchComponent.get());
+        patchComponents.emplace_back(std::move(patchComponent));
     }
 }
 
@@ -42,27 +51,75 @@ GradientMeshEditor::~GradientMeshEditor()
 {
 }
 
-void GradientMeshEditor::paint (juce::Graphics& g)
+juce::Rectangle<int> GradientMeshEditor::getPreferredSize()
+{
+    return mesh.getBounds().toNearestInt().expanded(50);
+}
+
+void GradientMeshEditor::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::black);
 
-    mesh.draw(g, {});
+    mesh.draw(meshImage, {});
+    g.drawImageAt(meshImage, 0, 0);
 }
 
 void GradientMeshEditor::resized()
 {
-    auto const& patch = mesh.getPatches().front();
+    auto const firstPatch = mesh.getPatches().getFirst();
 
-    juce::Rectangle<float> area = getLocalBounds().reduced(100).toFloat();
     for (auto& controlPointComponent : controlPointComponents)
     {
-        auto normalizedCenter = patch->getNormalizedControlPointPosition(controlPointComponent->gridPosition);
-
-        auto x = area.proportionOfWidth(normalizedCenter.x);
-        auto y = area.proportionOfHeight(normalizedCenter.y);
-        auto center = (juce::Point<float>{ x, y } + area.getTopLeft()).roundToInt();
-
+        auto pos = firstPatch->getControlPointPosition(controlPointComponent->gridPosition).roundToInt();
         controlPointComponent->setSize(32, 32);
-        controlPointComponent->setCentrePosition(center.x, center.y);
+        controlPointComponent->setCentrePosition(pos.x, pos.y);
+    }
+
+    meshImage = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
+
+    for (auto& patchComponent : patchComponents)
+    {
+        auto bounds = patchComponent->patch->getBounds().toNearestInt();
+        patchComponent->setBounds(bounds);
+    }
+}
+
+void GradientMeshEditor::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel)
+{
+#if 0
+    wheel.deltaY > 0 ? zoom *= 1.1f : zoom *= 0.9f;
+    zoom = juce::jlimit(0.1f, 10.0f, zoom);
+    setTransform(juce::AffineTransform::scale(zoom, zoom, getWidth() * 0.5f, getHeight() * 0.5f));
+    repaint();
+#endif
+}
+
+GradientMeshEditor::PatchComponent::PatchComponent(GradientMesh::Patch::Ptr patch_) :
+    patch(patch_)
+{
+    setOpaque(false);
+}
+
+bool GradientMeshEditor::PatchComponent::hitTest(int x, int y)
+{
+    return juce::Component::hitTest(x, y);
+}
+
+void GradientMeshEditor::PatchComponent::mouseEnter(const juce::MouseEvent& event)
+{
+
+}
+
+void GradientMeshEditor::PatchComponent::mouseExit(const MouseEvent& event)
+{
+
+}
+
+void GradientMeshEditor::PatchComponent::paint(juce::Graphics& g)
+{
+    if (isMouseOver(true))
+    {
+        g.setColour(juce::Colours::white);
+        g.drawRect(getLocalBounds());
     }
 }

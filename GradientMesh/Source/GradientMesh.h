@@ -81,10 +81,10 @@ public:
     GradientMesh();
     ~GradientMesh();
 
-    class Patch
+    class Patch : public juce::ReferenceCountedObject
     {
     public:
-        Patch();
+        Patch(juce::Rectangle<float> area);
         Patch(Patch const& other) = default;
         ~Patch();
 
@@ -101,20 +101,38 @@ public:
             return GridPosition{ index / numRows, index % numColumns };
         }
 
-        juce::Point<float> getNormalizedControlPointPosition(GridPosition gridPosition) const;
-        void setControlPointPosition(GridPosition gridPosition, juce::Point<float> pos);
-        std::optional<juce::Value> getControlPointColorValue(GridPosition gridPosition) const;
-        void setControlPointColor(GridPosition gridPosition, juce::Colour color);
+        juce::Rectangle<float> getBounds() const noexcept;
+
+        juce::Point<float> getControlPointPosition(GridPosition gridPosition) const;
+        std::optional<juce::Colour> getControlPointColor(GridPosition gridPosition) const;
+
+        using Ptr = juce::ReferenceCountedObjectPtr<Patch>;
 
     private:
+        friend class GradientMesh;
+
         struct PatchPimpl;
         std::unique_ptr<PatchPimpl> pimpl;
 
+        juce::WeakReference<Patch> leftNeighbor;
+        juce::WeakReference<Patch> rightNeighbor;
+        juce::WeakReference<Patch> topNeighbor;
+        juce::WeakReference<Patch> bottomNeighbor;
+
+        void setControlPointPosition(GridPosition gridPosition, juce::Point<float> pos);
+        void setControlPointColor(GridPosition gridPosition, juce::Colour color);
+
         JUCE_LEAK_DETECTOR(Patch)
+        JUCE_DECLARE_WEAK_REFERENCEABLE(Patch)
     };
 
-    void draw(juce::Graphics& g, juce::AffineTransform transform);
+    juce::Rectangle<float> getBounds() const noexcept;
 
+    void setControlPointPosition(Patch::Ptr patch, GridPosition gridPosition, juce::Point<float> pos);
+    void setControlPointColor(Patch::Ptr patch, GridPosition gridPosition, juce::Colour color);
+    void draw(juce::Image image, juce::AffineTransform transform);
+
+    void addPatch(juce::Rectangle<float> area);
     auto const& getPatches() const
     {
         return patches;
@@ -124,7 +142,9 @@ private:
     struct Pimpl;
     std::unique_ptr<Pimpl> pimpl;
 
-    std::vector<std::unique_ptr<Patch>> patches;
+    juce::ReferenceCountedArray<Patch> patches;
+
+    void updateMesh();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GradientMesh)
 };
