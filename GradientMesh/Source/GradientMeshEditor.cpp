@@ -1,14 +1,20 @@
 #include "GradientMeshEditor.h"
 
-GradientMeshEditor::GradientMeshEditor() :
-    mesh(juce::Rectangle<float>{ 50.0f, 50.0f, 400.0f, 400.0f })
+GradientMeshEditor::GradientMeshEditor()
 {
     setOpaque(false);
 
+    mesh.addPatch({ juce::Point<float>{ 50.0f, 50.0f }, { 550.0f, 50.0f }, { 550.0f, 550.0f }, { 50.0f, 550.0f } },
+        { juce::Colours::red, juce::Colours::yellow, juce::Colours::blue, juce::Colours::violet });
+
     mesh.addConnectedPatch(nullptr, GradientMesh::Direction::east,
         { juce::Colours::yellow, juce::Colours::red, juce::Colours::violet, juce::Colours::blue });
+
     mesh.addConnectedPatch(nullptr, GradientMesh::Direction::south,
         { juce::Colours::blue, juce::Colours::violet, juce::Colours::red, juce::Colours::yellow });
+
+    mesh.addConnectedPatch(nullptr, GradientMesh::Direction::west,
+        { juce::Colours::violet, juce::Colours::blue, juce::Colours::yellow, juce::Colours::red });
 
 #if 0
     auto patch = mesh.getPatches().getFirst();

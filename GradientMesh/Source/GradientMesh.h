@@ -70,15 +70,11 @@
 
 */
 
-struct GridPosition
-{
-    int row = 0, column = 0;
-};
-
 class GradientMesh
 {
 public:
-    GradientMesh(juce::Rectangle<float> initialPatchArea);
+    GradientMesh(std::array<juce::Point<float>, 4> cornerPositions);
+    GradientMesh();
     ~GradientMesh();
 
     enum class Corner : size_t
@@ -102,8 +98,7 @@ public:
 
     struct Vertex
     {
-        Vertex(int gridX, int gridY, juce::Point<float> pos) :
-            gridIndex{ gridX, gridY },
+        Vertex(juce::Point<float> pos) :
             position(pos)
         {
         }
@@ -123,7 +118,7 @@ public:
 
     struct Edge
     {
-        Edge(GradientMesh::Orientation orientation_, Point<float> cp1, Point<float> cp2, Vertex* v1, Vertex* v2) :
+        Edge(GradientMesh::Orientation orientation_, juce::Point<float> cp1, juce::Point<float> cp2, Vertex* v1, Vertex* v2) :
             orientation(orientation_),
             edgeControlPoints{ cp1, cp2 },
             vertices{ v1, v2 }
@@ -183,12 +178,14 @@ public:
 
         using Ptr = juce::ReferenceCountedObjectPtr<Patch>;
 
+        void setVertexPosition(Corner corner, juce::Point<float> position);
+
+        juce::WeakReference<Face> face;
     private:
         friend class GradientMesh;
 
         struct PatchPimpl;
         std::unique_ptr<PatchPimpl> pimpl;
-        juce::WeakReference<Face> face;
 
         static const std::array<juce::Colour, 4> defaultColors;
 
@@ -200,6 +197,9 @@ public:
     void draw(juce::Image image, juce::AffineTransform transform);
 
     Patch::Ptr addConnectedPatch(Patch::Ptr existingPatch, Direction direction, std::array<juce::Colour, 4> colors);
+
+    Patch::Ptr addPatch(std::array<juce::Point<float>, 4> vertices, 
+        std::array<juce::Colour, 4> colors);
 
     auto const& getPatches() const
     {

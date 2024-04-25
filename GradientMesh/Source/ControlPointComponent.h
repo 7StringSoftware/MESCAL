@@ -3,6 +3,11 @@
 #include "Base.h"
 #include "GradientMesh.h"
 
+struct GridPosition
+{
+    int row, column;
+};
+
 class ControlPointComponent : public juce::Button, public juce::ChangeListener
 {
 public:
