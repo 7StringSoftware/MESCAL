@@ -35,8 +35,10 @@ private:
     juce::Image meshImage;
     std::vector<std::unique_ptr<ControlPointComponent>> controlPointComponents;
     std::vector<std::unique_ptr<PatchComponent>> patchComponents;
+    juce::VBlankAttachment vblankAttachment{ this, [this] { repaint();  } };
 
     float zoom = 1.0f;
+    double phase = 0.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GradientMeshEditor)
 };

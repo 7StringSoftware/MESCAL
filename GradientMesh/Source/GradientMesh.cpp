@@ -131,7 +131,8 @@ void GradientMesh::updateMesh()
                 juce::D2DUtilities::toCOLOR_F(patch->options.lowerRightCorner.color),
                 juce::D2DUtilities::toCOLOR_F(patch->options.lowerLeftCorner.color),
 
-                D2D1_PATCH_EDGE_MODE_ANTIALIASED, D2D1_PATCH_EDGE_MODE_ANTIALIASED, D2D1_PATCH_EDGE_MODE_ANTIALIASED, D2D1_PATCH_EDGE_MODE_ANTIALIASED);
+                D2D1_PATCH_EDGE_MODE_ALIASED_INFLATED, D2D1_PATCH_EDGE_MODE_ALIASED, D2D1_PATCH_EDGE_MODE_ALIASED, D2D1_PATCH_EDGE_MODE_ALIASED);
+                //D2D1_PATCH_EDGE_MODE_ANTIALIASED, D2D1_PATCH_EDGE_MODE_ANTIALIASED, D2D1_PATCH_EDGE_MODE_ANTIALIASED, D2D1_PATCH_EDGE_MODE_ANTIALIASED);
             d2dPatch++;
         }
 
@@ -163,11 +164,11 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
 
                 pimpl->deviceContext->EndDraw();
                 pimpl->deviceContext->SetTarget(nullptr);
-    }
-}
+            }
+        }
     }
 
-#if 1
+#if 0
     auto drawDot = [&](D2D1_POINT_2F p)
         {
             juce::Graphics g{ image };
@@ -363,7 +364,7 @@ GradientMesh::Patch::Ptr GradientMesh::addPatch(PatchOptions& options)
 #endif
 
     return patch;
-    }
+}
 
 GradientMesh::Patch::Ptr GradientMesh::clonePatch(Patch::Ptr originalPatch, Direction direction)
 {
@@ -446,69 +447,84 @@ juce::Rectangle<float> GradientMesh::Patch::getBounds() const noexcept
 
 void GradientMesh::Patch::translate(float x, float y)
 {
+    auto translation = juce::Point<float>{ x, y };
 
+    options.upperLeftCorner.position += translation;
+    options.upperRightCorner.position += translation;
+    options.lowerLeftCorner.position += translation;
+    options.lowerRightCorner.position += translation;
+    options.leftEdge.upperControlPoint += translation;
+    options.leftEdge.lowerControlPoint += translation;
+    options.rightEdge.upperControlPoint += translation;
+    options.rightEdge.lowerControlPoint += translation;
+    options.topEdge.leftControlPoint += translation;
+    options.topEdge.rightControlPoint += translation;
+    options.bottomEdge.leftControlPoint += translation;
+    options.bottomEdge.rightControlPoint += translation;
+}
+
+void GradientMesh::Patch::applyTransform(juce::AffineTransform transform)
+{
+    options.upperLeftCorner.position.applyTransform(transform);
+    options.upperRightCorner.position.applyTransform(transform);
+    options.lowerLeftCorner.position.applyTransform(transform);
+    options.lowerRightCorner.position.applyTransform(transform);
+    options.leftEdge.upperControlPoint.applyTransform(transform);
+    options.leftEdge.lowerControlPoint.applyTransform(transform);
+    options.rightEdge.upperControlPoint.applyTransform(transform);
+    options.rightEdge.lowerControlPoint.applyTransform(transform);
+    options.topEdge.leftControlPoint.applyTransform(transform);
+    options.topEdge.rightControlPoint.applyTransform(transform);
+    options.bottomEdge.leftControlPoint.applyTransform(transform);
+    options.bottomEdge.rightControlPoint.applyTransform(transform);
 }
 
 void GradientMesh::Patch::flipControlPointsHorizontally()
 {
-#if 0
-    auto& d2dPatch = pimpl->d2dPatch;
-
-    std::swap(d2dPatch.point00, d2dPatch.point03);
-    std::swap(d2dPatch.point01, d2dPatch.point02);
-
-    std::swap(d2dPatch.point10, d2dPatch.point13);
-
-    std::swap(d2dPatch.point11, d2dPatch.point12);
-    std::swap(d2dPatch.point21, d2dPatch.point22);
-
-    std::swap(d2dPatch.point20, d2dPatch.point23);
-    std::swap(d2dPatch.point30, d2dPatch.point33);
-
-    std::swap(d2dPatch.point31, d2dPatch.point32);
-
-    std::swap(d2dPatch.leftEdgeMode, d2dPatch.rightEdgeMode);
-#endif
+    std::swap(options.upperLeftCorner.position, options.upperRightCorner.position);
+    std::swap(options.lowerLeftCorner.position, options.lowerRightCorner.position);
+    std::swap(options.leftEdge, options.rightEdge);
+    std::swap(options.topEdge.leftControlPoint, options.topEdge.rightControlPoint);
+    std::swap(options.bottomEdge.leftControlPoint, options.bottomEdge.rightControlPoint);
 }
 
 void GradientMesh::Patch::flipColorsHorizontally()
 {
-#if 0
-    auto& d2dPatch = pimpl->d2dPatch;
-
-    std::swap(d2dPatch.color00, d2dPatch.color03);
-    std::swap(d2dPatch.color30, d2dPatch.color33);
-#endif
+    std::swap(options.upperLeftCorner.color, options.upperRightCorner.color);
+    std::swap(options.lowerLeftCorner.color, options.lowerRightCorner.color);
 }
 
 void GradientMesh::Patch::flipControlPointsVertically()
 {
-#if 0
-    auto& d2dPatch = pimpl->d2dPatch;
-
-    std::swap(d2dPatch.point00, d2dPatch.point30);
-    std::swap(d2dPatch.point10, d2dPatch.point20);
-
-    std::swap(d2dPatch.point01, d2dPatch.point31);
-
-    std::swap(d2dPatch.point11, d2dPatch.point21);
-    std::swap(d2dPatch.point12, d2dPatch.point22);
-
-    std::swap(d2dPatch.point02, d2dPatch.point32);
-    std::swap(d2dPatch.point13, d2dPatch.point23);
-
-    std::swap(d2dPatch.point03, d2dPatch.point33);
-
-    std::swap(d2dPatch.topEdgeMode, d2dPatch.bottomEdgeMode);
-#endif
+    std::swap(options.upperLeftCorner.position, options.lowerLeftCorner.position);
+    std::swap(options.upperRightCorner.position, options.lowerRightCorner.position);
+    std::swap(options.topEdge, options.bottomEdge);
+    std::swap(options.leftEdge.upperControlPoint, options.leftEdge.lowerControlPoint);
+    std::swap(options.rightEdge.upperControlPoint, options.rightEdge.lowerControlPoint);
 }
 
 void GradientMesh::Patch::flipColorsVertically()
 {
-#if 0
-    auto& d2dPatch = pimpl->d2dPatch;
+    std::swap(options.upperLeftCorner.color, options.lowerLeftCorner.color);
+    std::swap(options.upperRightCorner.color, options.lowerRightCorner.color);
+}
 
-    std::swap(d2dPatch.color00, d2dPatch.color30);
-    std::swap(d2dPatch.color03, d2dPatch.color33);
-#endif
+void GradientMesh::Patch::setUpperLeftColor(juce::Colour color)
+{
+    options.upperLeftCorner.color = color;
+}
+
+void GradientMesh::Patch::setUpperRightColor(juce::Colour color)
+{
+    options.upperRightCorner.color = color;
+}
+
+void GradientMesh::Patch::setLowerLeftColor(juce::Colour color)
+{
+    options.lowerLeftCorner.color = color;
+}
+
+void GradientMesh::Patch::setLowerRightColor(juce::Colour color)
+{
+    options.lowerRightCorner.color = color;
 }

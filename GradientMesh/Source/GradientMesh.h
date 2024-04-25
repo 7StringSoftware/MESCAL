@@ -156,20 +156,18 @@ public:
         Patch(Patch const& other);
         ~Patch();
 
-        enum
-        {
-            numRows = 4,
-            numColumns = 4,
-            numControlPoints = numRows * numColumns,
-            numColors = 4
-        };
-
         juce::Rectangle<float> getBounds() const noexcept;
         void translate(float x, float y);
+        void applyTransform(juce::AffineTransform transform);
         void flipControlPointsHorizontally();
         void flipColorsHorizontally();
         void flipControlPointsVertically();
         void flipColorsVertically();
+
+        void setUpperLeftColor(juce::Colour color);
+        void setUpperRightColor(juce::Colour color);
+        void setLowerLeftColor(juce::Colour color);
+        void setLowerRightColor(juce::Colour color);
 
         using Ptr = juce::ReferenceCountedObjectPtr<Patch>;
 

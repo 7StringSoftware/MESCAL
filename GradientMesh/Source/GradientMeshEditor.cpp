@@ -4,44 +4,36 @@ GradientMeshEditor::GradientMeshEditor()
 {
     setOpaque(false);
 
-    float radius = 500.0f;
+    float radius = 200.0f;
     auto center = juce::Point<float>{ 0.0f, 0.0f };
     auto upperRight = center + juce::Point<float>{ radius, 0.0f };
     auto lowerLeft = center + juce::Point<float>{ 0.0f, radius};
     juce::Point<float> radialPoint = center.getPointOnCircumference(radius, juce::MathConstants<float>::twoPi * (90.0f + 45.0f) / 360.0f);
 
     GradientMesh::PatchOptions options;
-#if 0
-    options.upperLeftCorner = { center, juce::Colours::yellow };
-    options.upperRightCorner = { upperRight, juce::Colours::blue };
-    options.lowerRightCorner = { radialPoint, juce::Colours::yellow };
-    options.lowerLeftCorner = { lowerLeft, juce::Colours::violet };
+    auto startColor = juce::Colours::magenta;
+    auto endColor = juce::Colours::magenta.withAlpha(0.0f);
+    std::array<juce::Colour, 5> colors
+    {
+        startColor,
+        startColor.interpolatedWith(endColor, 0.25f),
+        startColor.interpolatedWith(endColor, 0.50f),
+        startColor.interpolatedWith(endColor, 0.75f),
+        endColor
+    };
 
-    juce::Line<float> leftEdge(center, lowerLeft);
-    options.leftEdge = { leftEdge.getPointAlongLineProportionally(0.25f), leftEdge.getPointAlongLineProportionally(0.75f) };
-
-    juce::Line<float> topEdge(center, upperRight);
-    options.topEdge = { topEdge.getPointAlongLineProportionally(0.25f), topEdge.getPointAlongLineProportionally(0.75f) };
-
-    auto distance = radius * 0.25f;
-    auto angle = center.getAngleToPoint(radialPoint);
-    auto tangentLine = juce::Line<float>::fromStartAndAngle(radialPoint, distance, angle + juce::MathConstants<float>::halfPi);
-    options.rightEdge = { upperRight.translated(0.0f, distance), tangentLine.getPointAlongLineProportionally(-1.0f) };
-
-    options.bottomEdge = { lowerLeft.translated(distance, 0.0f), tangentLine.getPointAlongLineProportionally(1.0f) };
-#else
-    options.upperLeftCorner = { center, juce::Colours::yellow };
-    options.upperRightCorner = { center, juce::Colours::blue };
-    options.lowerRightCorner = { upperRight, juce::Colours::blue };
-    options.lowerLeftCorner = { lowerLeft, juce::Colours::yellow };
+    options.upperLeftCorner = { center, startColor };
+    options.upperRightCorner = { center, colors[1] };
+    options.lowerRightCorner = { upperRight, colors[1] };
+    options.lowerLeftCorner = { lowerLeft, startColor };
 
     options.topEdge = { center, center };
 
     juce::Line<float> leftEdge(center, lowerLeft);
-    options.leftEdge = { leftEdge.getPointAlongLineProportionally(0.33f), leftEdge.getPointAlongLineProportionally(0.66f) };
+    options.leftEdge = { leftEdge.getPointAlongLineProportionally(0.5f), leftEdge.getPointAlongLineProportionally(0.5f) };
 
     juce::Line<float> rightEdge(center, upperRight);
-    options.rightEdge = { rightEdge.getPointAlongLineProportionally(0.33f), rightEdge.getPointAlongLineProportionally(0.66f) };
+    options.rightEdge = { rightEdge.getPointAlongLineProportionally(0.5f), rightEdge.getPointAlongLineProportionally(0.5f) };
 
 
     auto distance = radius * 0.50f;
@@ -50,9 +42,35 @@ GradientMeshEditor::GradientMeshEditor()
     //options.rightEdge = { upperRight.translated(0.0f, distance), tangentLine.getPointAlongLineProportionally(-1.0f) };
 
     options.bottomEdge = { lowerLeft.translated(distance, 0.0f), upperRight.translated(0.0f, distance) };
-#endif
 
     auto firstPatch = mesh.addPatch(options);
+    firstPatch->translate(radius, radius);
+
+    auto clone = mesh.clonePatch(firstPatch, GradientMesh::Direction::north);
+    clone->setUpperLeftColor(colors[1]);
+    clone->setUpperRightColor(colors[2]);
+    clone->setLowerRightColor(colors[2]);
+    clone->setLowerLeftColor(colors[1]);
+    clone->applyTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::twoPi * -0.25f, radius, radius));
+
+    clone = mesh.clonePatch(clone, GradientMesh::Direction::west);
+    //cloneStartColor = cloneEndColor;
+    //cloneEndColor = startColor.interpolatedWith(endColor, 0.75f);
+    clone->setUpperLeftColor(colors[2]);
+    clone->setUpperRightColor(colors[3]);
+    clone->setLowerRightColor(colors[3]);
+    clone->setLowerLeftColor(colors[2]);
+    clone->applyTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::twoPi * -0.25f, radius, radius));
+
+    clone = mesh.clonePatch(clone, GradientMesh::Direction::south);
+    clone->setUpperLeftColor(colors[3]);
+    clone->setUpperRightColor(endColor);
+    clone->setLowerRightColor(endColor);
+    clone->setLowerLeftColor(colors[3]);
+    clone->applyTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::twoPi * -0.25f, radius, radius));
+
+//     clone->flipControlPointsVertically();
+    //clone->flipColorsVertically();
 
 #if 0
     auto clone = mesh.clonePatch(firstPatch, GradientMesh::Direction::east);
@@ -132,6 +150,9 @@ juce::Rectangle<int> GradientMeshEditor::getPreferredSize()
 void GradientMeshEditor::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::black);
+
+    phase += juce::MathConstants<double>::twoPi * 0.01;
+    g.addTransform(juce::AffineTransform::rotation((float)std::sin(phase), 200.0f, 200.0f));
 
     mesh.draw(meshImage, {});
     g.drawImageAt(meshImage, 0, 0);
