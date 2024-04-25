@@ -4,9 +4,72 @@ GradientMeshEditor::GradientMeshEditor()
 {
     setOpaque(false);
 
-    mesh.addPatch({ juce::Point<float>{ 50.0f, 50.0f }, { 550.0f, 50.0f }, { 550.0f, 550.0f }, { 50.0f, 550.0f } },
-        { juce::Colours::red, juce::Colours::yellow, juce::Colours::blue, juce::Colours::violet });
+    float radius = 500.0f;
+    auto center = juce::Point<float>{ 0.0f, 0.0f };
+    auto upperRight = center + juce::Point<float>{ radius, 0.0f };
+    auto lowerLeft = center + juce::Point<float>{ 0.0f, radius};
+    juce::Point<float> radialPoint = center.getPointOnCircumference(radius, juce::MathConstants<float>::twoPi * (90.0f + 45.0f) / 360.0f);
 
+    GradientMesh::PatchOptions options;
+#if 0
+    options.upperLeftCorner = { center, juce::Colours::yellow };
+    options.upperRightCorner = { upperRight, juce::Colours::blue };
+    options.lowerRightCorner = { radialPoint, juce::Colours::yellow };
+    options.lowerLeftCorner = { lowerLeft, juce::Colours::violet };
+
+    juce::Line<float> leftEdge(center, lowerLeft);
+    options.leftEdge = { leftEdge.getPointAlongLineProportionally(0.25f), leftEdge.getPointAlongLineProportionally(0.75f) };
+
+    juce::Line<float> topEdge(center, upperRight);
+    options.topEdge = { topEdge.getPointAlongLineProportionally(0.25f), topEdge.getPointAlongLineProportionally(0.75f) };
+
+    auto distance = radius * 0.25f;
+    auto angle = center.getAngleToPoint(radialPoint);
+    auto tangentLine = juce::Line<float>::fromStartAndAngle(radialPoint, distance, angle + juce::MathConstants<float>::halfPi);
+    options.rightEdge = { upperRight.translated(0.0f, distance), tangentLine.getPointAlongLineProportionally(-1.0f) };
+
+    options.bottomEdge = { lowerLeft.translated(distance, 0.0f), tangentLine.getPointAlongLineProportionally(1.0f) };
+#else
+    options.upperLeftCorner = { center, juce::Colours::yellow };
+    options.upperRightCorner = { center, juce::Colours::blue };
+    options.lowerRightCorner = { upperRight, juce::Colours::blue };
+    options.lowerLeftCorner = { lowerLeft, juce::Colours::yellow };
+
+    options.topEdge = { center, center };
+
+    juce::Line<float> leftEdge(center, lowerLeft);
+    options.leftEdge = { leftEdge.getPointAlongLineProportionally(0.33f), leftEdge.getPointAlongLineProportionally(0.66f) };
+
+    juce::Line<float> rightEdge(center, upperRight);
+    options.rightEdge = { rightEdge.getPointAlongLineProportionally(0.33f), rightEdge.getPointAlongLineProportionally(0.66f) };
+
+
+    auto distance = radius * 0.50f;
+    auto angle = center.getAngleToPoint(radialPoint);
+    auto tangentLine = juce::Line<float>::fromStartAndAngle(radialPoint, distance, angle + juce::MathConstants<float>::halfPi);
+    //options.rightEdge = { upperRight.translated(0.0f, distance), tangentLine.getPointAlongLineProportionally(-1.0f) };
+
+    options.bottomEdge = { lowerLeft.translated(distance, 0.0f), upperRight.translated(0.0f, distance) };
+#endif
+
+    auto firstPatch = mesh.addPatch(options);
+
+#if 0
+    auto clone = mesh.clonePatch(firstPatch, GradientMesh::Direction::east);
+    clone->translate(500.0f, 0.0f);
+    clone->flipColorsHorizontally();
+
+    clone = mesh.clonePatch(clone, GradientMesh::Direction::south);
+    clone->translate(0.0f, 500.0f);
+    clone->flipControlPointsVertically();
+
+    clone = mesh.clonePatch(firstPatch, GradientMesh::Direction::south);
+    clone->translate(0.0f, 500.0f);
+    clone->flipControlPointsVertically();
+#endif
+
+
+#if 0
     mesh.addConnectedPatch(nullptr, GradientMesh::Direction::east,
         { juce::Colours::yellow, juce::Colours::red, juce::Colours::violet, juce::Colours::blue });
 
@@ -15,6 +78,7 @@ GradientMeshEditor::GradientMeshEditor()
 
     mesh.addConnectedPatch(nullptr, GradientMesh::Direction::west,
         { juce::Colours::violet, juce::Colours::blue, juce::Colours::yellow, juce::Colours::red });
+#endif
 
 #if 0
     auto patch = mesh.getPatches().getFirst();

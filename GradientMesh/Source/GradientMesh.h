@@ -93,77 +93,67 @@ public:
         vertical
     };
 
-    struct Edge;
-    struct Face;
-
-    struct Vertex
+    struct GridCoordinates
     {
-        Vertex(juce::Point<float> pos) :
-            position(pos)
-        {
-        }
+        int x = 0, y = 0;
 
-        juce::Point<int> gridIndex;
+        GridCoordinates translated(Direction direction) const
+        {
+            switch (direction)
+            {
+            case Direction::north:
+                return { x, y - 1 };
+            case Direction::east:
+                return { x + 1, y };
+            case Direction::south:
+                return { x, y + 1 };
+            case Direction::west:
+                return { x - 1, y };
+            default:
+                return *this;
+            }
+        }
+    };
+
+    struct CornerOptions
+    {
         juce::Point<float> position;
-
-        std::array<juce::WeakReference<Edge>, 4> edges; // top, right, bottom, left
-
-#if JUCE_DEBUG
-        juce::String name;
-        juce::String dump() const;
-#endif
-
-        JUCE_DECLARE_WEAK_REFERENCEABLE(Vertex)
+        juce::Colour color;
     };
 
-    struct Edge
+    struct EdgeOptions
     {
-        Edge(GradientMesh::Orientation orientation_, juce::Point<float> cp1, juce::Point<float> cp2, Vertex* v1, Vertex* v2) :
-            orientation(orientation_),
-            edgeControlPoints{ cp1, cp2 },
-            vertices{ v1, v2 }
-        {
-        }
-
-        GradientMesh::Orientation orientation;
-        std::array<juce::Point<float>, 2> edgeControlPoints;
-        std::array<juce::WeakReference<Vertex>, 2> vertices;
-
-        juce::Line<float> toLine() const noexcept
-        {
-            return { vertices[0]->position, vertices[1]->position };
-        }
-
-#if JUCE_DEBUG
-        juce::String name;
-        juce::String dump() const;
-#endif
-
-        JUCE_DECLARE_WEAK_REFERENCEABLE(Edge)
+        std::array<juce::Point<float>, 2> controlPointPositions;
     };
 
-    struct Face
+
+    struct PatchOptions
     {
-        std::array<juce::WeakReference<Vertex>, 4> vertices; // top left, top right, bottom right, bottom left
-        std::array<juce::WeakReference<Edge>, 4> edges; // top, right, bottom, left
-        std::array<juce::Colour, 4> colors;
-        std::array<juce::Point<float>, 4> innerControlPoints;
+        GridCoordinates gridCoordinates;
 
-        void setInnerControlPoints();
+        CornerOptions upperLeftCorner;
+        CornerOptions upperRightCorner;
+        CornerOptions lowerLeftCorner;
+        CornerOptions lowerRightCorner;
 
-#if JUCE_DEBUG
-        juce::String name;
-        juce::String dump() const;
-#endif
+        struct
+        {
+            juce::Point<float> upperControlPoint;
+            juce::Point<float> lowerControlPoint;
+        } leftEdge, rightEdge;
 
-        JUCE_DECLARE_WEAK_REFERENCEABLE(Face)
+        struct
+        {
+            juce::Point<float> leftControlPoint;
+            juce::Point<float> rightControlPoint;
+        } topEdge, bottomEdge;
     };
 
     class Patch : public juce::ReferenceCountedObject
     {
     public:
-        Patch(Face* face_);
-        Patch(Patch const& other) = default;
+        Patch(PatchOptions& options_, GradientMesh& mesh_);
+        Patch(Patch const& other);
         ~Patch();
 
         enum
@@ -175,18 +165,22 @@ public:
         };
 
         juce::Rectangle<float> getBounds() const noexcept;
+        void translate(float x, float y);
+        void flipControlPointsHorizontally();
+        void flipColorsHorizontally();
+        void flipControlPointsVertically();
+        void flipColorsVertically();
 
         using Ptr = juce::ReferenceCountedObjectPtr<Patch>;
 
-        void setVertexPosition(Corner corner, juce::Point<float> position);
-
-        juce::WeakReference<Face> face;
     private:
         friend class GradientMesh;
 
         struct PatchPimpl;
         std::unique_ptr<PatchPimpl> pimpl;
 
+        GradientMesh& mesh;
+        PatchOptions options;
         static const std::array<juce::Colour, 4> defaultColors;
 
         JUCE_LEAK_DETECTOR(Patch)
@@ -198,8 +192,9 @@ public:
 
     Patch::Ptr addConnectedPatch(Patch::Ptr existingPatch, Direction direction, std::array<juce::Colour, 4> colors);
 
-    Patch::Ptr addPatch(std::array<juce::Point<float>, 4> vertices, 
-        std::array<juce::Colour, 4> colors);
+    Patch::Ptr addPatch(PatchOptions& options);
+
+    Patch::Ptr clonePatch(Patch::Ptr originalPatch, Direction direction);
 
     auto const& getPatches() const
     {
