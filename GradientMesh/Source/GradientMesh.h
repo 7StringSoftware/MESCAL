@@ -121,11 +121,20 @@ public:
         juce::Colour color;
     };
 
-    struct EdgeOptions
+    enum class EdgeAliasingMode
     {
-        std::array<juce::Point<float>, 2> controlPointPositions;
+        aliased,
+        antialised,
+        inflated
     };
 
+    enum class Edge
+    {
+        topEdge,
+        rightEdge,
+        bottomEdge,
+        leftEdge
+    };
 
     struct PatchOptions
     {
@@ -136,16 +145,18 @@ public:
         CornerOptions lowerLeftCorner;
         CornerOptions lowerRightCorner;
 
-        struct
+        struct VerticalEdge
         {
             juce::Point<float> upperControlPoint;
             juce::Point<float> lowerControlPoint;
+            EdgeAliasingMode aliasingMode = EdgeAliasingMode::antialised;
         } leftEdge, rightEdge;
 
-        struct
+        struct HorizontalEdge
         {
             juce::Point<float> leftControlPoint;
             juce::Point<float> rightControlPoint;
+            EdgeAliasingMode aliasingMode = EdgeAliasingMode::antialised;
         } topEdge, bottomEdge;
     };
 
@@ -168,6 +179,8 @@ public:
         void setUpperRightColor(juce::Colour color);
         void setLowerLeftColor(juce::Colour color);
         void setLowerRightColor(juce::Colour color);
+
+        void setEdgeAliasingMode(Edge edge, EdgeAliasingMode mode);
 
         using Ptr = juce::ReferenceCountedObjectPtr<Patch>;
 

@@ -4,8 +4,6 @@ GradientMeshEditor::GradientMeshEditor()
 {
     setOpaque(false);
 
-    createConic();
-
 #if 0
     auto clone = mesh.clonePatch(firstPatch, GradientMesh::Direction::north);
     clone->setUpperLeftColor(colors[1]);
@@ -39,7 +37,7 @@ GradientMeshEditor::GradientMeshEditor()
 #endif
 }
 
-void GradientMeshEditor::createConic()
+void GradientMeshEditor::createConic(float rotationAngle)
 {
     //
     // Squish the upper right corner onto the upper left corner so the top edge has zero length
@@ -72,23 +70,20 @@ void GradientMeshEditor::createConic()
     //
 
     float radius = (float)juce::jmin(getWidth() * 0.5f, getHeight() * 0.5f);
-    auto mousePos = getMouseXYRelative();
     auto center = juce::Point<float>{ getWidth() * 0.5f, getHeight() * 0.5f };
     auto upperRight = center + juce::Point<float>{ radius, 0.0f };
     auto lowerLeft = center + juce::Point<float>{ 0.0f, radius};
     juce::Point<float> radialPoint = center.getPointOnCircumference(radius, juce::MathConstants<float>::twoPi * (90.0f + 45.0f) / 360.0f);
 
-    auto angle = center.getAngleToPoint(mousePos.toFloat());// +juce::MathConstants<float>::pi;
-
     GradientMesh::PatchOptions options;
-    auto startColor = juce::Colours::magenta;
-    auto endColor = juce::Colours::magenta.withAlpha(0.0f);
+    auto startColor = juce::Colours::red;
+    auto endColor = juce::Colours::violet;
     std::array<juce::Colour, 5> colors
     {
         startColor,
-        startColor.interpolatedWith(endColor, 0.25f),
-        startColor.interpolatedWith(endColor, 0.50f),
-        startColor.interpolatedWith(endColor, 0.75f),
+        juce::Colours::orange,
+        juce::Colours::cyan,
+        juce::Colours::orange,
         endColor
     };
 
@@ -99,19 +94,22 @@ void GradientMeshEditor::createConic()
 
     options.topEdge = { center, center };
 
-    juce::Line<float> leftEdge(center, lowerLeft);
-    options.leftEdge = { leftEdge.getPointAlongLineProportionally(0.5f), leftEdge.getPointAlongLineProportionally(0.5f) };
+    juce::Line<float> leftEdgeLine(center, lowerLeft);
+    options.leftEdge = GradientMesh::PatchOptions::VerticalEdge{ leftEdgeLine.getPointAlongLineProportionally(0.5f), leftEdgeLine.getPointAlongLineProportionally(0.5f), GradientMesh::EdgeAliasingMode::inflated };
 
-    juce::Line<float> rightEdge(center, upperRight);
-    options.rightEdge = { rightEdge.getPointAlongLineProportionally(0.5f), rightEdge.getPointAlongLineProportionally(0.5f) };
+    juce::Line<float> rightEdgeLine(center, upperRight);
+    options.rightEdge = { rightEdgeLine.getPointAlongLineProportionally(0.5f), rightEdgeLine.getPointAlongLineProportionally(0.5f), GradientMesh::EdgeAliasingMode::inflated };
 
     auto controlPointOffset = radius * 0.55f;
-    options.bottomEdge = { lowerLeft.translated(controlPointOffset, 0.0f), upperRight.translated(0.0f, controlPointOffset) };
+    options.bottomEdge = { lowerLeft.translated(controlPointOffset, 0.0f), upperRight.translated(0.0f, controlPointOffset), GradientMesh::EdgeAliasingMode::inflated };
 
     mesh.reset();
     auto firstPatch = mesh.addPatch(options);
+    firstPatch->applyTransform(juce::AffineTransform::rotation(rotationAngle, center.x, center.y));
 
     auto clone = mesh.clonePatch(firstPatch, GradientMesh::Direction::north);
+    clone->setEdgeAliasingMode(GradientMesh::Edge::leftEdge, GradientMesh::EdgeAliasingMode::inflated);
+    clone->setEdgeAliasingMode(GradientMesh::Edge::rightEdge, GradientMesh::EdgeAliasingMode::inflated);
     clone->setUpperLeftColor(colors[1]);
     clone->setUpperRightColor(colors[2]);
     clone->setLowerRightColor(colors[2]);
@@ -126,6 +124,7 @@ void GradientMeshEditor::createConic()
     clone->applyTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::twoPi * -0.25f, center.x, center.y));
 
     clone = mesh.clonePatch(clone, GradientMesh::Direction::south);
+    clone->setEdgeAliasingMode(GradientMesh::Edge::rightEdge, GradientMesh::EdgeAliasingMode::inflated);
     clone->setUpperLeftColor(colors[3]);
     clone->setUpperRightColor(endColor);
     clone->setLowerRightColor(endColor);
@@ -136,7 +135,6 @@ void GradientMeshEditor::createConic()
 void GradientMeshEditor::createSinglePatch()
 {
     mesh.reset();
-
 
     GradientMesh::PatchOptions options;
     auto bounds = getLocalBounds().toFloat().reduced(100.0f);
@@ -159,8 +157,6 @@ void GradientMeshEditor::createSinglePatch()
     options.bottomEdge = { { bounds.proportionOfWidth(0.25f), bounds.getBottom() - 50.0f }, { bounds.proportionOfWidth(0.75f), bounds.getBottom() + 50.0f } };
 
     mesh.addPatch(options);
-
-    phase += 0.01;
 }
 
 GradientMeshEditor::~GradientMeshEditor()
@@ -175,12 +171,19 @@ juce::Rectangle<int> GradientMeshEditor::getPreferredSize()
 
 void GradientMeshEditor::paint(juce::Graphics& g)
 {
+    auto now = juce::Time::getMillisecondCounterHiRes();
+    auto elapsedSeconds = (now - lastMsec) * 0.001;
+    lastMsec = now;
+    auto constexpr cyclesPerSecond = 0.1;
+    phase += cyclesPerSecond * elapsedSeconds * juce::MathConstants<double>::twoPi;
+
     createSinglePatch();
+    //createConic((float)phase);
     mesh.draw(meshImage, {});
 
     g.fillAll(juce::Colours::black);
 
-    g.setColour(juce::Colours::white);
+    g.setColour(juce::Colours::darkgrey);
     g.setFont(getHeight() * 0.3f);
     g.drawFittedText("Gradient Mesh", getLocalBounds(), juce::Justification::centred, 1);
 
@@ -198,8 +201,8 @@ void GradientMeshEditor::resized()
 {
     meshImage = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
     //createConic();
-    createSinglePatch();
-    mesh.draw(meshImage, {});
+    //createSinglePatch();
+    //mesh.draw(meshImage, {});
 }
 
 void GradientMeshEditor::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel)

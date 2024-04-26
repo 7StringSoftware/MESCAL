@@ -529,6 +529,16 @@ void GradientMesh::Patch::setLowerRightColor(juce::Colour color)
     options.lowerRightCorner.color = color;
 }
 
+void GradientMesh::Patch::setEdgeAliasingMode(Edge edge, EdgeAliasingMode mode)
+{
+    std::array<EdgeAliasingMode* const, 4> edgeModes
+    {
+        &options.topEdge.aliasingMode, &options.rightEdge.aliasingMode, &options.bottomEdge.aliasingMode, &options.leftEdge.aliasingMode
+    };
+
+    *edgeModes[(size_t)edge] = mode;
+}
+
 void GradientMesh::reset()
 {
     patches.clear();

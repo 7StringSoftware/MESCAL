@@ -9,7 +9,7 @@ class GradientMeshEditor  : public juce::Component
 public:
     GradientMeshEditor();
 
-    void createConic();
+    void createConic(float rotationAngle);
     void createSinglePatch();
 
     ~GradientMeshEditor() override;
@@ -39,9 +39,13 @@ private:
     juce::Image meshImage;
     std::vector<std::unique_ptr<ControlPointComponent>> controlPointComponents;
     std::vector<std::unique_ptr<PatchComponent>> patchComponents;
-    juce::VBlankAttachment vblankAttachment{ this, [this] { repaint();  } };
+    juce::VBlankAttachment vblankAttachment{ this, [this] 
+        { 
+            repaint(); 
+        } };
 
     float zoom = 1.0f;
+    double lastMsec = juce::Time::getMillisecondCounterHiRes();
     double phase = 0.0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GradientMeshEditor)
