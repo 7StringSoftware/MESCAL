@@ -199,6 +199,8 @@ public:
         return patches;
     }
 
+    void reset();
+
 private:
     struct Pimpl;
     std::unique_ptr<Pimpl> pimpl;

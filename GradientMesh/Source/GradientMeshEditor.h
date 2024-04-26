@@ -8,6 +8,10 @@ class GradientMeshEditor  : public juce::Component
 {
 public:
     GradientMeshEditor();
+
+    void createConic();
+    void createSinglePatch();
+
     ~GradientMeshEditor() override;
 
     juce::Rectangle<int> getPreferredSize();
@@ -38,7 +42,7 @@ private:
     juce::VBlankAttachment vblankAttachment{ this, [this] { repaint();  } };
 
     float zoom = 1.0f;
-    double phase = 0.0f;
+    double phase = 0.0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GradientMeshEditor)
 };

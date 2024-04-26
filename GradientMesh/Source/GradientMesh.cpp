@@ -131,8 +131,8 @@ void GradientMesh::updateMesh()
                 juce::D2DUtilities::toCOLOR_F(patch->options.lowerRightCorner.color),
                 juce::D2DUtilities::toCOLOR_F(patch->options.lowerLeftCorner.color),
 
-                D2D1_PATCH_EDGE_MODE_ALIASED_INFLATED, D2D1_PATCH_EDGE_MODE_ALIASED, D2D1_PATCH_EDGE_MODE_ALIASED, D2D1_PATCH_EDGE_MODE_ALIASED);
-                //D2D1_PATCH_EDGE_MODE_ANTIALIASED, D2D1_PATCH_EDGE_MODE_ANTIALIASED, D2D1_PATCH_EDGE_MODE_ANTIALIASED, D2D1_PATCH_EDGE_MODE_ANTIALIASED);
+                //D2D1_PATCH_EDGE_MODE_ALIASED_INFLATED, D2D1_PATCH_EDGE_MODE_ALIASED, D2D1_PATCH_EDGE_MODE_ALIASED, D2D1_PATCH_EDGE_MODE_ALIASED);
+                D2D1_PATCH_EDGE_MODE_ANTIALIASED, D2D1_PATCH_EDGE_MODE_ANTIALIASED, D2D1_PATCH_EDGE_MODE_ANTIALIASED, D2D1_PATCH_EDGE_MODE_ANTIALIASED);
             d2dPatch++;
         }
 
@@ -527,4 +527,10 @@ void GradientMesh::Patch::setLowerLeftColor(juce::Colour color)
 void GradientMesh::Patch::setLowerRightColor(juce::Colour color)
 {
     options.lowerRightCorner.color = color;
+}
+
+void GradientMesh::reset()
+{
+    patches.clear();
+    pimpl->gradientMesh = nullptr;
 }

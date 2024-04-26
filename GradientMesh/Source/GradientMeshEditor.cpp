@@ -4,11 +4,81 @@ GradientMeshEditor::GradientMeshEditor()
 {
     setOpaque(false);
 
-    float radius = 200.0f;
-    auto center = juce::Point<float>{ 0.0f, 0.0f };
+    createConic();
+
+#if 0
+    auto clone = mesh.clonePatch(firstPatch, GradientMesh::Direction::north);
+    clone->setUpperLeftColor(colors[1]);
+    clone->setUpperRightColor(colors[2]);
+    clone->setLowerRightColor(colors[2]);
+    clone->setLowerLeftColor(colors[1]);
+    clone->applyTransform(juce::AffineTransform::rotation(angle + juce::MathConstants<float>::twoPi * -0.25f, radius, radius));
+
+    clone = mesh.clonePatch(clone, GradientMesh::Direction::west);
+    clone->setUpperLeftColor(colors[2]);
+    clone->setUpperRightColor(colors[3]);
+    clone->setLowerRightColor(colors[3]);
+    clone->setLowerLeftColor(colors[2]);
+    clone->applyTransform(juce::AffineTransform::rotation(angle + juce::MathConstants<float>::twoPi * -0.25f, radius, radius));
+
+    clone = mesh.clonePatch(clone, GradientMesh::Direction::south);
+    clone->setUpperLeftColor(colors[3]);
+    clone->setUpperRightColor(endColor);
+    clone->setLowerRightColor(endColor);
+    clone->setLowerLeftColor(colors[3]);
+    clone->applyTransform(juce::AffineTransform::rotation(angle + juce::MathConstants<float>::twoPi * -0.25f, radius, radius));
+#endif
+
+#if 0
+    for (auto patch : mesh.getPatches())
+    {
+        auto patchComponent = std::make_unique<PatchComponent>(patch);
+        addAndMakeVisible(patchComponent.get());
+        patchComponents.emplace_back(std::move(patchComponent));
+    }
+#endif
+}
+
+void GradientMeshEditor::createConic()
+{
+    //
+    // Squish the upper right corner onto the upper left corner so the top edge has zero length
+    //
+    //                            RIGHT EDGE
+    //     P00 / P01 / P02 / P03 -----------P33
+    //              |                        |
+    //              |                       /
+    //              |                      /
+    //              |                     /
+    //              |                    /
+    //              |                   /
+    //            L |                  /
+    //            E |                 / B
+    //            F |                / O
+    //            T |               / T
+    //              |              / T
+    //            E |             / O
+    //            D |            / M
+    //            G |           /
+    //            E |          / E
+    //              |         / D
+    //              |        / G
+    //              |       / E
+    //              |      /
+    //              |     /
+    //              |    /
+    //              |   /
+    //               P30
+    //
+
+    float radius = (float)juce::jmin(getWidth() * 0.5f, getHeight() * 0.5f);
+    auto mousePos = getMouseXYRelative();
+    auto center = juce::Point<float>{ getWidth() * 0.5f, getHeight() * 0.5f };
     auto upperRight = center + juce::Point<float>{ radius, 0.0f };
     auto lowerLeft = center + juce::Point<float>{ 0.0f, radius};
     juce::Point<float> radialPoint = center.getPointOnCircumference(radius, juce::MathConstants<float>::twoPi * (90.0f + 45.0f) / 360.0f);
+
+    auto angle = center.getAngleToPoint(mousePos.toFloat());// +juce::MathConstants<float>::pi;
 
     GradientMesh::PatchOptions options;
     auto startColor = juce::Colours::magenta;
@@ -35,106 +105,62 @@ GradientMeshEditor::GradientMeshEditor()
     juce::Line<float> rightEdge(center, upperRight);
     options.rightEdge = { rightEdge.getPointAlongLineProportionally(0.5f), rightEdge.getPointAlongLineProportionally(0.5f) };
 
+    auto controlPointOffset = radius * 0.55f;
+    options.bottomEdge = { lowerLeft.translated(controlPointOffset, 0.0f), upperRight.translated(0.0f, controlPointOffset) };
 
-    auto distance = radius * 0.50f;
-    auto angle = center.getAngleToPoint(radialPoint);
-    auto tangentLine = juce::Line<float>::fromStartAndAngle(radialPoint, distance, angle + juce::MathConstants<float>::halfPi);
-    //options.rightEdge = { upperRight.translated(0.0f, distance), tangentLine.getPointAlongLineProportionally(-1.0f) };
-
-    options.bottomEdge = { lowerLeft.translated(distance, 0.0f), upperRight.translated(0.0f, distance) };
-
+    mesh.reset();
     auto firstPatch = mesh.addPatch(options);
-    firstPatch->translate(radius, radius);
 
     auto clone = mesh.clonePatch(firstPatch, GradientMesh::Direction::north);
     clone->setUpperLeftColor(colors[1]);
     clone->setUpperRightColor(colors[2]);
     clone->setLowerRightColor(colors[2]);
     clone->setLowerLeftColor(colors[1]);
-    clone->applyTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::twoPi * -0.25f, radius, radius));
+    clone->applyTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::twoPi * -0.25f, center.x, center.y));
 
     clone = mesh.clonePatch(clone, GradientMesh::Direction::west);
-    //cloneStartColor = cloneEndColor;
-    //cloneEndColor = startColor.interpolatedWith(endColor, 0.75f);
     clone->setUpperLeftColor(colors[2]);
     clone->setUpperRightColor(colors[3]);
     clone->setLowerRightColor(colors[3]);
     clone->setLowerLeftColor(colors[2]);
-    clone->applyTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::twoPi * -0.25f, radius, radius));
+    clone->applyTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::twoPi * -0.25f, center.x, center.y));
 
     clone = mesh.clonePatch(clone, GradientMesh::Direction::south);
     clone->setUpperLeftColor(colors[3]);
     clone->setUpperRightColor(endColor);
     clone->setLowerRightColor(endColor);
     clone->setLowerLeftColor(colors[3]);
-    clone->applyTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::twoPi * -0.25f, radius, radius));
+    clone->applyTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::twoPi * -0.25f, center.x, center.y));
+}
 
-//     clone->flipControlPointsVertically();
-    //clone->flipColorsVertically();
-
-#if 0
-    auto clone = mesh.clonePatch(firstPatch, GradientMesh::Direction::east);
-    clone->translate(500.0f, 0.0f);
-    clone->flipColorsHorizontally();
-
-    clone = mesh.clonePatch(clone, GradientMesh::Direction::south);
-    clone->translate(0.0f, 500.0f);
-    clone->flipControlPointsVertically();
-
-    clone = mesh.clonePatch(firstPatch, GradientMesh::Direction::south);
-    clone->translate(0.0f, 500.0f);
-    clone->flipControlPointsVertically();
-#endif
+void GradientMeshEditor::createSinglePatch()
+{
+    mesh.reset();
 
 
-#if 0
-    mesh.addConnectedPatch(nullptr, GradientMesh::Direction::east,
-        { juce::Colours::yellow, juce::Colours::red, juce::Colours::violet, juce::Colours::blue });
+    GradientMesh::PatchOptions options;
+    auto bounds = getLocalBounds().toFloat().reduced(100.0f);
 
-    mesh.addConnectedPatch(nullptr, GradientMesh::Direction::south,
-        { juce::Colours::blue, juce::Colours::violet, juce::Colours::red, juce::Colours::yellow });
+    float alpha = (float)std::sin(phase) * 0.5f + 0.5f;
+    options.upperLeftCorner = { bounds.getTopLeft(), juce::Colours::magenta.withAlpha(alpha)};
 
-    mesh.addConnectedPatch(nullptr, GradientMesh::Direction::west,
-        { juce::Colours::violet, juce::Colours::blue, juce::Colours::yellow, juce::Colours::red });
-#endif
+    alpha = (float)std::sin(phase + juce::MathConstants<float>::halfPi) * 0.5f + 0.5f;
+    options.upperRightCorner = { bounds.getTopRight(), juce::Colours::cyan.withAlpha(alpha)};
+    
+    alpha = (float)std::sin(phase + juce::MathConstants<float>::pi) * 0.5f + 0.5f;
+    options.lowerRightCorner = { bounds.getBottomRight(), juce::Colours::yellow.withAlpha(alpha)};
+    
+    alpha = (float)std::sin(phase + 1.5f * juce::MathConstants<float>::pi) * 0.5f + 0.5f;
+    options.lowerLeftCorner = { bounds.getBottomLeft(), juce::Colours::aliceblue.withAlpha(alpha) };
 
-#if 0
-    auto patch = mesh.getPatches().getFirst();
+    options.topEdge = { { bounds.proportionOfWidth(0.25f), bounds.getY() - 50.0f }, { bounds.proportionOfWidth(0.75f), bounds.getY() + 50.0f} };
+    options.leftEdge = { { bounds.getX() - 50.0f, bounds.proportionOfHeight(0.25f) }, { bounds.getX() - 50.0f, bounds.proportionOfHeight(0.75f) } };
+    options.rightEdge = { { bounds.getRight() + 50.0f, bounds.proportionOfHeight(0.25f) }, { bounds.getRight() + 50.0f, bounds.proportionOfHeight(0.75f) } };
+    options.bottomEdge = { { bounds.proportionOfWidth(0.25f), bounds.getBottom() - 50.0f }, { bounds.proportionOfWidth(0.75f), bounds.getBottom() + 50.0f } };
 
-    for (int index = 0; index < GradientMesh::Patch::numControlPoints; ++index)
-    {
-        auto gridPosition = GradientMesh::Patch::indexToGridPosition(index);
-        auto controlPointComponent = std::make_unique<ControlPointComponent>(gridPosition, patch->getControlPointColor(gridPosition));
+    mesh.addPatch(options);
 
-        String name;
-        name << gridPosition.row << gridPosition.column;
-        controlPointComponent->setName(name);
-
-        juce::Component::SafePointer<ControlPointComponent> compSafePointer = controlPointComponent.get();
-        controlPointComponent->onMove = [=]()
-            {
-                if (compSafePointer != nullptr)
-                {
-                    auto pos = compSafePointer->getBounds().toFloat().getCentre();
-                    mesh.setControlPointPosition(patch, gridPosition, pos.toFloat());
-                    if (compSafePointer->color.has_value())
-                        mesh.setControlPointColor(patch, gridPosition, *(compSafePointer->color));
-
-                    repaint();
-                }
-            };
-
-        addAndMakeVisible(controlPointComponent.get());
-        controlPointComponents.emplace_back(std::move(controlPointComponent));
-    }
-#endif
-
-    for (auto patch : mesh.getPatches())
-    {
-        auto patchComponent = std::make_unique<PatchComponent>(patch);
-        addAndMakeVisible(patchComponent.get());
-        patchComponents.emplace_back(std::move(patchComponent));
-    }
+    phase += 0.01;
 }
 
 GradientMeshEditor::~GradientMeshEditor()
@@ -149,36 +175,31 @@ juce::Rectangle<int> GradientMeshEditor::getPreferredSize()
 
 void GradientMeshEditor::paint(juce::Graphics& g)
 {
+    createSinglePatch();
+    mesh.draw(meshImage, {});
+
     g.fillAll(juce::Colours::black);
 
-    phase += juce::MathConstants<double>::twoPi * 0.01;
-    g.addTransform(juce::AffineTransform::rotation((float)std::sin(phase), 200.0f, 200.0f));
+    g.setColour(juce::Colours::white);
+    g.setFont(getHeight() * 0.3f);
+    g.drawFittedText("Gradient Mesh", getLocalBounds(), juce::Justification::centred, 1);
 
-    mesh.draw(meshImage, {});
-    g.drawImageAt(meshImage, 0, 0);
+    {
+        g.beginTransparencyLayer(0.75f);
+        g.drawImageAt(meshImage, 0, 0);
+        g.endTransparencyLayer();
+    }
+
+    g.setTiledImageFill(meshImage, 0, 0, 1.0f);
+    g.drawFittedText("Gradient Mesh", getLocalBounds(), juce::Justification::centred, 1);
 }
 
 void GradientMeshEditor::resized()
 {
-#if 0
-    auto const firstPatch = mesh.getPatches().getFirst();
-
-    for (auto& controlPointComponent : controlPointComponents)
-    {
-        auto pos = firstPatch->getControlPointPosition(controlPointComponent->gridPosition).roundToInt();
-        controlPointComponent->setSize(32, 32);
-        controlPointComponent->setCentrePosition(pos.x, pos.y);
-    }
-
-    for (auto& patchComponent : patchComponents)
-    {
-        auto bounds = patchComponent->patch->getBounds().toNearestInt();
-        patchComponent->setBounds(bounds);
-    }
-#endif
-
     meshImage = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
-
+    //createConic();
+    createSinglePatch();
+    mesh.draw(meshImage, {});
 }
 
 void GradientMeshEditor::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel)
