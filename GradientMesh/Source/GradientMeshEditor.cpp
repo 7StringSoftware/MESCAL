@@ -1,6 +1,14 @@
 #include "GradientMeshEditor.h"
 
-GradientMeshEditor::GradientMeshEditor()
+static Path makePath()
+{
+    juce::Path p;
+    p.addRoundedRectangle(juce::Rectangle<float>{ 10.0f, 10.0f, 500.0f, 500.0f }, 25.0f);
+    return p;
+}
+
+GradientMeshEditor::GradientMeshEditor() :
+    mesher(makePath())
 {
     setOpaque(false);
 
@@ -171,6 +179,7 @@ juce::Rectangle<int> GradientMeshEditor::getPreferredSize()
 
 void GradientMeshEditor::paint(juce::Graphics& g)
 {
+#if 0
     auto now = juce::Time::getMillisecondCounterHiRes();
     auto elapsedSeconds = (now - lastMsec) * 0.001;
     lastMsec = now;
@@ -195,6 +204,58 @@ void GradientMeshEditor::paint(juce::Graphics& g)
 
     g.setTiledImageFill(meshImage, 0, 0, 1.0f);
     g.drawFittedText("Gradient Mesh", getLocalBounds(), juce::Justification::centred, 1);
+#endif
+
+#if 0
+    Path p;
+    p.addRectangle(getLocalBounds().reduced(100).toFloat());
+
+    PathFlatteningIterator iterator{ p };
+    std::vector<juce::Point<float>> points;
+    if (iterator.next())
+    {
+        points.push_back({ iterator.x1, iterator.y1 });
+        points.push_back({ iterator.x2, iterator.y2 });
+    }
+    while (iterator.next())
+    {
+        points.push_back({ iterator.x2, iterator.y2 });
+    }
+
+    std::vector<Vector2d> triangles;
+    Triangulate::Process(points, triangles);
+
+    {
+        g.setColour(juce::Colours::darkgrey);
+        g.fillPath(p);
+
+        auto num = triangles.size() / 3;
+        jassert(triangles.size() % 3 == 0);
+        for (auto i= 0; i < num; i += 3)
+        {
+            g.setColour(juce::Colours::white);
+            juce::Path p2;
+            p2.addTriangle(triangles[i], triangles[i + 1], triangles[i + 2]);
+            g.fillPath(p2);
+        }
+    }
+#endif
+
+    g.setColour(juce::Colours::darkgrey);
+    g.fillPath(mesher.path);
+
+    auto bounds = mesher.path.getBounds();
+    for (auto const& rowHeight : mesher.rowHeights)
+    {
+        g.setColour(juce::Colours::white);
+        g.fillRect(bounds.getX(), bounds.getY() + rowHeight - 0.5f, bounds.getWidth(), 1.0f);
+    }
+
+    for (auto const& columnWidth : mesher.columnWidths)
+    {
+        g.setColour(juce::Colours::white);
+        g.fillRect(bounds.getX() + columnWidth - 0.5f, bounds.getY(), 1.0f, bounds.getHeight());
+    }
 }
 
 void GradientMeshEditor::resized()

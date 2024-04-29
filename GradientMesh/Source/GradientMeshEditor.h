@@ -3,6 +3,8 @@
 #include "Base.h"
 #include "GradientMesh.h"
 #include "ControlPointComponent.h"
+#include "Triangulator.h"
+#include "Mesher.h"
 
 class GradientMeshEditor  : public juce::Component
 {
@@ -47,6 +49,8 @@ private:
     float zoom = 1.0f;
     double lastMsec = juce::Time::getMillisecondCounterHiRes();
     double phase = 0.0;
+
+    Mesher mesher;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GradientMeshEditor)
 };

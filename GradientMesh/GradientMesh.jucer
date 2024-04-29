@@ -4,6 +4,11 @@
               id="NJ5XEl" jucerFormatVersion="1">
   <MAINGROUP id="fTgw8y" name="GradientMesh">
     <GROUP id="{07B94160-CF67-DC8B-7081-698B080E7B38}" name="Source">
+      <FILE id="bQe32Z" name="Mesher.cpp" compile="1" resource="0" file="Source/Mesher.cpp"/>
+      <FILE id="IzgBRn" name="Mesher.h" compile="0" resource="0" file="Source/Mesher.h"/>
+      <FILE id="xFrlu7" name="Triangulator.cpp" compile="1" resource="0"
+            file="Source/Triangulator.cpp"/>
+      <FILE id="N0Ol4b" name="Triangulator.h" compile="0" resource="0" file="Source/Triangulator.h"/>
       <FILE id="aXNKtb" name="Base.h" compile="0" resource="0" file="Source/Base.h"/>
       <FILE id="jEsi8N" name="Commander.cpp" compile="1" resource="0" file="Source/Commander.cpp"/>
       <FILE id="tv7bbM" name="Commander.h" compile="0" resource="0" file="Source/Commander.h"/>
