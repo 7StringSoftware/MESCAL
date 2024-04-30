@@ -4,6 +4,7 @@ static Path makePath()
 {
     juce::Path p;
     p.addRoundedRectangle(juce::Rectangle<float>{ 10.0f, 10.0f, 500.0f, 500.0f }, 25.0f);
+    //p.addEllipse(10.0f, 10.0f, 500.0f, 500.0f);
     return p;
 }
 
@@ -245,16 +246,23 @@ void GradientMeshEditor::paint(juce::Graphics& g)
     g.fillPath(mesher.path);
 
     auto bounds = mesher.path.getBounds();
-    for (auto const& rowHeight : mesher.rowHeights)
+
+    for (auto const& vertex : mesher.perimeterVertices)
     {
         g.setColour(juce::Colours::white);
-        g.fillRect(bounds.getX(), bounds.getY() + rowHeight - 0.5f, bounds.getWidth(), 1.0f);
+        g.fillEllipse(juce::Rectangle<float>{ 10.0f, 10.0f}.withCentre(vertex.point));
     }
 
-    for (auto const& columnWidth : mesher.columnWidths)
+    for (auto const& y : mesher.yPositions)
     {
-        g.setColour(juce::Colours::white);
-        g.fillRect(bounds.getX() + columnWidth - 0.5f, bounds.getY(), 1.0f, bounds.getHeight());
+        g.setColour(juce::Colours::cyan);
+        g.fillRect(bounds.getX(), y - 0.5f, bounds.getWidth(), 1.0f);
+    }
+
+    for (auto const& x : mesher.xPositions)
+    {
+        g.setColour(juce::Colours::cyan);
+        g.fillRect(x - 0.5f, bounds.getY(), 1.0f, bounds.getHeight());
     }
 }
 
