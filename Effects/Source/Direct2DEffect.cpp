@@ -8,16 +8,26 @@
 #include <juce_graphics/native/juce_Direct2DImage_windows.h>
 #include <JuceHeader.h>
 #include "Direct2DEffect.h"
-#include "Direct2DEdgeDetectionEffect.h"
-#include "Direct2DEmbossEffect.h"
 
 struct Direct2DEffect::Pimpl
 {
-    Pimpl(GUID const effectGuid_) : effectGuid(effectGuid_)
+    static GUID typeToGuid(EffectType effectType)
+    {
+        switch (effectType)
+        {
+        case EffectType::spotDiffuseLighting:
+            //return CLSID_D2D1SpotDiffuse;
+            return CLSID_D2D1HighlightsShadows;
+        }
+
+        return {};
+    }
+
+    Pimpl(EffectType effectType_) : effectGuid{ typeToGuid(effectType_) }
     {
     }
 
-    virtual ~Pimpl()
+    ~Pimpl()
     {
     }
 
@@ -49,7 +59,10 @@ struct Direct2DEffect::Pimpl
         }
     }
 
-    virtual void configureEffect() = 0;
+    void configureEffect()
+    {
+
+    }
 
     GUID const effectGuid;
     juce::DxgiAdapter::Ptr adapter;
@@ -58,7 +71,9 @@ struct Direct2DEffect::Pimpl
     juce::Direct2DPixelData::Ptr outputPixelData;
 };
 
-Direct2DEffect::Direct2DEffect()
+Direct2DEffect::Direct2DEffect(EffectType effectType_) :
+    effectType(effectType_),
+    pimpl(std::make_unique<Pimpl>(effectType_))
 {
 }
 
@@ -74,7 +89,6 @@ void Direct2DEffect::applyEffect(juce::Image& sourceImage, juce::Graphics& destC
         return;
     }
 
-    auto pimpl = getPimpl();
     pimpl->createResources(sourceImage);
     if (!pimpl->deviceContext || !pimpl->adapter || !pimpl->adapter->dxgiAdapter)
     {
@@ -87,7 +101,7 @@ void Direct2DEffect::applyEffect(juce::Image& sourceImage, juce::Graphics& destC
         outputPixelData = juce::Direct2DPixelData::make(juce::Image::ARGB, sourceImage.getWidth(), sourceImage.getHeight(), true, pimpl->adapter);
     }
 
-    if (auto hr = pimpl->deviceContext->CreateEffect(CLSID_D2D1Emboss, pimpl->d2dEffect.put()); FAILED(hr))
+    if (auto hr = pimpl->deviceContext->CreateEffect(pimpl->effectGuid, pimpl->d2dEffect.put()); FAILED(hr))
     {
         jassertfalse;
         return;
@@ -105,5 +119,5 @@ void Direct2DEffect::applyEffect(juce::Image& sourceImage, juce::Graphics& destC
     destContext.drawImageAt(outputImage, 0, 0);
 }
 
-#include "Direct2DEdgeDetectionEffect.cpp"
-#include "Direct2DEmbossEffect.cpp"
+// #include "Direct2DEdgeDetectionEffect.cpp"
+// #include "Direct2DEmbossEffect.cpp"

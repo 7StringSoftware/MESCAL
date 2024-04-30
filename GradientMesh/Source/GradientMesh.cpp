@@ -398,6 +398,11 @@ GradientMesh::Patch::~Patch()
 {
 }
 
+void GradientMesh::Patch::setOptions(PatchOptions& options_)
+{
+    options = options_;
+}
+
 juce::Rectangle<float> GradientMesh::Patch::getBounds() const noexcept
 {
     //     juce::Rectangle<float> r1{ pimpl->d2dPatch.point00.x, pimpl->d2dPatch.point00.y, pimpl->d2dPatch.point33.x, pimpl->d2dPatch.point33.y };
@@ -509,24 +514,14 @@ void GradientMesh::Patch::flipColorsVertically()
     std::swap(options.upperRightCorner.color, options.lowerRightCorner.color);
 }
 
-void GradientMesh::Patch::setUpperLeftColor(juce::Colour color)
+void GradientMesh::Patch::setColor(Corner corner, juce::Colour color)
 {
-    options.upperLeftCorner.color = color;
-}
+    std::array<CornerOptions* const, 4> corners
+    {
+        &options.upperLeftCorner, &options.upperRightCorner, &options.lowerRightCorner, &options.lowerLeftCorner
+    };
 
-void GradientMesh::Patch::setUpperRightColor(juce::Colour color)
-{
-    options.upperRightCorner.color = color;
-}
-
-void GradientMesh::Patch::setLowerLeftColor(juce::Colour color)
-{
-    options.lowerLeftCorner.color = color;
-}
-
-void GradientMesh::Patch::setLowerRightColor(juce::Colour color)
-{
-    options.lowerRightCorner.color = color;
+    corners[(size_t)corner]->color = color;
 }
 
 void GradientMesh::Patch::setEdgeAliasingMode(Edge edge, EdgeAliasingMode mode)

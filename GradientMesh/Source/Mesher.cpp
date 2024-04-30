@@ -24,7 +24,7 @@ static juce::String print(juce::Path::Iterator const& it)
     else if (it.elementType == Path::Iterator::closePath)
     {
         line << "closePath";
-    }   
+    }
 
     return line;
 }
@@ -36,53 +36,63 @@ Mesher::Mesher(Path&& p) :
 
     auto bounds = p.getBounds();
 
+    juce::Point<float> previousPoint;
     juce::Point<float> point;
     juce::Point<float> subpathStart;
+    Edge edge{ Edge::Type::unknown };
     auto storeVertices = [&]()
         {
             DBG(print(it));
 
-            Vertex::Type type = Vertex::Type::unknown;
             if (it.elementType == juce::Path::Iterator::startNewSubPath)
             {
                 point = { it.x1, it.y1 };
-                type = Vertex::Type::start;
                 subpathStart = point;
+                previousPoint = point;
+                return;
             }
-            else if (it.elementType == Path::Iterator::lineTo)
+
+            if (it.elementType == Path::Iterator::lineTo)
             {
                 point = { it.x1, it.y1 };
-                type = Vertex::Type::line;
+                edge = Edge{ Edge::Type::line };
+                edge.line = { previousPoint, point };
             }
             else if (it.elementType == Path::Iterator::quadraticTo)
             {
                 point = { it.x2, it.y2 };
-                type = Vertex::Type::quadratic;
+                edge = Edge{ Edge::Type::quadratic };
+                edge.line = { previousPoint, point };
             }
             else if (it.elementType == Path::Iterator::cubicTo)
             {
                 point = { it.x3, it.y3 };
-                type = Vertex::Type::cubic;
+                edge = Edge{ Edge::Type::cubic };
+                edge.line = { previousPoint, point };
+                edge.controlPoints = { juce::Point<float>{ it.x1, it.y1 }, juce::Point<float>{ it.x2, it.y2 } };
             }
             else if (it.elementType == Path::Iterator::closePath)
             {
                 point = subpathStart;
-                type = Vertex::Type::close;
-
-                if (approximatelyEqual(point.x, subpathStart.x) && approximatelyEqual(point.y, subpathStart.y))
-                {
-                    return;
-                }
+                edge = Edge{ Edge::Type::line };
+                edge.line = { previousPoint, point };
             }
             else
             {
                 return;
             }
 
-            perimeterVertices.add(Vertex(type, point, bounds));
-            xySortedVertices.add(Vertex(type, point, bounds));
-            yPositions.add(point.y);
-            xPositions.add(point.x);
+
+            if (approximatelyEqual(point.x, previousPoint.x) && approximatelyEqual(point.y, previousPoint.y))
+            {
+                return;
+            }
+
+            DBG("     adding " << point.toString());
+            vertices.add(Vertex{ point });
+            edges.add(edge);
+
+            previousPoint = point;
         };
 
     while (it.next())
@@ -90,28 +100,29 @@ Mesher::Mesher(Path&& p) :
         storeVertices();
     }
 
-    auto lastPoint = perimeterVertices.getReference(perimeterVertices.size() - 1).point;
-    auto firstPoint = perimeterVertices.getReference(0).point;
-    float lastAngle = lastPoint.getAngleToPoint(firstPoint);
-    lastPoint = firstPoint;
-
-    for (auto index = 1; index < perimeterVertices.size(); ++index)
+    for (auto vertex : vertices)
     {
-        DBG("#" << index << " " << perimeterVertices.getReference(index).point.toString());
-
-        auto const& vertex = perimeterVertices.getReference(index);
-        auto angle = lastPoint.getAngleToPoint(vertex.point);
-        auto deltaRadians = std::abs(angle - lastAngle);
-        DBG("angle " << angle / juce::MathConstants<float>::twoPi << " lastAngle " << lastAngle / juce::MathConstants<float>::twoPi << " delta " << deltaRadians);
-        if (deltaRadians > juce::MathConstants<float>::halfPi * 0.99f)
-        {
-            DBG("new patch for " << lastPoint.toString());
-        }
-
-        DBG("\n");
-
-        lastPoint = vertex.point;
-        lastAngle = angle;
+        edges.add({ Edge::Type::line, juce::Line<float>{ vertex.point, bounds.getCentre() } });
     }
+
+    if (vertices.size() < 4)
+    {
+        return;
+    }
+
+    int numQuads = vertices.size() / 2;
+    int vertexIndex = 0;
+    for (int index = 0; index < numQuads; ++index)
+    {
+        quads.add(Quadrilateral{ { vertices[vertexIndex].point, vertices[vertexIndex + 1].point, vertices[vertexIndex + 2].point, bounds.getCentre()} });
+        vertexIndex += 2;
+    }
+
+    if (vertices.size() & 1)
+    {
+        quads.add(Quadrilateral{ { vertices[vertices.size() - 1].point, vertices[0].point, bounds.getCentre(), bounds.getCentre()} });
+    }
+
+    vertices.add(Vertex{ bounds.getCentre() });
 }
 

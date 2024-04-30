@@ -73,7 +73,6 @@
 class GradientMesh
 {
 public:
-    GradientMesh(std::array<juce::Point<float>, 4> cornerPositions);
     GradientMesh();
     ~GradientMesh();
 
@@ -91,6 +90,21 @@ public:
     {
         horizontal,
         vertical
+    };
+
+    enum class EdgeAliasingMode
+    {
+        aliased,
+        antialised,
+        inflated
+    };
+
+    enum class Edge
+    {
+        topEdge,
+        rightEdge,
+        bottomEdge,
+        leftEdge
     };
 
     struct GridCoordinates
@@ -119,21 +133,6 @@ public:
     {
         juce::Point<float> position;
         juce::Colour color;
-    };
-
-    enum class EdgeAliasingMode
-    {
-        aliased,
-        antialised,
-        inflated
-    };
-
-    enum class Edge
-    {
-        topEdge,
-        rightEdge,
-        bottomEdge,
-        leftEdge
     };
 
     struct PatchOptions
@@ -167,6 +166,8 @@ public:
         Patch(Patch const& other);
         ~Patch();
 
+        void setOptions(PatchOptions& options);
+
         juce::Rectangle<float> getBounds() const noexcept;
         void translate(float x, float y);
         void applyTransform(juce::AffineTransform transform);
@@ -175,11 +176,7 @@ public:
         void flipControlPointsVertically();
         void flipColorsVertically();
 
-        void setUpperLeftColor(juce::Colour color);
-        void setUpperRightColor(juce::Colour color);
-        void setLowerLeftColor(juce::Colour color);
-        void setLowerRightColor(juce::Colour color);
-
+        void setColor(Corner corner, juce::Colour color);
         void setEdgeAliasingMode(Edge edge, EdgeAliasingMode mode);
 
         using Ptr = juce::ReferenceCountedObjectPtr<Patch>;

@@ -4,7 +4,7 @@ struct Mesher
 {
     Mesher(Path&& p);
 
-    struct Vertex
+    struct Edge
     {
         enum class Type
         {
@@ -14,58 +14,42 @@ struct Mesher
             quadratic,
             cubic,
             close,
-        } type;
+        } type = Type::unknown;
 
+        juce::Line<float> line;
+        std::array<std::optional<juce::Point<float>>, 2> controlPoints;
+    };
+
+    struct Vertex
+    {
         juce::Point<float> point;
-        juce::Rectangle<float> containingBounds;
 
-        Vertex(Type t, juce::Point<float> p, juce::Rectangle<float> containingBounds_) :
-            type(t),
-            point(p),
-            containingBounds(containingBounds_)
+        Vertex() = default;
+
+        Vertex(juce::Point<float> p) :
+            point(p)
         {
         }
 
-        bool operator<(const Vertex& other) const
+        Vertex(Vertex const& other) :
+            point(other.point)
         {
-            return getScore() < other.getScore();
-        }
-
-        bool operator>(const Vertex& other) const
-        {
-            return getScore() > other.getScore();
-        }
-
-        bool operator==(const Vertex& other) const
-        {
-            return approximatelyEqual(point.x, other.point.x) && approximatelyEqual(point.y, other.point.y);
-        }
-
-        bool operator!=(const Vertex& other) const
-        {
-            return !(*this == other);
-        }
-
-        bool operator<=(const Vertex& other) const
-        {
-            return *this < other || *this == other;
-        }
-
-        bool operator>=(const Vertex& other) const
-        {
-            return *this > other || *this == other;
-        }
-
-        float getScore() const noexcept
-        {
-            return point.y * containingBounds.getWidth() + point.x;
         }
     };
 
-    juce::Array<Vertex> perimeterVertices;
-    juce::SortedSet<Vertex> xySortedVertices;
-    juce::SortedSet<float> xPositions;
-    juce::SortedSet<float> yPositions;
+    struct Triangle
+    {
+        std::array<juce::Point<float>, 3> vertices;
+    };
+
+    struct Quadrilateral
+    {
+        std::array<juce::Point<float>, 4> vertices;
+    };
+
+    juce::Array<Vertex> vertices;
+    juce::Array<Edge> edges;
+    juce::Array<Quadrilateral> quads;
     juce::Path path;
 };
 

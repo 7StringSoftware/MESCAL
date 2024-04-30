@@ -3,8 +3,14 @@
 static Path makePath()
 {
     juce::Path p;
-    p.addRoundedRectangle(juce::Rectangle<float>{ 10.0f, 10.0f, 500.0f, 500.0f }, 25.0f);
+    p.addRoundedRectangle(juce::Rectangle<float>{ 100.0f, 100.0f, 500.0f, 500.0f }, 25.0f);
+    //p.addStar({ 350.0f, 350.0f }, 8, 200.0f, 300.0f);
     //p.addEllipse(10.0f, 10.0f, 500.0f, 500.0f);
+    p.addPolygon({ 400.0f, 400.0f }, 7, 300.0f);
+    p.applyTransform(juce::AffineTransform::rotation(0.2f, p.getBounds().getCentreX(), p.getBounds().getCentreY()));
+
+
+
     return p;
 }
 
@@ -48,6 +54,7 @@ GradientMeshEditor::GradientMeshEditor() :
 
 void GradientMeshEditor::createConic(float rotationAngle)
 {
+#if 0
     //
     // Squish the upper right corner onto the upper left corner so the top edge has zero length
     //
@@ -139,6 +146,7 @@ void GradientMeshEditor::createConic(float rotationAngle)
     clone->setLowerRightColor(endColor);
     clone->setLowerLeftColor(colors[3]);
     clone->applyTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::twoPi * -0.25f, center.x, center.y));
+#endif
 }
 
 void GradientMeshEditor::createSinglePatch()
@@ -149,14 +157,14 @@ void GradientMeshEditor::createSinglePatch()
     auto bounds = getLocalBounds().toFloat().reduced(100.0f);
 
     float alpha = (float)std::sin(phase) * 0.5f + 0.5f;
-    options.upperLeftCorner = { bounds.getTopLeft(), juce::Colours::magenta.withAlpha(alpha)};
+    options.upperLeftCorner = { bounds.getTopLeft(), juce::Colours::magenta.withAlpha(alpha) };
 
     alpha = (float)std::sin(phase + juce::MathConstants<float>::halfPi) * 0.5f + 0.5f;
-    options.upperRightCorner = { bounds.getTopRight(), juce::Colours::cyan.withAlpha(alpha)};
-    
+    options.upperRightCorner = { bounds.getTopRight(), juce::Colours::cyan.withAlpha(alpha) };
+
     alpha = (float)std::sin(phase + juce::MathConstants<float>::pi) * 0.5f + 0.5f;
-    options.lowerRightCorner = { bounds.getBottomRight(), juce::Colours::yellow.withAlpha(alpha)};
-    
+    options.lowerRightCorner = { bounds.getBottomRight(), juce::Colours::yellow.withAlpha(alpha) };
+
     alpha = (float)std::sin(phase + 1.5f * juce::MathConstants<float>::pi) * 0.5f + 0.5f;
     options.lowerLeftCorner = { bounds.getBottomLeft(), juce::Colours::aliceblue.withAlpha(alpha) };
 
@@ -232,7 +240,7 @@ void GradientMeshEditor::paint(juce::Graphics& g)
 
         auto num = triangles.size() / 3;
         jassert(triangles.size() % 3 == 0);
-        for (auto i= 0; i < num; i += 3)
+        for (auto i = 0; i < num; i += 3)
         {
             g.setColour(juce::Colours::white);
             juce::Path p2;
@@ -246,24 +254,46 @@ void GradientMeshEditor::paint(juce::Graphics& g)
     g.fillPath(mesher.path);
 
     auto bounds = mesher.path.getBounds();
+#if 1
 
-    for (auto const& vertex : mesher.perimeterVertices)
+    for (auto const& vertex : mesher.vertices)
     {
-        g.setColour(juce::Colours::white);
+        g.setColour(juce::Colours::blue);
         g.fillEllipse(juce::Rectangle<float>{ 10.0f, 10.0f}.withCentre(vertex.point));
     }
+#endif
 
-    for (auto const& y : mesher.yPositions)
+    for (auto const& edge : mesher.edges)
     {
-        g.setColour(juce::Colours::cyan);
-        g.fillRect(bounds.getX(), y - 0.5f, bounds.getWidth(), 1.0f);
+        g.setColour(juce::Colours::white);
+
+        if (edge.type == Mesher::Edge::Type::cubic)
+        {
+            Path p;
+            p.startNewSubPath(edge.line.getStart());
+            p.cubicTo(edge.controlPoints[0].value(), edge.controlPoints[1].value(), edge.line.getEnd());
+            g.strokePath(p, juce::PathStrokeType(2.0f));
+            continue;
+        }
+
+        g.drawLine(edge.line, 2.0f);
     }
 
-    for (auto const& x : mesher.xPositions)
+#if 0
+    for (auto const& quad : mesher.quads)
     {
-        g.setColour(juce::Colours::cyan);
-        g.fillRect(x - 0.5f, bounds.getY(), 1.0f, bounds.getHeight());
+        g.setColour(juce::Colours::white);
+        juce::Path p;
+        //p.addQuadrilateral(quad.vertices[0].x, quad.vertices[0].y, quad.vertices[1].x, quad.vertices[1].y, quad.vertices[2].x, quad.vertices[2].y, quad.vertices[3].x, quad.vertices[3].y);
+        p.addArrow({ quad.vertices[0], quad.vertices[1] }, 3.0f, 10.0f, 10.0f);
+        p.addArrow({ quad.vertices[1], quad.vertices[2] }, 3.0f, 10.0f, 10.0f);
+        p.addArrow({ quad.vertices[2], quad.vertices[3] }, 3.0f, 10.0f, 10.0f);
+        p.addArrow({ quad.vertices[3], quad.vertices[0] }, 3.0f, 10.0f, 10.0f);
+
+        //g.strokePath(p, juce::PathStrokeType(1.0f));
+        g.fillPath(p);
     }
+#endif
 }
 
 void GradientMeshEditor::resized()

@@ -1,8 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "Direct2DEdgeDetectionEffect.h"
-#include "Direct2DEmbossEffect.h"
+#include "Direct2DEffect.h"
 
 class MainComponent  : public juce::Component
 {
@@ -14,9 +13,8 @@ public:
     void resized() override;
 
 private:
-    juce::Image image;
-    Direct2DEdgeDetectionEffect edgeDetectionEffect;
-    Direct2DEmbossEffect embossEffect;
+    juce::Image input, output;
+    Direct2DEffect effect{ Direct2DEffect::EffectType::spotDiffuseLighting };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

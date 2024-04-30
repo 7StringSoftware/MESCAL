@@ -4,19 +4,13 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
   <MAINGROUP id="VYSsCw" name="Direct2D Effects">
     <GROUP id="{8B15FD36-06CF-DAD8-A43B-75B5A35F0253}" name="Source">
+      <FILE id="vMUZi1" name="spot-spec-example.png" compile="0" resource="1"
+            file="../../../d2d/spot-spec-example.png"/>
       <GROUP id="{E841E213-7196-FB5F-286F-55AABB376929}" name="Effects">
-        <FILE id="HwEwOx" name="Direct2DEdgeDetectionEffect.cpp" compile="0"
-              resource="0" file="Source/Direct2DEdgeDetectionEffect.cpp"/>
-        <FILE id="uRmleU" name="Direct2DEdgeDetectionEffect.h" compile="0"
-              resource="0" file="Source/Direct2DEdgeDetectionEffect.h"/>
         <FILE id="Eu9KqO" name="Direct2DEffect.cpp" compile="1" resource="0"
               file="Source/Direct2DEffect.cpp"/>
         <FILE id="YxFNR6" name="Direct2DEffect.h" compile="0" resource="0"
               file="Source/Direct2DEffect.h"/>
-        <FILE id="suwrzS" name="Direct2DEmbossEffect.cpp" compile="0" resource="0"
-              file="Source/Direct2DEmbossEffect.cpp"/>
-        <FILE id="YCFDpb" name="Direct2DEmbossEffect.h" compile="0" resource="0"
-              file="Source/Direct2DEmbossEffect.h"/>
       </GROUP>
       <FILE id="fRU9qi" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="z8zkXI" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
