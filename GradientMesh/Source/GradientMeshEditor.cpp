@@ -8,7 +8,8 @@ static Path makePath()
     //p.addEllipse(10.0f, 10.0f, 500.0f, 500.0f);
     p.addPolygon({ 400.0f, 400.0f }, 7, 300.0f);
     p.applyTransform(juce::AffineTransform::rotation(0.2f, p.getBounds().getCentreX(), p.getBounds().getCentreY()));
-
+    //p.addRectangle(100.0f, 100.0f, 500.0f, 500.0f);
+    //p.addRectangle(200.0f, 200.0f, 500.0f, 500.0f);
 
 
     return p;
@@ -254,21 +255,19 @@ void GradientMeshEditor::paint(juce::Graphics& g)
     g.fillPath(mesher.path);
 
     auto bounds = mesher.path.getBounds();
-#if 1
 
-    for (auto const& vertex : mesher.vertices)
+    for (auto const& vertex : mesher.perimeterVertices)
     {
-        g.setColour(juce::Colours::blue);
+        g.setColour(juce::Colours::red);
         g.fillEllipse(juce::Rectangle<float>{ 10.0f, 10.0f}.withCentre(vertex.point));
     }
-#endif
 
-    for (auto const& edge : mesher.edges)
+    for (auto const& edge : mesher.perimeterEdges)
     {
-        g.setColour(juce::Colours::white);
-
         if (edge.type == Mesher::Edge::Type::cubic)
         {
+            g.setColour(juce::Colours::white);
+
             Path p;
             p.startNewSubPath(edge.line.getStart());
             p.cubicTo(edge.controlPoints[0].value(), edge.controlPoints[1].value(), edge.line.getEnd());
@@ -276,7 +275,9 @@ void GradientMeshEditor::paint(juce::Graphics& g)
             continue;
         }
 
-        g.drawLine(edge.line, 2.0f);
+        g.setColour(juce::Colours::pink);
+
+        g.drawArrow(edge.line, 2.0f, 10.0f, 10.0f);
     }
 
 #if 0

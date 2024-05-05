@@ -35,6 +35,11 @@ struct Mesher
             point(other.point)
         {
         }
+
+        bool operator==(Vertex const& other) const
+        {
+            return approximatelyEqual(point.x, other.point.x) && approximatelyEqual(point.y, other.point.y);
+        }
     };
 
     struct Triangle
@@ -47,8 +52,8 @@ struct Mesher
         std::array<juce::Point<float>, 4> vertices;
     };
 
-    juce::Array<Vertex> vertices;
-    juce::Array<Edge> edges;
+    juce::Array<Vertex> perimeterVertices;
+    juce::Array<Edge> perimeterEdges;
     juce::Array<Quadrilateral> quads;
     juce::Path path;
 };
