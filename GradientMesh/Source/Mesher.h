@@ -1,26 +1,16 @@
 #pragma once
 
-struct Mesher
+class Mesher
 {
+public:
     Mesher(Path&& p);
+    ~Mesher();
 
-    struct Vertex;
-    struct Edge
-    {
-        enum class Type
-        {
-            unknown = -1,
-            start,
-            line,
-            quadratic,
-            cubic,
-            close,
-        } type = Type::unknown;
+    void draw(juce::Image image, juce::AffineTransform transform);
 
-        std::array<std::shared_ptr<Vertex>, 2> vertices;
-        std::array<std::optional<juce::Point<float>>, 2> controlPoints;
-    };
+private:
 
+    struct Edge;
     struct Vertex
     {
         juce::Point<float> point;
@@ -44,21 +34,32 @@ struct Mesher
         }
     };
 
-    struct Triangle
+    struct Edge
     {
-        std::array<juce::Point<float>, 3> vertices;
+        enum class Type
+        {
+            unknown = -1,
+            start,
+            line,
+            quadratic,
+            cubic,
+            close,
+        } type = Type::unknown;
+
+        std::array<std::shared_ptr<Vertex>, 2> vertices;
+        std::array<std::optional<juce::Point<float>>, 2> controlPoints;
     };
 
-    struct PatchBoundary
+    struct Patch
     {
-        std::array<juce::Point<float>, 4> vertices;
+        std::array<std::shared_ptr<Edge>, 4> edges;
     };
 
     struct Subpath
     {
         std::vector<std::shared_ptr<Vertex>> vertices;
         std::vector<std::shared_ptr<Edge>> edges;
-        std::vector<PatchBoundary> quads;
+        std::vector<Patch> patches;
     };
 
     std::vector<Subpath> subpaths;
@@ -66,4 +67,7 @@ struct Mesher
     juce::Path path;
 
     void iterateSubpath(juce::Path::Iterator& it, std::shared_ptr<Vertex> subpathStart);
+
+    struct Pimpl;
+    std::unique_ptr<Pimpl> pimpl;
 };

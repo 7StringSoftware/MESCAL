@@ -5,7 +5,9 @@ class Direct2DEffect : public juce::ImageEffectFilter
 public:
     enum class EffectType
     {
-        spotDiffuseLighting
+        gaussianBlur,
+        spotDiffuseLighting,
+        numEffectTypes
     };
 
     Direct2DEffect(EffectType effectType_);

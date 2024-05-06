@@ -14,7 +14,7 @@ public:
 
 private:
     juce::Image input, output;
-    Direct2DEffect effect{ Direct2DEffect::EffectType::spotDiffuseLighting };
+    Direct2DEffect effect{ Direct2DEffect::EffectType::gaussianBlur };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

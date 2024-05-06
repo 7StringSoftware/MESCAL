@@ -1,4 +1,12 @@
+#include <windows.h>
+#include <winrt/Windows.Foundation.h>
+#include <d3d11_3.h>
+#include <d2d1_3.h>
+#define JUCE_CORE_INCLUDE_COM_SMART_PTR 1
 #include <JuceHeader.h>
+#include <juce_graphics/native/juce_DirectX_windows.h>
+#include <juce_graphics/native/juce_Direct2DImage_windows.h>
+#include <d2d1_3helper.h>
 #include "Mesher.h"
 
 static juce::String print(juce::Path::Iterator const& it)
@@ -29,7 +37,42 @@ static juce::String print(juce::Path::Iterator const& it)
     return line;
 }
 
+struct Mesher::Pimpl
+{
+    Pimpl(Mesher& owner_) : owner(owner_)
+    {
+    }
+
+    void createResources(juce::Image image)
+    {
+        if (!deviceContext)
+        {
+            if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
+            {
+                if (auto adapter = pixelData->getAdapter())
+                {
+                    winrt::com_ptr<ID2D1DeviceContext1> deviceContext1;
+                    if (const auto hr = adapter->direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS,
+                        deviceContext1.put());
+                        FAILED(hr))
+                    {
+                        jassertfalse;
+                        return;
+                    }
+
+                    deviceContext = deviceContext1.as<ID2D1DeviceContext2>();
+                }
+            }
+        }
+    }
+
+    Mesher& owner;
+    winrt::com_ptr<ID2D1DeviceContext2> deviceContext;
+    winrt::com_ptr<ID2D1GradientMesh> gradientMesh;
+};
+
 Mesher::Mesher(Path&& p) :
+    pimpl(std::make_unique<Pimpl>(*this)),
     path(p)
 {
     juce::Path::Iterator it{ p };
@@ -63,10 +106,41 @@ Mesher::Mesher(Path&& p) :
     {
         for (int edgeIndex = 0; edgeIndex < subpath.edges.size(); edgeIndex += 2)
         {
-            auto const& firstEdge = subpath.edges[edgeIndex];
-            auto const& secondEdge = subpath.edges[(edgeIndex + 1) % subpath.edges.size()];
-            subpath.quads.emplace_back(PatchBoundary{ { firstEdge->vertices[0]->point, firstEdge->vertices[1]->point, secondEdge->vertices[1]->point, center } });
+            auto const& firstPerimeterEdge = subpath.edges[edgeIndex];
+            auto const& secondPerimeterEdge = subpath.edges[(edgeIndex + 1) % subpath.edges.size()];
+
+            //subpath.quads.emplace_back(PatchBoundary{ { firstEdge->vertices[0]->point, firstEdge->vertices[1]->point, secondEdge->vertices[1]->point, center } });
         }
+    }
+}
+
+Mesher::~Mesher()
+{
+}
+
+void Mesher::draw(juce::Image image, juce::AffineTransform transform)
+{
+    pimpl->createResources(image);
+
+    size_t numPatches = 0;
+    for (auto const& subpath : subpaths)
+    {
+        numPatches += subpath.patches.size();
+    }
+
+    std::vector<D2D1_GRADIENT_MESH_PATCH> d2dPatches;
+    d2dPatches.reserve(numPatches);
+    winrt::com_ptr<ID2D1GradientMesh> gradientMesh;
+
+    for (auto const& subpath : subpaths)
+    {
+#if 0
+        for (auto const& quad : subpath.quads)
+        {
+            D2D1_GRADIENT_MESH_PATCH d2dPatch;
+            d2dPatches.emplace_back(d2dPatch);
+        }
+#endif
     }
 }
 

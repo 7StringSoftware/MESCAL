@@ -250,6 +250,7 @@ void GradientMeshEditor::paint(juce::Graphics& g)
     }
 #endif
 
+#if 0
     g.setColour(juce::Colours::darkgrey);
     g.fillPath(mesher.path);
 
@@ -313,6 +314,7 @@ void GradientMeshEditor::paint(juce::Graphics& g)
         }
 
     }
+#endif
 
 
 #if 0

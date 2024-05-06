@@ -11,19 +11,8 @@
 
 struct Direct2DEffect::Pimpl
 {
-    static GUID typeToGuid(EffectType effectType)
-    {
-        switch (effectType)
-        {
-        case EffectType::spotDiffuseLighting:
-            //return CLSID_D2D1SpotDiffuse;
-            return CLSID_D2D1HighlightsShadows;
-        }
-
-        return {};
-    }
-
-    Pimpl(EffectType effectType_) : effectGuid{ typeToGuid(effectType_) }
+    Pimpl(EffectType effectType_) :
+        effectType(effectType_)
     {
     }
 
@@ -53,7 +42,7 @@ struct Direct2DEffect::Pimpl
             }
         }
 
-        if (auto hr = deviceContext->CreateEffect(effectGuid, d2dEffect.put()); FAILED(hr))
+        if (auto hr = deviceContext->CreateEffect(*effectGuids[(size_t)effectType], d2dEffect.put()); FAILED(hr))
         {
             jassertfalse;
         }
@@ -64,11 +53,17 @@ struct Direct2DEffect::Pimpl
 
     }
 
-    GUID const effectGuid;
+    EffectType effectType;
     juce::DxgiAdapter::Ptr adapter;
     winrt::com_ptr<ID2D1DeviceContext2> deviceContext;
     winrt::com_ptr<ID2D1Effect> d2dEffect;
     juce::Direct2DPixelData::Ptr outputPixelData;
+
+    static constexpr std::array<GUID const * const, (size_t)EffectType::numEffectTypes> effectGuids
+    {
+        &CLSID_D2D1GaussianBlur,
+        &CLSID_D2D1SpotDiffuse
+    };
 };
 
 Direct2DEffect::Direct2DEffect(EffectType effectType_) :
@@ -90,7 +85,7 @@ void Direct2DEffect::applyEffect(juce::Image& sourceImage, juce::Graphics& destC
     }
 
     pimpl->createResources(sourceImage);
-    if (!pimpl->deviceContext || !pimpl->adapter || !pimpl->adapter->dxgiAdapter)
+    if (!pimpl->deviceContext || !pimpl->adapter || !pimpl->adapter->dxgiAdapter || !pimpl->d2dEffect)
     {
         return;
     }
@@ -99,12 +94,6 @@ void Direct2DEffect::applyEffect(juce::Image& sourceImage, juce::Graphics& destC
     if (!outputPixelData || outputPixelData->width < sourceImage.getWidth() || outputPixelData->height < sourceImage.getHeight())
     {
         outputPixelData = juce::Direct2DPixelData::make(juce::Image::ARGB, sourceImage.getWidth(), sourceImage.getHeight(), true, pimpl->adapter);
-    }
-
-    if (auto hr = pimpl->deviceContext->CreateEffect(pimpl->effectGuid, pimpl->d2dEffect.put()); FAILED(hr))
-    {
-        jassertfalse;
-        return;
     }
 
     pimpl->configureEffect();
