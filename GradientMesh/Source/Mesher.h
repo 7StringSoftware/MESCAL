@@ -4,6 +4,7 @@ struct Mesher
 {
     Mesher(Path&& p);
 
+    struct Vertex;
     struct Edge
     {
         enum class Type
@@ -16,13 +17,14 @@ struct Mesher
             close,
         } type = Type::unknown;
 
-        juce::Line<float> line;
+        std::array<std::shared_ptr<Vertex>, 2> vertices;
         std::array<std::optional<juce::Point<float>>, 2> controlPoints;
     };
 
     struct Vertex
     {
         juce::Point<float> point;
+        std::vector<std::shared_ptr<Edge>> edges;
 
         Vertex() = default;
 
@@ -47,15 +49,21 @@ struct Mesher
         std::array<juce::Point<float>, 3> vertices;
     };
 
-    struct Quadrilateral
+    struct PatchBoundary
     {
         std::array<juce::Point<float>, 4> vertices;
     };
 
-    juce::Array<Vertex> perimeterVertices;
-    juce::Array<Edge> perimeterEdges;
-    juce::Array<Quadrilateral> quads;
+    struct Subpath
+    {
+        std::vector<std::shared_ptr<Vertex>> vertices;
+        std::vector<std::shared_ptr<Edge>> edges;
+        std::vector<PatchBoundary> quads;
+    };
+
+    std::vector<Subpath> subpaths;
+
     juce::Path path;
+
+    void iterateSubpath(juce::Path::Iterator& it, std::shared_ptr<Vertex> subpathStart);
 };
-
-

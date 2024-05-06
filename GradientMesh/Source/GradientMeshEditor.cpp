@@ -6,11 +6,10 @@ static Path makePath()
     p.addRoundedRectangle(juce::Rectangle<float>{ 100.0f, 100.0f, 500.0f, 500.0f }, 25.0f);
     //p.addStar({ 350.0f, 350.0f }, 8, 200.0f, 300.0f);
     //p.addEllipse(10.0f, 10.0f, 500.0f, 500.0f);
-    p.addPolygon({ 400.0f, 400.0f }, 7, 300.0f);
-    p.applyTransform(juce::AffineTransform::rotation(0.2f, p.getBounds().getCentreX(), p.getBounds().getCentreY()));
+    //p.addPolygon({ 400.0f, 400.0f }, 7, 300.0f);
+    //p.applyTransform(juce::AffineTransform::rotation(0.2f, p.getBounds().getCentreX(), p.getBounds().getCentreY()));
     //p.addRectangle(100.0f, 100.0f, 500.0f, 500.0f);
     //p.addRectangle(200.0f, 200.0f, 500.0f, 500.0f);
-
 
     return p;
 }
@@ -256,29 +255,65 @@ void GradientMeshEditor::paint(juce::Graphics& g)
 
     auto bounds = mesher.path.getBounds();
 
-    for (auto const& vertex : mesher.perimeterVertices)
+    for (auto const& subpath : mesher.subpaths)
     {
-        g.setColour(juce::Colours::red);
-        g.fillEllipse(juce::Rectangle<float>{ 10.0f, 10.0f}.withCentre(vertex.point));
-    }
-
-    for (auto const& edge : mesher.perimeterEdges)
-    {
-        if (edge.type == Mesher::Edge::Type::cubic)
+        for (auto const& vertex : subpath.vertices)
         {
-            g.setColour(juce::Colours::white);
-
-            Path p;
-            p.startNewSubPath(edge.line.getStart());
-            p.cubicTo(edge.controlPoints[0].value(), edge.controlPoints[1].value(), edge.line.getEnd());
-            g.strokePath(p, juce::PathStrokeType(2.0f));
-            continue;
+            g.setColour(juce::Colours::red.withAlpha(0.5f));
+            g.fillEllipse(juce::Rectangle<float>{ 10.0f, 10.0f}.withCentre(vertex->point));
         }
 
-        g.setColour(juce::Colours::pink);
+#if 0
+        for (auto const& edge : subpath.edges)
+        {
+            switch (edge->type)
+            {
+            case Mesher::Edge::Type::line:
+            {
+                g.setColour(juce::Colours::green);
+                g.drawLine(edge->line, 2.0f);
+                break;
+            }
 
-        g.drawArrow(edge.line, 2.0f, 10.0f, 10.0f);
+            case Mesher::Edge::Type::quadratic:
+            {
+                g.setColour(juce::Colours::blue);
+                Path p;
+                p.startNewSubPath(edge->line.getStart());
+                p.quadraticTo(edge->controlPoints[0].value(), edge->line.getEnd());
+                g.strokePath(p, juce::PathStrokeType(2.0f));
+                break;
+            }
+
+            case Mesher::Edge::Type::cubic:
+            {
+                g.setColour(juce::Colours::white);
+                Path p;
+                p.startNewSubPath(edge->line.getStart());
+                p.cubicTo(edge->controlPoints[0].value(), edge->controlPoints[1].value(), edge->line.getEnd());
+                g.strokePath(p, juce::PathStrokeType(2.0f));
+                break;
+            }
+            }
+        }
+#endif
+
+        for (auto const& quad : subpath.quads)
+        {
+            g.setColour(juce::Colours::white);
+            juce::Path p;
+            //p.addQuadrilateral(quad.vertices[0].x, quad.vertices[0].y, quad.vertices[1].x, quad.vertices[1].y, quad.vertices[2].x, quad.vertices[2].y, quad.vertices[3].x, quad.vertices[3].y);
+            p.addArrow({ quad.vertices[0], quad.vertices[1] }, 3.0f, 10.0f, 10.0f);
+            p.addArrow({ quad.vertices[1], quad.vertices[2] }, 3.0f, 10.0f, 10.0f);
+            p.addArrow({ quad.vertices[2], quad.vertices[3] }, 3.0f, 10.0f, 10.0f);
+            p.addArrow({ quad.vertices[3], quad.vertices[0] }, 3.0f, 10.0f, 10.0f);
+
+            g.strokePath(p, juce::PathStrokeType(1.0f), juce::AffineTransform::translation(0, 0));
+            //g.fillPath(p);
+        }
+
     }
+
 
 #if 0
     for (auto const& quad : mesher.quads)
@@ -303,7 +338,7 @@ void GradientMeshEditor::resized()
     //createConic();
     //createSinglePatch();
     //mesh.draw(meshImage, {});
-}
+        }
 
 void GradientMeshEditor::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel)
 {

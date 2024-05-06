@@ -29,194 +29,115 @@ static juce::String print(juce::Path::Iterator const& it)
     return line;
 }
 
-static bool isInterioPoint(juce::Path const& path, juce::Point<float> const& point)
-{
-    auto bounds = path.getBounds();
-    auto intersection = juce::Point<float>{ bounds.getCentre().x, bounds.getCentre().y - 1000.0f };
-    auto line = juce::Line<float>{ point, intersection };
-
-    int intersections = 0;
-    juce::Path::Iterator it{ path };
-    while (it.next())
-    {
-        if (it.elementType == Path::Iterator::lineTo)
-        {
-            auto edge = juce::Line<float>{ it.x1, it.y1, it.x2, it.y2 };
-            juce::Point<float> intersection;
-            if (edge.intersects(line, intersection))
-            {
-                ++intersections;
-            }
-        }
-        else if (it.elementType == Path::Iterator::quadraticTo)
-        {
-            auto edge = juce::Line<float>{ it.x1, it.y1, it.x2, it.y2 };
-            juce::Point<float> intersection;
-            if (edge.intersects(line, intersection))
-            {
-                ++intersections;
-            }
-        }
-        else if (it.elementType == Path::Iterator::cubicTo)
-        {
-            auto edge = juce::Line<float>{ it.x1, it.y1, it.x3, it.y3 };
-            juce::Point<float> intersection;
-            if (edge.intersects(line, intersection))
-            {
-                ++intersections;
-            }
-        }
-    }
-
-    return intersections & 1;
-}
-
 Mesher::Mesher(Path&& p) :
     path(p)
 {
     juce::Path::Iterator it{ p };
 
-    auto bounds = p.getBounds();
-    auto center = bounds.getCentre();
-
-    juce::Point<float> previousPoint;
-    juce::Point<float> point;
-    juce::Point<float> subpathStart;
-    Edge edge{ Edge::Type::unknown };
-    juce::Array<Vertex> vertices;
-    juce::Array<Edge> edges;
-
-    auto isPerimeterPoint = [&](juce::Point<float> const point) -> bool
-        {
-            juce::Line<float> line{ center, point };
-            bool contained = path.contains(point);
-            bool fartherPointContained = path.contains(line.getPointAlongLine(line.getLength() + 1.0f));
-            return ! contained || (contained && !fartherPointContained);
-        };
-
-    auto storeEdge = [&](Edge const& edge)
-        {
-            for (auto const& storedEdge : edges)
-            {
-                juce::Point<float> intersection;
-                if (storedEdge.line.intersects(edge.line, intersection))
-                {
-                    vertices.add(Vertex{ intersection });
-                    edges.add({ Edge::Type::line, juce::Line<float>{ edge.line.getStart(), intersection} });
-                    edges.add({ Edge::Type::line, juce::Line<float>{ intersection, edge.line.getEnd() } });
-                    return;
-                }
-            }
-
-            edges.add(edge);
-        };
-
-    auto storeVertex = [&]()
-        {
-            DBG(print(it));
-
-            if (it.elementType == juce::Path::Iterator::startNewSubPath)
-            {
-                point = { it.x1, it.y1 };
-                subpathStart = point;
-                previousPoint = point;
-                return;
-            }
-
-            if (it.elementType == Path::Iterator::lineTo)
-            {
-                point = { it.x1, it.y1 };
-                edge = Edge{ Edge::Type::line };
-                edge.line = { previousPoint, point };
-            }
-            else if (it.elementType == Path::Iterator::quadraticTo)
-            {
-                point = { it.x2, it.y2 };
-                edge = Edge{ Edge::Type::quadratic };
-                edge.line = { previousPoint, point };
-            }
-            else if (it.elementType == Path::Iterator::cubicTo)
-            {
-                point = { it.x3, it.y3 };
-                edge = Edge{ Edge::Type::cubic };
-                edge.line = { previousPoint, point };
-                edge.controlPoints = { juce::Point<float>{ it.x1, it.y1 }, juce::Point<float>{ it.x2, it.y2 } };
-            }
-            else if (it.elementType == Path::Iterator::closePath)
-            {
-                point = subpathStart;
-                edge = Edge{ Edge::Type::line };
-                edge.line = { previousPoint, point };
-            }
-            else
-            {
-                return;
-            }
-
-            if (approximatelyEqual(point.x, previousPoint.x) && approximatelyEqual(point.y, previousPoint.y))
-            {
-                return;
-            }
-
-            vertices.add(Vertex{ point });
-            storeEdge(edge);
-
-            previousPoint = point;
-        };
-
+    std::shared_ptr<Vertex> subpathStart;
     while (it.next())
     {
-        storeVertex();
-    }
+        DBG(print(it));
 
-    if (vertices.size() < 4)
-    {
-        return;
-    }
-
-    {
-	    for (auto const& vertex : vertices)
-	    {
-	        if (isPerimeterPoint(vertex.point))
-	        {
-                perimeterVertices.addIfNotAlreadyThere(vertex);
-	        }
-	    }
-
-        std::sort(perimeterVertices.begin(), perimeterVertices.end(), [&](Vertex const& a, Vertex const& b) -> bool
-            {
-                return center.getAngleToPoint(a.point) < center.getAngleToPoint(b.point);
-            });
-    }
-
-    {
-        auto it = perimeterVertices.begin();
-        auto previousPoint = it->point;
-        it++;
-
-        while (it != perimeterVertices.end())
+        switch (it.elementType)
         {
-            perimeterEdges.add({ Edge::Type::line, juce::Line<float>{ previousPoint, it->point } });
-            previousPoint = it->point;
-            it++;
+        case Path::Iterator::startNewSubPath:
+            subpathStart = std::make_shared<Vertex>(juce::Point<float>{ it.x1, it.y1 });
+            iterateSubpath(it, subpathStart);
+            break;
+
+        case Path::Iterator::lineTo:
+        case Path::Iterator::cubicTo:
+        case Path::Iterator::quadraticTo:
+            subpathStart = std::make_shared<Vertex>(juce::Point<float>{ it.x1, it.y1 });
+            iterateSubpath(it, subpathStart);
+            break;
+
+        default:
+            break;
         }
     }
 
-#if 0
-    int numQuads = vertices.size() / 2;
-    int vertexIndex = 0;
-    for (int index = 0; index < numQuads; ++index)
+    auto center = path.getBounds().getCentre();
+    for (auto& subpath : subpaths)
     {
-        quads.add(Quadrilateral{ { vertices[vertexIndex].point, vertices[vertexIndex + 1].point, vertices[vertexIndex + 2].point, center } });
-        vertexIndex += 2;
+        for (int edgeIndex = 0; edgeIndex < subpath.edges.size(); edgeIndex += 2)
+        {
+            auto const& firstEdge = subpath.edges[edgeIndex];
+            auto const& secondEdge = subpath.edges[(edgeIndex + 1) % subpath.edges.size()];
+            subpath.quads.emplace_back(PatchBoundary{ { firstEdge->vertices[0]->point, firstEdge->vertices[1]->point, secondEdge->vertices[1]->point, center } });
+        }
     }
-
-    if (vertices.size() & 1)
-    {
-        quads.add(Quadrilateral{ { vertices[vertices.size() - 1].point, vertices[0].point, center, center } });
-    }
-
-    vertices.add(Vertex{ bounds.getCentre() });
-#endif
 }
 
+void Mesher::iterateSubpath(juce::Path::Iterator& it, std::shared_ptr<Vertex> subpathStart)
+{
+    auto& subpath = subpaths.emplace_back(Subpath{});
+
+    auto bounds = path.getBounds();
+    auto center = bounds.getCentre();
+
+    std::shared_ptr<Vertex> previousVertex = subpathStart;
+    std::shared_ptr<Vertex> vertex;
+    std::shared_ptr<Edge> edge;
+
+    subpath.vertices.emplace_back(subpathStart);
+
+    bool closed = false;
+    while (it.next() || closed)
+    {
+        DBG("   " << print(it));
+
+        switch (it.elementType)
+        {
+        case Path::Iterator::startNewSubPath:
+        {
+            subpathStart = std::make_shared<Vertex>(juce::Point<float>{ it.x1, it.y1 });
+            iterateSubpath(it, subpathStart);
+            return;
+        }
+
+        case Path::Iterator::lineTo:
+        {
+            vertex = std::make_shared<Vertex>(juce::Point<float>{ it.x1, it.y1 });
+            edge = std::make_shared<Edge>(Edge{ Edge::Type::line, { previousVertex, vertex } });
+            break;
+        }
+
+        case Path::Iterator::quadraticTo:
+        {
+            vertex = std::make_shared<Vertex>(juce::Point<float>{ it.x2, it.y2 });
+            edge = std::make_shared<Edge>(Edge{ Edge::Type::line, { previousVertex, vertex } });
+            edge->controlPoints = { juce::Point<float>{ it.x1, it.y1 }, juce::Point<float>{ it.x1, it.y1 } };
+            break;
+        }
+
+        case Path::Iterator::cubicTo:
+        {
+            vertex = std::make_shared<Vertex>(juce::Point<float>{ it.x3, it.y3 });
+            edge = std::make_shared<Edge>(Edge{ Edge::Type::line, { previousVertex, vertex } });
+            edge->controlPoints = { juce::Point<float>{ it.x1, it.y1 }, juce::Point<float>{ it.x2, it.y2 } };
+            break;
+        }
+
+        case Path::Iterator::closePath:
+        {
+            vertex = subpathStart;
+            edge = std::make_shared<Edge>(Edge{Edge::Type::line, {previousVertex, vertex} });
+            closed = true;
+            break;
+        }
+        }
+
+        if (approximatelyEqual(vertex->point.x, previousVertex->point.x) && approximatelyEqual(vertex->point.y, previousVertex->point.y))
+        {
+            return;
+        }
+
+        subpath.vertices.emplace_back(vertex);
+        subpath.edges.emplace_back(edge);
+        previousVertex = vertex;
+        vertex = {};
+        edge = {};
+    }
+}
