@@ -77,6 +77,9 @@ Mesher::Mesher(Path&& p) :
 {
     juce::Path::Iterator it{ p };
 
+    //
+    // Find perimeter vertices
+    //
     std::shared_ptr<Vertex> subpathStart;
     while (it.next())
     {
@@ -101,16 +104,37 @@ Mesher::Mesher(Path&& p) :
         }
     }
 
+    //
+    // Sort perimeter vertices by clockwise angle from center
+    //
     auto center = path.getBounds().getCentre();
     for (auto& subpath : subpaths)
     {
-        for (int edgeIndex = 0; edgeIndex < subpath.edges.size(); edgeIndex += 2)
-        {
-            auto const& firstPerimeterEdge = subpath.edges[edgeIndex];
-            auto const& secondPerimeterEdge = subpath.edges[(edgeIndex + 1) % subpath.edges.size()];
+        std::sort(subpath.vertices.begin(), subpath.vertices.end(), [&](auto const& a, auto const& b)
+            {
+                auto angleA = center.getAngleToPoint(a->point);
+                auto angleB = center.getAngleToPoint(b->point);
+                return angleA < angleB;
+            });
 
-            //subpath.quads.emplace_back(PatchBoundary{ { firstEdge->vertices[0]->point, firstEdge->vertices[1]->point, secondEdge->vertices[1]->point, center } });
+        std::sort(subpath.edges.begin(), subpath.edges.end(), [&](auto const& a, auto const& b)
+            {
+                auto angleA = center.getAngleToPoint(a->vertices[0].lock()->point);
+                auto angleB = center.getAngleToPoint(b->vertices[0].lock()->point);
+                return angleA < angleB;
+            });
+    }
+
+    //
+    // Add patches
+    //
+    for (auto& subpath : subpaths)
+    {
+        for (auto const& v : subpath.vertices)
+        {
+            DBG("vertex " << v->point.toString());
         }
+        subpath.addPatches(center);
     }
 }
 
@@ -158,7 +182,7 @@ void Mesher::iterateSubpath(juce::Path::Iterator& it, std::shared_ptr<Vertex> su
     subpath.vertices.emplace_back(subpathStart);
 
     bool closed = false;
-    while (it.next() || closed)
+    while (it.next() || !closed)
     {
         DBG("   " << print(it));
 
@@ -196,22 +220,70 @@ void Mesher::iterateSubpath(juce::Path::Iterator& it, std::shared_ptr<Vertex> su
 
         case Path::Iterator::closePath:
         {
-            vertex = subpathStart;
-            edge = std::make_shared<Edge>(Edge{Edge::Type::line, {previousVertex, vertex} });
+            edge = std::make_shared<Edge>(Edge{Edge::Type::line, {previousVertex, subpathStart} });
             closed = true;
             break;
         }
         }
 
-        if (approximatelyEqual(vertex->point.x, previousVertex->point.x) && approximatelyEqual(vertex->point.y, previousVertex->point.y))
+        if (vertex)
         {
-            return;
+            if (approximatelyEqual(vertex->point.x, previousVertex->point.x) && approximatelyEqual(vertex->point.y, previousVertex->point.y))
+            {
+                return;
+            }
+
+            vertex->edges.emplace_back(edge);
+            subpath.vertices.emplace_back(vertex);
         }
 
-        subpath.vertices.emplace_back(vertex);
-        subpath.edges.emplace_back(edge);
+        if (edge)
+        {
+            previousVertex->edges.emplace_back(edge);
+            subpath.edges.emplace_back(edge);
+        }
+
         previousVertex = vertex;
         vertex = {};
         edge = {};
     }
+}
+
+void Mesher::Subpath::addPatches(juce::Point<float> center)
+{
+    auto centerVertex = std::make_shared<Vertex>(center);
+    std::shared_ptr<Edge> newEdge;
+    std::weak_ptr<Edge> previousEdge;
+
+    auto addPatch = [&](std::weak_ptr<Vertex> perimeterVertex1, std::weak_ptr<Vertex> perimeterVertex2)
+        {
+            if (auto previousEdgeLock = previousEdge.lock())
+            {
+                DBG("addPatch " << perimeterVertex1.lock()->point.toString() << " -> " << perimeterVertex2.lock()->point.toString());
+
+                auto newPatch = std::make_shared<Patch>(Patch{ { perimeterVertex1.lock()->edges.front(), perimeterVertex2.lock()->edges.front(), newEdge, previousEdgeLock } });
+                patches.emplace_back(newPatch);
+            }
+        };
+
+    auto lastPerimeterVertex = vertices.begin() + vertices.size();
+    auto lastPerimeterEdge = edges.begin() + edges.size();
+    for (auto it = vertices.begin(); it != lastPerimeterVertex; it += 2)
+    {
+        auto perimeterVertex = *it;
+        newEdge = std::make_shared<Edge>(Edge{ Edge::Type::line, { perimeterVertex, centerVertex } });
+        perimeterVertex->edges.emplace_back(newEdge);
+        centerVertex->edges.emplace_back(newEdge);
+        edges.emplace_back(newEdge);
+    }
+
+    for (size_t centerVertexEdgeIndex = 0; centerVertexEdgeIndex < centerVertex->edges.size() - 1; ++centerVertexEdgeIndex)
+    {
+        auto centerVertexEdge0 = centerVertex->edges[centerVertexEdgeIndex];
+        auto centerVertexEdge1 = centerVertex->edges[centerVertexEdgeIndex + 1];
+
+
+    }
+
+    vertices.emplace_back(centerVertex);
 }

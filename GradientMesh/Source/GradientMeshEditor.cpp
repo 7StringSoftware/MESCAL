@@ -3,12 +3,12 @@
 static Path makePath()
 {
     juce::Path p;
-    p.addRoundedRectangle(juce::Rectangle<float>{ 100.0f, 100.0f, 500.0f, 500.0f }, 25.0f);
+    //p.addRoundedRectangle(juce::Rectangle<float>{ 100.0f, 100.0f, 500.0f, 500.0f }, 25.0f);
     //p.addStar({ 350.0f, 350.0f }, 8, 200.0f, 300.0f);
     //p.addEllipse(10.0f, 10.0f, 500.0f, 500.0f);
     //p.addPolygon({ 400.0f, 400.0f }, 7, 300.0f);
     //p.applyTransform(juce::AffineTransform::rotation(0.2f, p.getBounds().getCentreX(), p.getBounds().getCentreY()));
-    //p.addRectangle(100.0f, 100.0f, 500.0f, 500.0f);
+    p.addRectangle(0.0f, 0.0f, 100.0f, 100.0f);
     //p.addRectangle(200.0f, 200.0f, 500.0f, 500.0f);
 
     return p;
@@ -50,6 +50,49 @@ GradientMeshEditor::GradientMeshEditor() :
         patchComponents.emplace_back(std::move(patchComponent));
     }
 #endif
+
+    for (auto const& subpath : mesher.subpaths)
+    {
+        for (auto const& vertex : subpath.vertices)
+        {
+            auto vertexComponent = std::make_unique<VertexComponent>(vertex);
+            addAndMakeVisible(vertexComponent.get());
+
+            juce::Component::SafePointer<VertexComponent> safePointer{ vertexComponent.get() };
+            vertexComponent->onMouseOver = [this, safePointer]()
+                {
+                    if (safePointer)
+                        highlightVertex(safePointer);
+                };
+
+            vertexComponents.emplace_back(std::move(vertexComponent));
+        }
+
+        for (auto const& edge : subpath.edges)
+        {
+            auto edgeComponent = std::make_unique<EdgeComponent>(edge);
+            addAndMakeVisible(edgeComponent.get());
+            edgeComponent->toBack();
+
+            juce::Component::SafePointer<EdgeComponent> edgeComponentSafePointer{ edgeComponent.get() };
+            edgeComponent->onMouseOver = [this, edgeComponentSafePointer]()
+                {
+                    if (edgeComponentSafePointer)
+                        highlightEdge(edgeComponentSafePointer);
+                };
+
+            edgeComponents.emplace_back(std::move(edgeComponent));
+        }
+
+        for (auto const& patch : subpath.patches)
+        {
+            auto patchComponent = std::make_unique<PatchComponent>(patch);
+            addAndMakeVisible(patchComponent.get());
+            patchComponent->toBack();
+
+            patchComponents.emplace_back(std::move(patchComponent));
+        }
+    }
 }
 
 void GradientMeshEditor::createConic(float rotationAngle)
@@ -188,150 +231,35 @@ juce::Rectangle<int> GradientMeshEditor::getPreferredSize()
 
 void GradientMeshEditor::paint(juce::Graphics& g)
 {
-#if 0
-    auto now = juce::Time::getMillisecondCounterHiRes();
-    auto elapsedSeconds = (now - lastMsec) * 0.001;
-    lastMsec = now;
-    auto constexpr cyclesPerSecond = 0.1;
-    phase += cyclesPerSecond * elapsedSeconds * juce::MathConstants<double>::twoPi;
+    //     for (auto const& subpath : mesher.subpaths)
+    //     {
+    //         paintSubpath(g, subpath, mesher.path.getBounds());
+    //     }
+}
 
-    createSinglePatch();
-    //createConic((float)phase);
-    mesh.draw(meshImage, {});
-
-    g.fillAll(juce::Colours::black);
-
-    g.setColour(juce::Colours::darkgrey);
-    g.setFont(getHeight() * 0.3f);
-    g.drawFittedText("Gradient Mesh", getLocalBounds(), juce::Justification::centred, 1);
-
+void GradientMeshEditor::paintSubpath(juce::Graphics& g, const Mesher::Subpath& subpath, juce::Rectangle<float> area)
+{
+    for (auto const& vertex : subpath.vertices)
     {
-        g.beginTransparencyLayer(0.75f);
-        g.drawImageAt(meshImage, 0, 0);
-        g.endTransparencyLayer();
+        g.setColour(juce::Colours::red.withAlpha(0.5f));
+        g.fillEllipse(juce::Rectangle<float>{ 10.0f, 10.0f }.withCentre(vertex->point));
     }
 
-    g.setTiledImageFill(meshImage, 0, 0, 1.0f);
-    g.drawFittedText("Gradient Mesh", getLocalBounds(), juce::Justification::centred, 1);
-#endif
-
-#if 0
-    Path p;
-    p.addRectangle(getLocalBounds().reduced(100).toFloat());
-
-    PathFlatteningIterator iterator{ p };
-    std::vector<juce::Point<float>> points;
-    if (iterator.next())
+    float x = 0.0f;
+    for (auto const& edge : subpath.edges)
     {
-        points.push_back({ iterator.x1, iterator.y1 });
-        points.push_back({ iterator.x2, iterator.y2 });
-    }
-    while (iterator.next())
-    {
-        points.push_back({ iterator.x2, iterator.y2 });
-    }
+        g.setColour(juce::Colours::green.withAlpha(0.75f));
 
-    std::vector<Vector2d> triangles;
-    Triangulate::Process(points, triangles);
-
-    {
-        g.setColour(juce::Colours::darkgrey);
-        g.fillPath(p);
-
-        auto num = triangles.size() / 3;
-        jassert(triangles.size() % 3 == 0);
-        for (auto i = 0; i < num; i += 3)
+        auto vertex0 = edge->vertices[0].lock();
+        auto vertex1 = edge->vertices[1].lock();
+        if (vertex0 && vertex1)
         {
-            g.setColour(juce::Colours::white);
-            juce::Path p2;
-            p2.addTriangle(triangles[i], triangles[i + 1], triangles[i + 2]);
-            g.fillPath(p2);
-        }
-    }
-#endif
-
-#if 0
-    g.setColour(juce::Colours::darkgrey);
-    g.fillPath(mesher.path);
-
-    auto bounds = mesher.path.getBounds();
-
-    for (auto const& subpath : mesher.subpaths)
-    {
-        for (auto const& vertex : subpath.vertices)
-        {
-            g.setColour(juce::Colours::red.withAlpha(0.5f));
-            g.fillEllipse(juce::Rectangle<float>{ 10.0f, 10.0f}.withCentre(vertex->point));
+            auto offset = Point<float>{ x, 0.0f };
+            g.drawLine({ vertex0->point + offset, vertex1->point + offset }, 2.0f);
         }
 
-#if 0
-        for (auto const& edge : subpath.edges)
-        {
-            switch (edge->type)
-            {
-            case Mesher::Edge::Type::line:
-            {
-                g.setColour(juce::Colours::green);
-                g.drawLine(edge->line, 2.0f);
-                break;
-            }
-
-            case Mesher::Edge::Type::quadratic:
-            {
-                g.setColour(juce::Colours::blue);
-                Path p;
-                p.startNewSubPath(edge->line.getStart());
-                p.quadraticTo(edge->controlPoints[0].value(), edge->line.getEnd());
-                g.strokePath(p, juce::PathStrokeType(2.0f));
-                break;
-            }
-
-            case Mesher::Edge::Type::cubic:
-            {
-                g.setColour(juce::Colours::white);
-                Path p;
-                p.startNewSubPath(edge->line.getStart());
-                p.cubicTo(edge->controlPoints[0].value(), edge->controlPoints[1].value(), edge->line.getEnd());
-                g.strokePath(p, juce::PathStrokeType(2.0f));
-                break;
-            }
-            }
-        }
-#endif
-
-        for (auto const& quad : subpath.quads)
-        {
-            g.setColour(juce::Colours::white);
-            juce::Path p;
-            //p.addQuadrilateral(quad.vertices[0].x, quad.vertices[0].y, quad.vertices[1].x, quad.vertices[1].y, quad.vertices[2].x, quad.vertices[2].y, quad.vertices[3].x, quad.vertices[3].y);
-            p.addArrow({ quad.vertices[0], quad.vertices[1] }, 3.0f, 10.0f, 10.0f);
-            p.addArrow({ quad.vertices[1], quad.vertices[2] }, 3.0f, 10.0f, 10.0f);
-            p.addArrow({ quad.vertices[2], quad.vertices[3] }, 3.0f, 10.0f, 10.0f);
-            p.addArrow({ quad.vertices[3], quad.vertices[0] }, 3.0f, 10.0f, 10.0f);
-
-            g.strokePath(p, juce::PathStrokeType(1.0f), juce::AffineTransform::translation(0, 0));
-            //g.fillPath(p);
-        }
-
+        x += area.getWidth();
     }
-#endif
-
-
-#if 0
-    for (auto const& quad : mesher.quads)
-    {
-        g.setColour(juce::Colours::white);
-        juce::Path p;
-        //p.addQuadrilateral(quad.vertices[0].x, quad.vertices[0].y, quad.vertices[1].x, quad.vertices[1].y, quad.vertices[2].x, quad.vertices[2].y, quad.vertices[3].x, quad.vertices[3].y);
-        p.addArrow({ quad.vertices[0], quad.vertices[1] }, 3.0f, 10.0f, 10.0f);
-        p.addArrow({ quad.vertices[1], quad.vertices[2] }, 3.0f, 10.0f, 10.0f);
-        p.addArrow({ quad.vertices[2], quad.vertices[3] }, 3.0f, 10.0f, 10.0f);
-        p.addArrow({ quad.vertices[3], quad.vertices[0] }, 3.0f, 10.0f, 10.0f);
-
-        //g.strokePath(p, juce::PathStrokeType(1.0f));
-        g.fillPath(p);
-    }
-#endif
 }
 
 void GradientMeshEditor::resized()
@@ -340,7 +268,36 @@ void GradientMeshEditor::resized()
     //createConic();
     //createSinglePatch();
     //mesh.draw(meshImage, {});
+
+    for (auto& vertexComponent : vertexComponents)
+    {
+        if (auto vertex = vertexComponent->vertex.lock())
+        {
+            vertexComponent->setSize(30, 30);
+
+            auto center = vertex->point.roundToInt();
+            vertexComponent->setCentrePosition(center.x, center.y);
         }
+    }
+
+    for (auto& edgeComponent : edgeComponents)
+    {
+        if (auto edge = edgeComponent->edge.lock())
+        {
+            auto v0 = edge->vertices[0].lock();
+            auto v1 = edge->vertices[1].lock();
+            if (v0 && v1)
+            {
+                edgeComponent->setBounds(juce::Rectangle<float>{ v0->point, v1->point }.expanded(5.0f).toNearestInt());
+            }
+        }
+    }
+
+    for (auto& patchComponent : patchComponents)
+    {
+        patchComponent->setBounds(getLocalBounds());
+    }
+}
 
 void GradientMeshEditor::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel)
 {
@@ -352,16 +309,84 @@ void GradientMeshEditor::mouseWheelMove(const juce::MouseEvent& event, const juc
 #endif
 }
 
-GradientMeshEditor::PatchComponent::PatchComponent(GradientMesh::Patch::Ptr patch_) :
+void GradientMeshEditor::mouseMove(const MouseEvent& event)
+{
+}
+
+void GradientMeshEditor::clearHighlights()
+{
+    for (auto const& vertexComponent : vertexComponents)
+    {
+        vertexComponent->setAlpha(0.5f);
+    }
+
+    for (auto const& edgeComponent : edgeComponents)
+    {
+        edgeComponent->setAlpha(0.5f);
+        edgeComponent->highlighted = false;
+    }
+}
+
+void GradientMeshEditor::highlightVertex(VertexComponent* vertexComponent)
+{
+    clearHighlights();
+
+    vertexComponent->setAlpha(1.0f);
+
+    for (auto const& edgeComponent : edgeComponents)
+    {
+        if (auto edge = edgeComponent->edge.lock())
+        {
+            if (edge->vertices[0].lock() == vertexComponent->vertex.lock() || edge->vertices[1].lock() == vertexComponent->vertex.lock())
+            {
+                edgeComponent->setAlpha(1.0f);
+                edgeComponent->highlighted = true;
+            }
+        }
+    }
+}
+
+void GradientMeshEditor::highlightEdge(EdgeComponent* edgeComponent)
+{
+    clearHighlights();
+
+    edgeComponent->setAlpha(1.0f);
+    edgeComponent->highlighted = true;
+
+    if (auto edge = edgeComponent->edge.lock())
+    {
+        for (auto const& vertexComponent : vertexComponents)
+        {
+            if (edge->vertices[0].lock() == vertexComponent->vertex.lock() || edge->vertices[1].lock() == vertexComponent->vertex.lock())
+            {
+                vertexComponent->setAlpha(1.0f);
+            }
+        }
+    }
+}
+
+GradientMeshEditor::PatchComponent::PatchComponent(std::weak_ptr<Mesher::Patch> patch_) :
     patch(patch_)
 {
     setOpaque(false);
     setRepaintsOnMouseActivity(true);
+
+    if (auto lock = patch.lock())
+    {
+        auto it = lock->edges.begin();
+        path.startNewSubPath(it->lock()->vertices[0].lock()->point);
+
+        while (it != lock->edges.end())
+        {
+            path.lineTo(it->lock()->vertices[1].lock()->point);
+            ++it;
+        }
+    }
 }
 
 bool GradientMeshEditor::PatchComponent::hitTest(int x, int y)
 {
-    return juce::Component::hitTest(x, y);
+        return path.contains((float)x, (float)y);
 }
 
 void GradientMeshEditor::PatchComponent::mouseEnter(const juce::MouseEvent& event)
@@ -376,10 +401,79 @@ void GradientMeshEditor::PatchComponent::mouseExit(const MouseEvent& event)
 
 void GradientMeshEditor::PatchComponent::paint(juce::Graphics& g)
 {
-    if (isMouseOver(true))
+    //if (isMouseOver(true))
     {
-        g.fillAll(juce::Colours::lightgrey.withAlpha(0.15f));
-        g.setColour(juce::Colours::white);
-        g.drawRect(getLocalBounds());
+        g.setColour(juce::Colours::purple);
+        g.fillPath(path);
+    }
+}
+
+GradientMeshEditor::VertexComponent::VertexComponent(std::weak_ptr<Mesher::Vertex> vertex_) :
+    vertex(vertex_)
+{
+    setAlpha(0.5f);
+    setInterceptsMouseClicks(false, false);
+}
+
+bool GradientMeshEditor::VertexComponent::hitTest(int x, int y)
+{
+    return juce::Component::hitTest(x, y);
+}
+
+void GradientMeshEditor::VertexComponent::mouseEnter(const juce::MouseEvent& event)
+{
+    if (onMouseOver)
+        onMouseOver();
+}
+
+void GradientMeshEditor::VertexComponent::mouseExit(const MouseEvent& event)
+{
+}
+
+void GradientMeshEditor::VertexComponent::paint(juce::Graphics& g)
+{
+    g.setColour(juce::Colours::red);
+    g.fillEllipse(getLocalBounds().toFloat());
+}
+
+GradientMeshEditor::EdgeComponent::EdgeComponent(std::weak_ptr<Mesher::Edge> edge_) :
+    edge(edge_)
+{
+    setAlpha(0.5f);
+    setInterceptsMouseClicks(false, false);
+}
+
+bool GradientMeshEditor::EdgeComponent::hitTest(int x, int y)
+{
+    return juce::Component::hitTest(x, y);
+}
+
+void GradientMeshEditor::EdgeComponent::mouseEnter(const juce::MouseEvent& event)
+{
+    if (onMouseOver)
+        onMouseOver();
+}
+
+void GradientMeshEditor::EdgeComponent::mouseExit(const MouseEvent& event)
+{
+
+}
+
+void GradientMeshEditor::EdgeComponent::paint(juce::Graphics& g)
+{
+    //g.drawRect(getLocalBounds());
+
+    if (auto e = edge.lock())
+    {
+        auto v0 = e->vertices[0].lock();
+        auto v1 = e->vertices[1].lock();
+        if (v0 && v1)
+        {
+            auto origin = getPosition().toFloat();
+
+            auto color = highlighted ? juce::Colours::green : juce::Colours::blue;
+            g.setColour(color);
+            g.drawLine({ v0->point - origin, v1->point - origin }, 4.0f);
+        }
     }
 }
