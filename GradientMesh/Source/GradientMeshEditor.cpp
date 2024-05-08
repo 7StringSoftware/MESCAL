@@ -5,10 +5,10 @@ static Path makePath()
     juce::Path p;
     //p.addRoundedRectangle(juce::Rectangle<float>{ 100.0f, 100.0f, 500.0f, 500.0f }, 25.0f);
     //p.addStar({ 350.0f, 350.0f }, 8, 200.0f, 300.0f);
-    //p.addEllipse(10.0f, 10.0f, 500.0f, 500.0f);
+    p.addEllipse(10.0f, 10.0f, 500.0f, 500.0f);
     //p.addPolygon({ 400.0f, 400.0f }, 7, 300.0f);
     //p.applyTransform(juce::AffineTransform::rotation(0.2f, p.getBounds().getCentreX(), p.getBounds().getCentreY()));
-    p.addRectangle(0.0f, 0.0f, 100.0f, 100.0f);
+    //p.addRectangle(10.0f, 10.0f, 500.0f, 500.0f);
     //p.addRectangle(200.0f, 200.0f, 500.0f, 500.0f);
 
     return p;
@@ -374,11 +374,35 @@ GradientMeshEditor::PatchComponent::PatchComponent(std::weak_ptr<Mesher::Patch> 
     if (auto lock = patch.lock())
     {
         auto it = lock->edges.begin();
-        path.startNewSubPath(it->lock()->vertices[0].lock()->point);
+        auto lastPoint = it->lock()->vertices[0].lock()->point;
+        path.startNewSubPath(lastPoint);
 
         while (it != lock->edges.end())
         {
-            path.lineTo(it->lock()->vertices[1].lock()->point);
+            auto nextPoint = it->lock()->vertices[1].lock()->point;
+            if (nextPoint == lastPoint)
+                nextPoint = it->lock()->vertices[0].lock()->point;
+
+            switch (it->lock()->type)
+            {
+            case Mesher::Edge::Type::line:
+                path.lineTo(nextPoint);
+                break;
+
+            case Mesher::Edge::Type::quadratic:
+                path.quadraticTo(it->lock()->controlPoints[0].value_or(juce::Point<float>{}), nextPoint);
+                break;
+
+            case Mesher::Edge::Type::cubic:
+                path.cubicTo(it->lock()->controlPoints[0].value_or(juce::Point<float>{}), it->lock()->controlPoints[1].value_or(juce::Point<float>{}), nextPoint);
+                break;
+
+            default:
+                jassertfalse;
+                break;
+            }
+
+            lastPoint = nextPoint;
             ++it;
         }
     }
@@ -386,7 +410,7 @@ GradientMeshEditor::PatchComponent::PatchComponent(std::weak_ptr<Mesher::Patch> 
 
 bool GradientMeshEditor::PatchComponent::hitTest(int x, int y)
 {
-        return path.contains((float)x, (float)y);
+    return path.contains((float)x, (float)y);
 }
 
 void GradientMeshEditor::PatchComponent::mouseEnter(const juce::MouseEvent& event)
@@ -401,7 +425,7 @@ void GradientMeshEditor::PatchComponent::mouseExit(const MouseEvent& event)
 
 void GradientMeshEditor::PatchComponent::paint(juce::Graphics& g)
 {
-    //if (isMouseOver(true))
+    if (isMouseOver(true))
     {
         g.setColour(juce::Colours::purple);
         g.fillPath(path);
@@ -411,7 +435,7 @@ void GradientMeshEditor::PatchComponent::paint(juce::Graphics& g)
 GradientMeshEditor::VertexComponent::VertexComponent(std::weak_ptr<Mesher::Vertex> vertex_) :
     vertex(vertex_)
 {
-    setAlpha(0.5f);
+    setAlpha(0.7f);
     setInterceptsMouseClicks(false, false);
 }
 
@@ -439,7 +463,7 @@ void GradientMeshEditor::VertexComponent::paint(juce::Graphics& g)
 GradientMeshEditor::EdgeComponent::EdgeComponent(std::weak_ptr<Mesher::Edge> edge_) :
     edge(edge_)
 {
-    setAlpha(0.5f);
+    setAlpha(0.7f);
     setInterceptsMouseClicks(false, false);
 }
 

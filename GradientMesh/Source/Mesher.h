@@ -17,10 +17,6 @@ public:
         std::vector<std::weak_ptr<Edge>> edges;
 
         Vertex() = default;
-        ~Vertex()
-        {
-            DBG("~Vertex");
-        }
 
         Vertex(juce::Point<float> p) :
             point(p)
@@ -42,9 +38,33 @@ public:
 
     struct Edge
     {
-        ~Edge()
+        void dump()
         {
-            DBG("~Edge");
+            juce::String line = "Edge ";
+
+            if (auto lock = vertices[0].lock())
+            {
+                line << lock->point.toString();
+            }
+            else
+            {
+                line << "nullptr";
+            }
+
+            line << " -> ";
+
+            if (auto lock = vertices[1].lock())
+            {
+                line << lock->point.toString();
+            }
+            else
+            {
+                line << "nullptr";
+            }
+
+            DBG(line);
+
+            //DBG("Edge " << vertices[0].lock()->point.toString() << " -> " << vertices[1].lock()->point.toString() << "   --   " << controlPoints[0].value_or(juce::Point<float>{}).toString() << " -> " << controlPoints[1].value_or(juce::Point<float>{}).toString());
         }
 
         enum class Type
@@ -70,6 +90,9 @@ public:
             juce::String line = "Patch ";
             for (auto const& edge : edges)
             {
+                jassert(edge.lock());
+                jassert(edge.lock()->vertices[0].lock());
+                jassert(edge.lock()->vertices[1].lock());
                 line << edge.lock()->vertices[0].lock()->point.toString() << " -> " << edge.lock()->vertices[1].lock()->point.toString() << "   --   ";
             }
             DBG(line);

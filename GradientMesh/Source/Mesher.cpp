@@ -83,7 +83,7 @@ Mesher::Mesher(Path&& p) :
     std::shared_ptr<Vertex> subpathStart;
     while (it.next())
     {
-        DBG(print(it));
+        //DBG(print(it));
 
         switch (it.elementType)
         {
@@ -110,6 +110,11 @@ Mesher::Mesher(Path&& p) :
     auto center = path.getBounds().getCentre();
     for (auto& subpath : subpaths)
     {
+        for (auto const& edge : subpath.edges)
+        {
+            edge->dump();
+        }
+
         std::sort(subpath.vertices.begin(), subpath.vertices.end(), [&](auto const& a, auto const& b)
             {
                 auto angleA = center.getAngleToPoint(a->point);
@@ -130,10 +135,12 @@ Mesher::Mesher(Path&& p) :
     //
     for (auto& subpath : subpaths)
     {
+#if 0
         for (auto const& v : subpath.vertices)
         {
             DBG("vertex " << v->point.toString());
         }
+#endif
         subpath.addPatches(center);
     }
 }
@@ -176,16 +183,18 @@ void Mesher::iterateSubpath(juce::Path::Iterator& it, std::shared_ptr<Vertex> su
     auto center = bounds.getCentre();
 
     std::shared_ptr<Vertex> previousVertex = subpathStart;
-    std::shared_ptr<Vertex> vertex;
-    std::shared_ptr<Edge> edge;
-
     subpath.vertices.emplace_back(subpathStart);
+    //DBG("   subpath start vertex " << subpathStart->point.toString());
 
-    bool closed = false;
-    while (it.next() || !closed)
+    while (it.next())
     {
+        std::shared_ptr<Vertex> vertex;
+        std::shared_ptr<Edge> edge;
+
         DBG("   " << print(it));
 
+        auto edgeType = Edge::Type::unknown;
+        std::array<std::optional<juce::Point<float>>, 2> controlPoints;
         switch (it.elementType)
         {
         case Path::Iterator::startNewSubPath:
@@ -198,31 +207,29 @@ void Mesher::iterateSubpath(juce::Path::Iterator& it, std::shared_ptr<Vertex> su
         case Path::Iterator::lineTo:
         {
             vertex = std::make_shared<Vertex>(juce::Point<float>{ it.x1, it.y1 });
-            edge = std::make_shared<Edge>(Edge{ Edge::Type::line, { previousVertex, vertex } });
+            edgeType = Edge::Type::line;
             break;
         }
 
         case Path::Iterator::quadraticTo:
         {
             vertex = std::make_shared<Vertex>(juce::Point<float>{ it.x2, it.y2 });
-            edge = std::make_shared<Edge>(Edge{ Edge::Type::line, { previousVertex, vertex } });
-            edge->controlPoints = { juce::Point<float>{ it.x1, it.y1 }, juce::Point<float>{ it.x1, it.y1 } };
+            edgeType = Edge::Type::quadratic;
+            controlPoints = { juce::Point<float>{ it.x1, it.y1 }, juce::Point<float>{ it.x1, it.y1 } };
             break;
         }
 
         case Path::Iterator::cubicTo:
         {
             vertex = std::make_shared<Vertex>(juce::Point<float>{ it.x3, it.y3 });
-            edge = std::make_shared<Edge>(Edge{ Edge::Type::line, { previousVertex, vertex } });
-            edge->controlPoints = { juce::Point<float>{ it.x1, it.y1 }, juce::Point<float>{ it.x2, it.y2 } };
+            edgeType = Edge::Type::cubic;
+            controlPoints = { juce::Point<float>{ it.x1, it.y1 }, juce::Point<float>{ it.x2, it.y2 } };
             break;
         }
 
         case Path::Iterator::closePath:
         {
-            edge = std::make_shared<Edge>(Edge{Edge::Type::line, {previousVertex, subpathStart} });
-            closed = true;
-            break;
+            return;
         }
         }
 
@@ -233,19 +240,23 @@ void Mesher::iterateSubpath(juce::Path::Iterator& it, std::shared_ptr<Vertex> su
                 return;
             }
 
-            vertex->edges.emplace_back(edge);
-            subpath.vertices.emplace_back(vertex);
-        }
+            if (approximatelyEqual(vertex->point.x, subpathStart->point.x) && approximatelyEqual(vertex->point.y, subpathStart->point.y))
+            {
+                edge = std::make_shared<Edge>(Edge{ edgeType, { previousVertex, subpathStart } });
+            }
+            else
+            {
+                edge = std::make_shared<Edge>(Edge{ edgeType, { previousVertex, vertex } });
+                subpath.vertices.emplace_back(vertex);
+            }
 
-        if (edge)
-        {
+            edge->controlPoints = controlPoints;
+
             previousVertex->edges.emplace_back(edge);
             subpath.edges.emplace_back(edge);
         }
 
         previousVertex = vertex;
-        vertex = {};
-        edge = {};
     }
 }
 
@@ -255,34 +266,32 @@ void Mesher::Subpath::addPatches(juce::Point<float> center)
     std::shared_ptr<Edge> newEdge;
     std::weak_ptr<Edge> previousEdge;
 
-    auto addPatch = [&](std::weak_ptr<Vertex> perimeterVertex1, std::weak_ptr<Vertex> perimeterVertex2)
-        {
-            if (auto previousEdgeLock = previousEdge.lock())
-            {
-                DBG("addPatch " << perimeterVertex1.lock()->point.toString() << " -> " << perimeterVertex2.lock()->point.toString());
+    auto perimeterVerticesEnd = vertices.begin() + vertices.size();
+    auto perimeterEdgesEnd = edges.begin() + edges.size();
 
-                auto newPatch = std::make_shared<Patch>(Patch{ { perimeterVertex1.lock()->edges.front(), perimeterVertex2.lock()->edges.front(), newEdge, previousEdgeLock } });
-                patches.emplace_back(newPatch);
-            }
-        };
-
-    auto lastPerimeterVertex = vertices.begin() + vertices.size();
-    auto lastPerimeterEdge = edges.begin() + edges.size();
-    for (auto it = vertices.begin(); it != lastPerimeterVertex; it += 2)
+    for (auto vertexIndex = 0; vertexIndex < vertices.size(); vertexIndex += 2)
     {
-        auto perimeterVertex = *it;
+        auto& perimeterVertex = vertices[vertexIndex];
         newEdge = std::make_shared<Edge>(Edge{ Edge::Type::line, { perimeterVertex, centerVertex } });
         perimeterVertex->edges.emplace_back(newEdge);
         centerVertex->edges.emplace_back(newEdge);
         edges.emplace_back(newEdge);
+        //newEdge->dump();
     }
 
-    for (size_t centerVertexEdgeIndex = 0; centerVertexEdgeIndex < centerVertex->edges.size() - 1; ++centerVertexEdgeIndex)
+    for (size_t centerVertexEdgeIndex = 0; centerVertexEdgeIndex < centerVertex->edges.size(); ++centerVertexEdgeIndex)
     {
         auto centerVertexEdge0 = centerVertex->edges[centerVertexEdgeIndex];
-        auto centerVertexEdge1 = centerVertex->edges[centerVertexEdgeIndex + 1];
+        auto centerVertexEdge1 = centerVertex->edges[(centerVertexEdgeIndex + 1) % centerVertex->edges.size()];
 
+        auto perimeterEdge0 = edges[centerVertexEdgeIndex * 2];
+        auto perimeterEdge1 = edges[centerVertexEdgeIndex * 2 + 1];
 
+        auto& patch = patches.emplace_back(std::make_shared<Patch>(Patch{ { perimeterEdge0, perimeterEdge1, centerVertexEdge1, centerVertexEdge0 } }));
+
+        DBG("patch " << patch->edges[0].lock()->vertices[0].lock()->point.toString()
+            << " -> " << patch->edges[1].lock()->vertices[0].lock()->point.toString() << " -> "
+            << patch->edges[2].lock()->vertices[0].lock()->point.toString() << " -> " << patch->edges[3].lock()->vertices[0].lock()->point.toString());
     }
 
     vertices.emplace_back(centerVertex);
