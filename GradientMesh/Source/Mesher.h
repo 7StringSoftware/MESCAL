@@ -15,6 +15,7 @@ public:
     {
         juce::Point<float> point;
         std::vector<std::weak_ptr<Edge>> edges;
+        juce::Colour color;
 
         Vertex() = default;
 

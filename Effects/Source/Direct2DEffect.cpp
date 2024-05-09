@@ -76,6 +76,11 @@ Direct2DEffect::~Direct2DEffect()
 {
 }
 
+void Direct2DEffect::setProperty(PropertyIndex index, PropertyValue&& value)
+{
+
+}
+
 void Direct2DEffect::applyEffect(juce::Image& sourceImage, juce::Graphics& destContext, float scaleFactor, float alpha)
 {
     auto sourcePixelData = dynamic_cast<juce::Direct2DPixelData*>(sourceImage.getPixelData());

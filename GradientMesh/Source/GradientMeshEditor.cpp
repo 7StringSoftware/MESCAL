@@ -3,9 +3,9 @@
 static Path makePath()
 {
     juce::Path p;
-    //p.addRoundedRectangle(juce::Rectangle<float>{ 100.0f, 100.0f, 500.0f, 500.0f }, 25.0f);
+    p.addRoundedRectangle(juce::Rectangle<float>{ 100.0f, 100.0f, 500.0f, 500.0f }, 25.0f);
     //p.addStar({ 350.0f, 350.0f }, 8, 200.0f, 300.0f);
-    p.addEllipse(10.0f, 10.0f, 500.0f, 500.0f);
+    //p.addEllipse(10.0f, 10.0f, 500.0f, 500.0f);
     //p.addPolygon({ 400.0f, 400.0f }, 7, 300.0f);
     //p.applyTransform(juce::AffineTransform::rotation(0.2f, p.getBounds().getCentreX(), p.getBounds().getCentreY()));
     //p.addRectangle(10.0f, 10.0f, 500.0f, 500.0f);
@@ -56,7 +56,7 @@ GradientMeshEditor::GradientMeshEditor() :
         for (auto const& vertex : subpath.vertices)
         {
             auto vertexComponent = std::make_unique<VertexComponent>(vertex);
-            addAndMakeVisible(vertexComponent.get());
+            //addAndMakeVisible(vertexComponent.get());
 
             juce::Component::SafePointer<VertexComponent> safePointer{ vertexComponent.get() };
             vertexComponent->onMouseOver = [this, safePointer]()
@@ -71,7 +71,7 @@ GradientMeshEditor::GradientMeshEditor() :
         for (auto const& edge : subpath.edges)
         {
             auto edgeComponent = std::make_unique<EdgeComponent>(edge);
-            addAndMakeVisible(edgeComponent.get());
+            //addAndMakeVisible(edgeComponent.get());
             edgeComponent->toBack();
 
             juce::Component::SafePointer<EdgeComponent> edgeComponentSafePointer{ edgeComponent.get() };
@@ -87,7 +87,7 @@ GradientMeshEditor::GradientMeshEditor() :
         for (auto const& patch : subpath.patches)
         {
             auto patchComponent = std::make_unique<PatchComponent>(patch);
-            addAndMakeVisible(patchComponent.get());
+            //addAndMakeVisible(patchComponent.get());
             patchComponent->toBack();
 
             patchComponents.emplace_back(std::move(patchComponent));
@@ -231,10 +231,13 @@ juce::Rectangle<int> GradientMeshEditor::getPreferredSize()
 
 void GradientMeshEditor::paint(juce::Graphics& g)
 {
-    //     for (auto const& subpath : mesher.subpaths)
-    //     {
-    //         paintSubpath(g, subpath, mesher.path.getBounds());
-    //     }
+    mesher.draw(meshImage, {});
+    g.drawImageAt(meshImage, 0, 0);
+
+    for (auto const& subpath : mesher.subpaths)
+    {
+        //paintSubpath(g, subpath, mesher.path.getBounds());
+    }
 }
 
 void GradientMeshEditor::paintSubpath(juce::Graphics& g, const Mesher::Subpath& subpath, juce::Rectangle<float> area)

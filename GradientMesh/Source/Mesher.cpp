@@ -1,12 +1,12 @@
 #include <windows.h>
 #include <winrt/Windows.Foundation.h>
+#include <d2d1_3helper.h>
 #include <d3d11_3.h>
 #include <d2d1_3.h>
 #define JUCE_CORE_INCLUDE_COM_SMART_PTR 1
 #include <JuceHeader.h>
 #include <juce_graphics/native/juce_DirectX_windows.h>
 #include <juce_graphics/native/juce_Direct2DImage_windows.h>
-#include <d2d1_3helper.h>
 #include "Mesher.h"
 
 static juce::String print(juce::Path::Iterator const& it)
@@ -36,6 +36,14 @@ static juce::String print(juce::Path::Iterator const& it)
 
     return line;
 }
+
+static std::array<int, 20> const stockColors
+{
+    0xe6194b, 0x3cb44b, 0xffe119, 0x4363d8, 0xf58231,
+    0x911eb4, 0x46f0f0, 0xf032e6, 0xbcf60c, 0xfabebe,
+    0x008080, 0xe6beff, 0x9a6324, 0xfffac8, 0x800000,
+    0xaaffc3, 0x808000, 0xffd8b1, 0x000075, 0x808080
+};
 
 struct Mesher::Pimpl
 {
@@ -105,6 +113,19 @@ Mesher::Mesher(Path&& p) :
     }
 
     //
+    // Default vertex colors
+    //
+    int colorIndex = 0;
+    for (auto const& subpath : subpaths)
+    {
+        for (auto const& vertex : subpath.vertices)
+        {
+            vertex->color = juce::Colour(stockColors[colorIndex] | 0xff000000);
+            colorIndex = (colorIndex + 1) % stockColors.size();
+        }
+    }
+
+    //
     // Sort perimeter vertices by clockwise angle from center
     //
     auto center = path.getBounds().getCentre();
@@ -151,6 +172,50 @@ Mesher::~Mesher()
 
 void Mesher::draw(juce::Image image, juce::AffineTransform transform)
 {
+    auto toPoint2F = [&](juce::Point<float> p)
+        {
+            return D2D1::Point2F(p.x, p.y);
+        };
+
+    auto setD2DPatchVertices = [&](std::weak_ptr<Patch> patch, int edgeIndex, D2D1_POINT_2F& p0, D2D1_POINT_2F& p1, D2D1_COLOR_F& c0, D2D1_COLOR_F& c1)
+        {
+            if (auto patchLock = patch.lock())
+            {
+                if (auto edge = patchLock->edges[edgeIndex].lock())
+                {
+                    auto v0 = edge->vertices[0].lock();
+                    auto v1 = edge->vertices[1].lock();
+
+                    if (v0 && v1)
+                    {
+                        p0 = toPoint2F(v0->point.toFloat());
+                        p1 = toPoint2F(v1->point.toFloat());
+                        c0 = juce::D2DUtilities::toCOLOR_F(v0->color);
+                        c1 = juce::D2DUtilities::toCOLOR_F(v1->color);
+                    }
+                }
+            }
+        };
+
+    auto setEdgeControlPoints = [&](std::weak_ptr<Patch> patch, int edgeIndex, D2D1_POINT_2F& p0, D2D1_POINT_2F& p1)
+        {
+            if (auto patchLock = patch.lock())
+            {
+                if (auto edge = patchLock->edges[edgeIndex].lock())
+                {
+                    if (edge->controlPoints[0].has_value())
+                    {
+                        p0 = toPoint2F(edge->controlPoints[0].value());
+                    }
+
+                    if (edge->controlPoints[1].has_value())
+                    {
+                        p1 = toPoint2F(edge->controlPoints[1].value());
+                    }
+                }
+            }
+        };
+
     pimpl->createResources(image);
 
     size_t numPatches = 0;
@@ -165,13 +230,54 @@ void Mesher::draw(juce::Image image, juce::AffineTransform transform)
 
     for (auto const& subpath : subpaths)
     {
-#if 0
-        for (auto const& quad : subpath.quads)
+        for (auto const& patch : subpath.patches)
         {
-            D2D1_GRADIENT_MESH_PATCH d2dPatch;
-            d2dPatches.emplace_back(d2dPatch);
+            auto& d2dPatch = d2dPatches.emplace_back(D2D1_GRADIENT_MESH_PATCH{});
+
+            setD2DPatchVertices(patch, 0, d2dPatch.point00, d2dPatch.point03, d2dPatch.color00, d2dPatch.color03);
+            setD2DPatchVertices(patch, 2, d2dPatch.point30, d2dPatch.point33, d2dPatch.color30, d2dPatch.color33);
+
+            setEdgeControlPoints(patch, 0, d2dPatch.point01, d2dPatch.point02);
+            setEdgeControlPoints(patch, 1, d2dPatch.point10, d2dPatch.point20);
+            setEdgeControlPoints(patch, 2, d2dPatch.point31, d2dPatch.point32);
+            setEdgeControlPoints(patch, 3, d2dPatch.point02, d2dPatch.point23);
+
+            d2dPatch.point11 = d2dPatch.point00;
+            d2dPatch.point12 = d2dPatch.point03;
+            d2dPatch.point21 = d2dPatch.point30;
+            d2dPatch.point22 = d2dPatch.point33;
+
+            break;
         }
-#endif
+
+        break;
+    }
+
+    if (pimpl->deviceContext && image.isValid())
+    {
+        pimpl->deviceContext->CreateGradientMesh(d2dPatches.data(), d2dPatches.size(), pimpl->gradientMesh.put());
+
+        if (pimpl->gradientMesh)
+        {
+            if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
+            {
+                if (auto bitmap = pixelData->getAdapterD2D1Bitmap())
+                {
+                    pimpl->deviceContext->SetTarget(bitmap);
+                    pimpl->deviceContext->BeginDraw();
+                    pimpl->deviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+                    pimpl->deviceContext->Clear({ 0.0f, 0.0f, 0.0f, 0.0f });
+
+                    if (pimpl->gradientMesh)
+                    {
+                        pimpl->deviceContext->DrawGradientMesh(pimpl->gradientMesh.get());
+                    }
+
+                    pimpl->deviceContext->EndDraw();
+                    pimpl->deviceContext->SetTarget(nullptr);
+                }
+            }
+        }
     }
 }
 
