@@ -89,12 +89,20 @@ private:
     std::vector<std::unique_ptr<PatchComponent>> patchComponents;
     juce::VBlankAttachment vblankAttachment{ this, [this] 
         { 
+            double now = juce::Time::getMillisecondCounterHiRes();
+            double delta = now - lastMsec;
+            lastMsec = now;
+            //rotationAngle = delta * 0.001 * 0.1 * juce::MathConstants<float>::twoPi;
+
+            while (rotationAngle > juce::MathConstants<double>::twoPi)
+                rotationAngle -= juce::MathConstants<double>::twoPi;
+
             repaint(); 
         } };
 
     float zoom = 1.0f;
     double lastMsec = juce::Time::getMillisecondCounterHiRes();
-    double phase = 0.0;
+    double rotationAngle = 0.0;
 
     Mesher mesher;
 

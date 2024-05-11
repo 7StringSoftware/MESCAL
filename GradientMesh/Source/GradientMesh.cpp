@@ -17,7 +17,7 @@
 #include <juce_graphics/native/juce_DirectX_windows.h>
 #include <juce_graphics/native/juce_Direct2DImage_windows.h>
 #include "GradientMesh.h"
-#include <d2d1_3helper.h>a
+#include <d2d1_3helper.h>
 
 const std::array<juce::Colour, 4> GradientMesh::Patch::defaultColors =
 {

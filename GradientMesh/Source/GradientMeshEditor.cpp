@@ -56,7 +56,7 @@ GradientMeshEditor::GradientMeshEditor() :
         for (auto const& vertex : subpath.vertices)
         {
             auto vertexComponent = std::make_unique<VertexComponent>(vertex);
-            //addAndMakeVisible(vertexComponent.get());
+            addAndMakeVisible(vertexComponent.get());
 
             juce::Component::SafePointer<VertexComponent> safePointer{ vertexComponent.get() };
             vertexComponent->onMouseOver = [this, safePointer]()
@@ -71,7 +71,7 @@ GradientMeshEditor::GradientMeshEditor() :
         for (auto const& edge : subpath.edges)
         {
             auto edgeComponent = std::make_unique<EdgeComponent>(edge);
-            //addAndMakeVisible(edgeComponent.get());
+            addAndMakeVisible(edgeComponent.get());
             edgeComponent->toBack();
 
             juce::Component::SafePointer<EdgeComponent> edgeComponentSafePointer{ edgeComponent.get() };
@@ -87,7 +87,7 @@ GradientMeshEditor::GradientMeshEditor() :
         for (auto const& patch : subpath.patches)
         {
             auto patchComponent = std::make_unique<PatchComponent>(patch);
-            //addAndMakeVisible(patchComponent.get());
+            addAndMakeVisible(patchComponent.get());
             patchComponent->toBack();
 
             patchComponents.emplace_back(std::move(patchComponent));
@@ -194,6 +194,7 @@ void GradientMeshEditor::createConic(float rotationAngle)
 
 void GradientMeshEditor::createSinglePatch()
 {
+#if 0
     mesh.reset();
 
     GradientMesh::PatchOptions options;
@@ -217,6 +218,7 @@ void GradientMeshEditor::createSinglePatch()
     options.bottomEdge = { { bounds.proportionOfWidth(0.25f), bounds.getBottom() - 50.0f }, { bounds.proportionOfWidth(0.75f), bounds.getBottom() + 50.0f } };
 
     mesh.addPatch(options);
+#endif
 }
 
 GradientMeshEditor::~GradientMeshEditor()
@@ -231,12 +233,16 @@ juce::Rectangle<int> GradientMeshEditor::getPreferredSize()
 
 void GradientMeshEditor::paint(juce::Graphics& g)
 {
-    mesher.draw(meshImage, {});
-    g.drawImageAt(meshImage, 0, 0);
+    g.fillAll(juce::Colours::black);
+
+//     mesher.path.applyTransform(juce::AffineTransform::rotation((float)rotationAngle, mesher.path.getBounds().getCentreX(), mesher.path.getBounds().getCentreY()));
+//     mesher.updateMesh();
+//     mesher.draw(meshImage, {});
+    //g.drawImageAt(meshImage, 0, 0);
 
     for (auto const& subpath : mesher.subpaths)
     {
-        //paintSubpath(g, subpath, mesher.path.getBounds());
+        paintSubpath(g, subpath, mesher.path.getBounds());
     }
 }
 
@@ -439,7 +445,7 @@ GradientMeshEditor::VertexComponent::VertexComponent(std::weak_ptr<Mesher::Verte
     vertex(vertex_)
 {
     setAlpha(0.7f);
-    setInterceptsMouseClicks(false, false);
+    //setInterceptsMouseClicks(false, false);
 }
 
 bool GradientMeshEditor::VertexComponent::hitTest(int x, int y)
@@ -467,7 +473,7 @@ GradientMeshEditor::EdgeComponent::EdgeComponent(std::weak_ptr<Mesher::Edge> edg
     edge(edge_)
 {
     setAlpha(0.7f);
-    setInterceptsMouseClicks(false, false);
+    //setInterceptsMouseClicks(false, false);
 }
 
 bool GradientMeshEditor::EdgeComponent::hitTest(int x, int y)

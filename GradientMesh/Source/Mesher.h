@@ -6,6 +6,8 @@ public:
     Mesher(Path&& p);
     ~Mesher();
 
+    void updateMesh();
+
     void draw(juce::Image image, juce::AffineTransform transform);
 
 //private:
@@ -39,6 +41,24 @@ public:
 
     struct Edge
     {
+        enum class Type
+        {
+            unknown = -1,
+            start,
+            line,
+            quadratic,
+            cubic,
+            close,
+        } type = Type::unknown;
+
+        Edge(Type type_, std::weak_ptr<Vertex> v0, std::weak_ptr<Vertex> v1) :
+            type(type_),
+            angle(v0.lock()->point.getAngleToPoint(v1.lock()->point))
+        {
+            vertices[0] = v0;
+            vertices[1] = v1;
+        }
+
         void dump()
         {
             juce::String line = "Edge ";
@@ -63,23 +83,16 @@ public:
                 line << "nullptr";
             }
 
+            line << "   angle:" << angle / juce::MathConstants<float>::pi;
+
             DBG(line);
 
             //DBG("Edge " << vertices[0].lock()->point.toString() << " -> " << vertices[1].lock()->point.toString() << "   --   " << controlPoints[0].value_or(juce::Point<float>{}).toString() << " -> " << controlPoints[1].value_or(juce::Point<float>{}).toString());
         }
 
-        enum class Type
-        {
-            unknown = -1,
-            start,
-            line,
-            quadratic,
-            cubic,
-            close,
-        } type = Type::unknown;
-
         std::array<std::weak_ptr<Vertex>, 2> vertices;
         std::array<std::optional<juce::Point<float>>, 2> controlPoints;
+        float angle = 0.0f;
 
         JUCE_LEAK_DETECTOR(Edge)
     };
