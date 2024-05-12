@@ -3,12 +3,12 @@
 static Path makePath()
 {
     juce::Path p;
-    p.addRoundedRectangle(juce::Rectangle<float>{ 100.0f, 100.0f, 500.0f, 500.0f }, 25.0f);
+    //p.addRoundedRectangle(juce::Rectangle<float>{ 100.0f, 100.0f, 500.0f, 500.0f }, 25.0f);
     //p.addStar({ 350.0f, 350.0f }, 8, 200.0f, 300.0f);
     //p.addEllipse(10.0f, 10.0f, 500.0f, 500.0f);
     //p.addPolygon({ 400.0f, 400.0f }, 7, 300.0f);
     //p.applyTransform(juce::AffineTransform::rotation(0.2f, p.getBounds().getCentreX(), p.getBounds().getCentreY()));
-    //p.addRectangle(10.0f, 10.0f, 500.0f, 500.0f);
+    p.addRectangle(10.0f, 10.0f, 500.0f, 500.0f);
     //p.addRectangle(200.0f, 200.0f, 500.0f, 500.0f);
 
     return p;
@@ -56,7 +56,7 @@ GradientMeshEditor::GradientMeshEditor() :
         for (auto const& vertex : subpath.vertices)
         {
             auto vertexComponent = std::make_unique<VertexComponent>(vertex);
-            addAndMakeVisible(vertexComponent.get());
+            //addAndMakeVisible(vertexComponent.get());
 
             juce::Component::SafePointer<VertexComponent> safePointer{ vertexComponent.get() };
             vertexComponent->onMouseOver = [this, safePointer]()
@@ -71,7 +71,7 @@ GradientMeshEditor::GradientMeshEditor() :
         for (auto const& edge : subpath.edges)
         {
             auto edgeComponent = std::make_unique<EdgeComponent>(edge);
-            addAndMakeVisible(edgeComponent.get());
+            //addAndMakeVisible(edgeComponent.get());
             edgeComponent->toBack();
 
             juce::Component::SafePointer<EdgeComponent> edgeComponentSafePointer{ edgeComponent.get() };
@@ -87,7 +87,7 @@ GradientMeshEditor::GradientMeshEditor() :
         for (auto const& patch : subpath.patches)
         {
             auto patchComponent = std::make_unique<PatchComponent>(patch);
-            addAndMakeVisible(patchComponent.get());
+            //addAndMakeVisible(patchComponent.get());
             patchComponent->toBack();
 
             patchComponents.emplace_back(std::move(patchComponent));
@@ -235,14 +235,14 @@ void GradientMeshEditor::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::black);
 
-//     mesher.path.applyTransform(juce::AffineTransform::rotation((float)rotationAngle, mesher.path.getBounds().getCentreX(), mesher.path.getBounds().getCentreY()));
-//     mesher.updateMesh();
-//     mesher.draw(meshImage, {});
-    //g.drawImageAt(meshImage, 0, 0);
+     mesher.path.applyTransform(juce::AffineTransform::rotation((float)rotationAngle, mesher.path.getBounds().getCentreX(), mesher.path.getBounds().getCentreY()));
+     mesher.updateMesh();
+     mesher.draw(meshImage, {});
+    g.drawImageAt(meshImage, 0, 0);
 
     for (auto const& subpath : mesher.subpaths)
     {
-        paintSubpath(g, subpath, mesher.path.getBounds());
+        //paintSubpath(g, subpath, mesher.path.getBounds());
     }
 }
 
@@ -259,12 +259,11 @@ void GradientMeshEditor::paintSubpath(juce::Graphics& g, const Mesher::Subpath& 
     {
         g.setColour(juce::Colours::green.withAlpha(0.75f));
 
-        auto vertex0 = edge->vertices[0].lock();
-        auto vertex1 = edge->vertices[1].lock();
-        if (vertex0 && vertex1)
+        auto vertexPair = edge->getVertices();
+        if (vertexPair.first && vertexPair.second)
         {
             auto offset = Point<float>{ x, 0.0f };
-            g.drawLine({ vertex0->point + offset, vertex1->point + offset }, 2.0f);
+            g.drawLine({ vertexPair.first->point + offset, vertexPair.second->point + offset }, 2.0f);
         }
 
         x += area.getWidth();
@@ -293,11 +292,10 @@ void GradientMeshEditor::resized()
     {
         if (auto edge = edgeComponent->edge.lock())
         {
-            auto v0 = edge->vertices[0].lock();
-            auto v1 = edge->vertices[1].lock();
-            if (v0 && v1)
+            auto vertexPair = edge->getVertices();
+            if (vertexPair.first && vertexPair.second)
             {
-                edgeComponent->setBounds(juce::Rectangle<float>{ v0->point, v1->point }.expanded(5.0f).toNearestInt());
+                edgeComponent->setBounds(juce::Rectangle<float>{ vertexPair.first->point, vertexPair.second->point }.expanded(5.0f).toNearestInt());
             }
         }
     }
@@ -346,7 +344,8 @@ void GradientMeshEditor::highlightVertex(VertexComponent* vertexComponent)
     {
         if (auto edge = edgeComponent->edge.lock())
         {
-            if (edge->vertices[0].lock() == vertexComponent->vertex.lock() || edge->vertices[1].lock() == vertexComponent->vertex.lock())
+            auto vertexPair = edge->getVertices();
+            if (vertexPair.first == vertexComponent->vertex.lock() || vertexPair.second == vertexComponent->vertex.lock())
             {
                 edgeComponent->setAlpha(1.0f);
                 edgeComponent->highlighted = true;
@@ -366,7 +365,8 @@ void GradientMeshEditor::highlightEdge(EdgeComponent* edgeComponent)
     {
         for (auto const& vertexComponent : vertexComponents)
         {
-            if (edge->vertices[0].lock() == vertexComponent->vertex.lock() || edge->vertices[1].lock() == vertexComponent->vertex.lock())
+            auto vertexPair = edge->getVertices();
+            if (vertexPair.first == vertexComponent->vertex.lock() || vertexPair.second == vertexComponent->vertex.lock())
             {
                 vertexComponent->setAlpha(1.0f);
             }
@@ -383,14 +383,14 @@ GradientMeshEditor::PatchComponent::PatchComponent(std::weak_ptr<Mesher::Patch> 
     if (auto lock = patch.lock())
     {
         auto it = lock->edges.begin();
-        auto lastPoint = it->lock()->vertices[0].lock()->point;
+        auto lastPoint = it->lock()->endpoints[0].vertex.lock()->point;
         path.startNewSubPath(lastPoint);
 
         while (it != lock->edges.end())
         {
-            auto nextPoint = it->lock()->vertices[1].lock()->point;
+            auto nextPoint = it->lock()->endpoints[1].vertex.lock()->point;
             if (nextPoint == lastPoint)
-                nextPoint = it->lock()->vertices[0].lock()->point;
+                nextPoint = it->lock()->endpoints[0].vertex.lock()->point;
 
             switch (it->lock()->type)
             {
@@ -498,15 +498,14 @@ void GradientMeshEditor::EdgeComponent::paint(juce::Graphics& g)
 
     if (auto e = edge.lock())
     {
-        auto v0 = e->vertices[0].lock();
-        auto v1 = e->vertices[1].lock();
-        if (v0 && v1)
+        auto vertexPair = e->getVertices();
+        if (vertexPair.first && vertexPair.second)
         {
             auto origin = getPosition().toFloat();
 
             auto color = highlighted ? juce::Colours::green : juce::Colours::blue;
             g.setColour(color);
-            g.drawLine({ v0->point - origin, v1->point - origin }, 4.0f);
+            g.drawLine({ vertexPair.first->point - origin, vertexPair.second->point - origin }, 4.0f);
         }
     }
 }

@@ -9,6 +9,8 @@
 #include <juce_graphics/native/juce_Direct2DImage_windows.h>
 #include "Mesher.h"
 
+int Mesher::Edge::uniqueIDCounter = 0;
+
 static juce::String print(juce::Path::Iterator const& it)
 {
     juce::String line;
@@ -90,7 +92,7 @@ Mesher::~Mesher()
 {
 }
 
-void Mesher::updateMesh()
+void Mesher::updateMesh(int numPatchEdges)
 {
     subpaths.clear();
 
@@ -149,14 +151,29 @@ void Mesher::updateMesh()
                 return angleA < angleB;
             });
 
-#if 1
-        std::sort(subpath.edges.begin(), subpath.edges.end(), [&](auto const& a, auto const& b)
+        for (auto const& vertex : subpath.vertices)
+        {
+            std::sort(vertex->vertexConnectedEdges.begin(), vertex->vertexConnectedEdges.end(), [&](auto const& a, auto const& b)
+                {
+                    auto angleA = a.lock()->getAngle(vertex.get());
+                    auto angleB = b.lock()->getAngle(vertex.get());
+
+                    return angleA < angleB;
+                });
+
+            int edgeIndex = 0;
+            for (auto& edge : vertex->vertexConnectedEdges)
             {
-                auto angleA = center.getAngleToPoint(a->vertices[0].lock()->point);
-                auto angleB = center.getAngleToPoint(b->vertices[0].lock()->point);
-                return angleA < angleB;
-            });
-#endif
+                DBG("connecting edge " << edge.lock()->uniqueID << " to vertex " << vertex->point.toString() << " at index " << edgeIndex << " of " << vertex->vertexConnectedEdges.size());
+                auto& endpoint = edge.lock()->getEndpoint(vertex.get());
+                endpoint.edgeIndex = edgeIndex++;
+            }
+
+            for (auto const& edge : vertex->vertexConnectedEdges)
+            {
+                edge.lock()->dump();
+            }
+        }
     }
 
     //
@@ -164,13 +181,7 @@ void Mesher::updateMesh()
     //
     for (auto& subpath : subpaths)
     {
-#if 0
-        for (auto const& v : subpath.vertices)
-        {
-            DBG("vertex " << v->point.toString());
-        }
-#endif
-        subpath.addPatches(center);
+        subpath.addPatches(center, numPatchEdges);
     }
 }
 
@@ -187,8 +198,8 @@ void Mesher::draw(juce::Image image, juce::AffineTransform transform)
             {
                 if (auto edge = patchLock->edges[edgeIndex].lock())
                 {
-                    auto v0 = edge->vertices[0].lock();
-                    auto v1 = edge->vertices[1].lock();
+                    auto v0 = edge->endpoints[0].vertex.lock();
+                    auto v1= edge->endpoints[1].vertex.lock();
 
                     if (v0 && v1)
                     {
@@ -207,9 +218,6 @@ void Mesher::draw(juce::Image image, juce::AffineTransform transform)
             {
                 if (auto edge = patchLock->edges[edgeIndex].lock())
                 {
-                    auto v0 = edge->vertices[0].lock();
-                    auto v1 = edge->vertices[1].lock();
-
                     if (edge->controlPoints[0].has_value())
                     {
                         p0 = toPoint2F(edge->controlPoints[0].value());
@@ -375,7 +383,8 @@ void Mesher::iterateSubpath(juce::Path::Iterator& it, std::shared_ptr<Vertex> su
 
             edge->controlPoints = controlPoints;
 
-            previousVertex->edges.emplace_back(edge);
+            vertex->vertexConnectedEdges.emplace_back(edge);
+            previousVertex->vertexConnectedEdges.emplace_back(edge);
             subpath.edges.emplace_back(edge);
         }
 
@@ -383,7 +392,7 @@ void Mesher::iterateSubpath(juce::Path::Iterator& it, std::shared_ptr<Vertex> su
     }
 }
 
-void Mesher::Subpath::addPatches(juce::Point<float> center)
+void Mesher::Subpath::addPatches(juce::Point<float> center, int numPatchEdges)
 {
     auto centerVertex = std::make_shared<Vertex>(center);
     std::shared_ptr<Edge> newEdge;
@@ -396,43 +405,62 @@ void Mesher::Subpath::addPatches(juce::Point<float> center)
     {
         auto& perimeterVertex = vertices[vertexIndex];
         newEdge = std::make_shared<Edge>(Edge{ Edge::Type::line, perimeterVertex, centerVertex });
-        perimeterVertex->edges.emplace_back(newEdge);
-        centerVertex->edges.emplace_back(newEdge);
+        perimeterVertex->vertexConnectedEdges.emplace_back(newEdge);
+        centerVertex->vertexConnectedEdges.emplace_back(newEdge);
         edges.emplace_back(newEdge);
-        //newEdge->dump();
     }
 
-#if 0
-    for (size_t centerVertexEdgeIndex = 0; centerVertexEdgeIndex < centerVertex->edges.size(); ++centerVertexEdgeIndex)
+    switch (numPatchEdges)
     {
-        auto centerVertexEdge0 = centerVertex->edges[centerVertexEdgeIndex];
-        auto centerVertexEdge1 = centerVertex->edges[(centerVertexEdgeIndex + 1) % centerVertex->edges.size()];
+    case 3:
+    {
+        for (size_t centerVertexEdgeIndex = 0; centerVertexEdgeIndex < centerVertex->vertexConnectedEdges.size(); ++centerVertexEdgeIndex)
+        {
+            auto centerVertexEdge0 = centerVertex->vertexConnectedEdges[centerVertexEdgeIndex];
+            auto centerVertexEdge1 = centerVertex->vertexConnectedEdges[(centerVertexEdgeIndex + 1) % centerVertex->vertexConnectedEdges.size()];
 
-        auto perimeterEdge0 = edges[centerVertexEdgeIndex * 2];
-        auto perimeterEdge1 = edges[centerVertexEdgeIndex * 2 + 1];
+            auto perimeterEdge = edges[centerVertexEdgeIndex];
 
-        auto& patch = patches.emplace_back(std::make_shared<Patch>(Patch{ { perimeterEdge0, perimeterEdge1, centerVertexEdge1, centerVertexEdge0 } }));
-
-        DBG("patch " << patch->edges[0].lock()->vertices[0].lock()->point.toString()
-            << " -> " << patch->edges[1].lock()->vertices[0].lock()->point.toString() << " -> "
-            << patch->edges[2].lock()->vertices[0].lock()->point.toString() << " -> " << patch->edges[3].lock()->vertices[0].lock()->point.toString());
+            patches.emplace_back(std::make_shared<Patch>(Patch{ { perimeterEdge, perimeterEdge, centerVertexEdge1, centerVertexEdge0 } }));
+        }
+        break;
     }
-#endif
 
-    for (size_t centerVertexEdgeIndex = 0; centerVertexEdgeIndex < centerVertex->edges.size(); ++centerVertexEdgeIndex)
+    case 4:
     {
-        auto centerVertexEdge0 = centerVertex->edges[centerVertexEdgeIndex];
-        auto centerVertexEdge1 = centerVertex->edges[(centerVertexEdgeIndex + 1) % centerVertex->edges.size()];
+        for (size_t centerVertexEdgeIndex = 0; centerVertexEdgeIndex < centerVertex->vertexConnectedEdges.size(); ++centerVertexEdgeIndex)
+        {
+            auto centerVertexEdge0 = centerVertex->vertexConnectedEdges[centerVertexEdgeIndex];
+            auto centerVertexEdge1 = centerVertex->vertexConnectedEdges[(centerVertexEdgeIndex + 1) % centerVertex->vertexConnectedEdges.size()];
 
-        auto perimeterEdge = edges[centerVertexEdgeIndex];
-        //auto perimeterEdge1 = edges[centerVertexEdgeIndex * 2 + 1];
+            auto perimeterEdge0 = centerVertexEdge0.lock()->nextEdgeRightTurn(centerVertex.get());
 
-        auto& patch = patches.emplace_back(std::make_shared<Patch>(Patch{ { perimeterEdge, perimeterEdge, centerVertexEdge1, centerVertexEdge0 } }));
+            auto perimeterEdge1 = edges[centerVertexEdgeIndex * 2 + 1];
 
-//         DBG("patch " << patch->edges[0].lock()->vertices[0].lock()->point.toString()
-//             << " -> " << patch->edges[1].lock()->vertices[0].lock()->point.toString() << " -> "
-//             << patch->edges[2].lock()->vertices[0].lock()->point.toString() << " -> " << patch->edges[3].lock()->vertices[0].lock()->point.toString());
+            auto& patch = patches.emplace_back(std::make_shared<Patch>(Patch{ { perimeterEdge0, perimeterEdge1, centerVertexEdge1, centerVertexEdge0 } }));
+        }
+        break;
+    }
+
+    default:
+    {
+        jassertfalse;
+        break;
+    }
     }
 
     vertices.emplace_back(centerVertex);
+}
+
+std::weak_ptr<Mesher::Edge> Mesher::Edge::nextEdgeRightTurn(Vertex const* const start)
+{
+    Endpoint& endpoint = (start == endpoints[0].vertex.lock().get()) ? endpoints[1] : endpoints[0];
+    return endpoint.vertex.lock()->turnRight(endpoint.edgeIndex);
+}
+
+std::weak_ptr<Mesher::Edge> Mesher::Vertex::turnRight(int edgeIndex) const
+{
+    jassert(edgeIndex >= 0);
+    edgeIndex = (edgeIndex - 1) % vertexConnectedEdges.size();
+    return vertexConnectedEdges[edgeIndex];
 }

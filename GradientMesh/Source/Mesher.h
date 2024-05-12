@@ -6,7 +6,7 @@ public:
     Mesher(Path&& p);
     ~Mesher();
 
-    void updateMesh();
+    void updateMesh(int numPatchEdges = 4);
 
     void draw(juce::Image image, juce::AffineTransform transform);
 
@@ -16,7 +16,7 @@ public:
     struct Vertex
     {
         juce::Point<float> point;
-        std::vector<std::weak_ptr<Edge>> edges;
+        std::vector<std::weak_ptr<Edge>> vertexConnectedEdges;
         juce::Colour color;
 
         Vertex() = default;
@@ -36,7 +36,15 @@ public:
             return approximatelyEqual(point.x, other.point.x) && approximatelyEqual(point.y, other.point.y);
         }
 
+        std::weak_ptr<Edge> turnRight(int edgeIndex) const;
+
         JUCE_LEAK_DETECTOR(Vertex)
+    };
+
+    struct Endpoint
+    {
+        std::weak_ptr<Vertex> vertex;
+        int edgeIndex = -1;
     };
 
     struct Edge
@@ -53,44 +61,69 @@ public:
 
         Edge(Type type_, std::weak_ptr<Vertex> v0, std::weak_ptr<Vertex> v1) :
             type(type_),
+            endpoints{ { {v0, -1}, {v1, -1} }  },
             angle(v0.lock()->point.getAngleToPoint(v1.lock()->point))
         {
-            vertices[0] = v0;
-            vertices[1] = v1;
+            DBG("Created edge " << uniqueID << " with angle " << angle);
         }
 
-        void dump()
+        void dump() const noexcept
         {
-            juce::String line = "Edge ";
+            juce::String line = "Edge #";
+            
+            line << uniqueID << " ";
 
-            if (auto lock = vertices[0].lock())
-            {
-                line << lock->point.toString();
-            }
-            else
-            {
-                line << "nullptr";
-            }
+            auto edgeVertices = getVertices();
 
+            line << edgeVertices.first->point.toString();
             line << " -> ";
-
-            if (auto lock = vertices[1].lock())
-            {
-                line << lock->point.toString();
-            }
-            else
-            {
-                line << "nullptr";
-            }
-
+            line << edgeVertices.second->point.toString();
             line << "   angle:" << angle / juce::MathConstants<float>::pi;
+            line << "   endpoint edge indices: " << endpoints[0].edgeIndex << " " << endpoints[1].edgeIndex;
 
             DBG(line);
-
-            //DBG("Edge " << vertices[0].lock()->point.toString() << " -> " << vertices[1].lock()->point.toString() << "   --   " << controlPoints[0].value_or(juce::Point<float>{}).toString() << " -> " << controlPoints[1].value_or(juce::Point<float>{}).toString());
         }
 
-        std::array<std::weak_ptr<Vertex>, 2> vertices;
+        std::pair<std::shared_ptr<Vertex>, std::shared_ptr<Vertex>> getVertices() const
+        {
+            return { endpoints[0].vertex.lock(), endpoints[1].vertex.lock() };
+        }
+
+        float getAngle(Vertex* start)const
+        {
+            if (auto v0 = endpoints[0].vertex.lock())
+            {
+                if (v0.get() == start)
+                {
+                    return angle;
+                }
+            }
+
+            jassert(start == endpoints[1].vertex.lock().get());
+
+            return angle + juce::MathConstants<float>::pi;
+        }
+
+        Endpoint& getEndpoint(Vertex* vertex)
+        {
+            if (auto v0 = endpoints[0].vertex.lock())
+            {
+                if (v0.get() == vertex)
+                {
+                    return endpoints[0];
+                }
+            }
+
+            jassert(vertex == endpoints[1].vertex.lock().get());
+
+            return endpoints[1];
+        }
+
+        std::weak_ptr<Edge> nextEdgeRightTurn(Vertex const* const start);
+
+        static int uniqueIDCounter;
+        int const uniqueID = uniqueIDCounter++;
+        std::array<Endpoint, 2> endpoints;
         std::array<std::optional<juce::Point<float>>, 2> controlPoints;
         float angle = 0.0f;
 
@@ -101,15 +134,6 @@ public:
     {
         Patch(std::array<std::weak_ptr<Edge>, 4>&& edges_) : edges(edges_)
         {
-            juce::String line = "Patch ";
-            for (auto const& edge : edges)
-            {
-                jassert(edge.lock());
-                jassert(edge.lock()->vertices[0].lock());
-                jassert(edge.lock()->vertices[1].lock());
-                line << edge.lock()->vertices[0].lock()->point.toString() << " -> " << edge.lock()->vertices[1].lock()->point.toString() << "   --   ";
-            }
-            DBG(line);
         }
 
         std::array<std::weak_ptr<Edge>, 4> edges;
@@ -123,7 +147,7 @@ public:
         std::vector<std::shared_ptr<Edge>> edges;
         std::vector<std::shared_ptr<Patch>> patches;
 
-        void addPatches(juce::Point<float> center);
+        void addPatches(juce::Point<float> center, int numPatchEdges);
     };
 
     std::vector<Subpath> subpaths;
