@@ -85,7 +85,7 @@ Mesher::Mesher(Path&& p) :
     pimpl(std::make_unique<Pimpl>(*this)),
     path(p)
 {
-    updateMesh();
+//    updateMesh();
 }
 
 Mesher::~Mesher()
@@ -435,9 +435,8 @@ void Mesher::Subpath::addPatches(juce::Point<float> center, int numPatchEdges)
 
             auto perimeterEdge0 = centerVertexEdge0.lock()->nextEdgeRightTurn(centerVertex.get());
 
-            auto perimeterEdge1 = edges[centerVertexEdgeIndex * 2 + 1];
 
-            auto& patch = patches.emplace_back(std::make_shared<Patch>(Patch{ { perimeterEdge0, perimeterEdge1, centerVertexEdge1, centerVertexEdge0 } }));
+            //auto& patch = patches.emplace_back(std::make_shared<Patch>(Patch{ { perimeterEdge0, perimeterEdge1, centerVertexEdge1, centerVertexEdge0 } }));
         }
         break;
     }

@@ -5,6 +5,7 @@
 #include "ControlPointComponent.h"
 #include "Triangulator.h"
 #include "Mesher.h"
+#include "HalfEdgeMesh.h"
 
 class GradientMeshEditor  : public juce::Component
 {
@@ -18,7 +19,7 @@ public:
 
     juce::Rectangle<int> getPreferredSize();
     void paint (juce::Graphics&) override;
-    void paintSubpath(juce::Graphics& g, const Mesher::Subpath& subpath, juce::Rectangle<float> area);
+    void paintSubpath(juce::Graphics& g, const HalfEdgeMesh::Subpath& subpath, juce::Rectangle<float> area);
     void resized() override;
     void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override;
     void mouseMove(const MouseEvent& event) override;
@@ -27,7 +28,7 @@ private:
     struct EdgeComponent;
     struct VertexComponent : public juce::Component
     {
-        VertexComponent(std::weak_ptr<Mesher::Vertex> vertex_);
+        VertexComponent(const HalfEdgeMesh::Vertex* const vertex_);
         ~VertexComponent() override {}
 
         bool hitTest(int x, int y) override;
@@ -37,7 +38,7 @@ private:
 
         void paint(juce::Graphics& g) override;
 
-        std::weak_ptr<Mesher::Vertex> vertex;
+        const HalfEdgeMesh::Vertex* const vertex;
 
         std::function<void()> onMouseOver;
     };
@@ -76,7 +77,7 @@ private:
         bool highlighted = false;
         juce::Path path;
     };
-    
+
     void clearHighlights();
     void highlightVertex(VertexComponent* vertexComponent);
     void highlightEdge(EdgeComponent* edgeComponent);
@@ -87,8 +88,8 @@ private:
     std::vector<std::unique_ptr<EdgeComponent>> edgeComponents;
     std::vector<std::unique_ptr<ControlPointComponent>> controlPointComponents;
     std::vector<std::unique_ptr<PatchComponent>> patchComponents;
-    juce::VBlankAttachment vblankAttachment{ this, [this] 
-        { 
+    juce::VBlankAttachment vblankAttachment{ this, [this]
+        {
             double now = juce::Time::getMillisecondCounterHiRes();
             double delta = now - lastMsec;
             lastMsec = now;
@@ -97,7 +98,7 @@ private:
             while (rotationAngle > juce::MathConstants<double>::twoPi)
                 rotationAngle -= juce::MathConstants<double>::twoPi;
 
-            repaint(); 
+            repaint();
         } };
 
     float zoom = 1.0f;
@@ -105,6 +106,7 @@ private:
     double rotationAngle = 0.0;
 
     Mesher mesher;
+    HalfEdgeMesh halfedgeMesh;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GradientMeshEditor)
 };

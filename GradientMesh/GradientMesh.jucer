@@ -4,6 +4,9 @@
               id="NJ5XEl" jucerFormatVersion="1">
   <MAINGROUP id="fTgw8y" name="GradientMesh">
     <GROUP id="{07B94160-CF67-DC8B-7081-698B080E7B38}" name="Source">
+      <FILE id="GVjUdc" name="HalfEdgeMesh.cpp" compile="1" resource="0"
+            file="Source/HalfEdgeMesh.cpp"/>
+      <FILE id="NpagV2" name="HalfEdgeMesh.h" compile="0" resource="0" file="Source/HalfEdgeMesh.h"/>
       <FILE id="bQe32Z" name="Mesher.cpp" compile="1" resource="0" file="Source/Mesher.cpp"/>
       <FILE id="IzgBRn" name="Mesher.h" compile="0" resource="0" file="Source/Mesher.h"/>
       <FILE id="xFrlu7" name="Triangulator.cpp" compile="1" resource="0"
