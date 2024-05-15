@@ -9,6 +9,11 @@
 #include <juce_graphics/native/juce_Direct2DImage_windows.h>
 #include "HalfEdgeMesh.h"
 
+void HalfEdgeMesh::Vertex::dump() const
+{
+    DBG("Vertex " << point.toString() << "  halfedge:" << (halfedge ? halfedge->print() : "null"));
+}
+
 HalfEdgeMesh::HalfEdgeMesh(Path&& p) :
     path(p)
 {
@@ -108,56 +113,70 @@ void HalfEdgeMesh::iterateSubpath(juce::Path::Iterator& it, Point<float> subpath
         }
     }
 
-    auto addHalfedge = [&](Vertex* tailVertex, Vertex* headVertex, Halfedge::Type type)
+    auto addHalfedge = [&](Vertex* tailVertex, Vertex* headVertex, Halfedge::Type type) -> Halfedge*
+        {
+            auto halfedge = std::make_unique<Halfedge>();
+            halfedge->type = type;
+            halfedge->tailVertex = tailVertex;
+            halfedge->headVertex = headVertex;
+
+            auto twin = std::make_unique<Halfedge>();
+            twin->type = halfedge->type;
+            twin->tailVertex = halfedge->headVertex;
+            twin->headVertex = halfedge->tailVertex;
+
+            halfedge->twin = twin.get();
+            twin->twin = halfedge.get();
+
+            subpath.halfedges.push_back(std::move(twin));
+            subpath.halfedges.push_back(std::move(halfedge));
+
+            return subpath.halfedges.back().get();
+        };
+
+    for (const auto& pathPoint : pathPoints)
     {
-        auto halfedge = std::make_unique<Halfedge>();
-        halfedge->type = type;
-        halfedge->tailVertex = tailVertex;
-        halfedge->headVertex = headVertex;
-
-        auto twin = std::make_unique<Halfedge>();
-        twin->type = halfedge->type;
-        twin->tailVertex = halfedge->headVertex;
-        twin->headVertex = halfedge->tailVertex;
-
-        halfedge->twin = twin.get();
-        twin->twin = halfedge.get();
-
-        subpath.halfedges.push_back(std::move(halfedge));
-        subpath.halfedges.push_back(std::move(twin));
-    };
-
-    Vertex* previousVertex = subpath.vertices.emplace_back(std::make_unique<Vertex>(pathPoints.front().point)).get();
-    for (auto pathPointIterator = pathPoints.begin() + 1; pathPointIterator != pathPoints.end(); ++pathPointIterator)
-    {
-        auto const& pathPoint = *pathPointIterator;
-        auto& vertex = subpath.vertices.emplace_back(std::make_unique<Vertex>(pathPoint.point));
-
-        addHalfedge(previousVertex, vertex.get(), pathPoint.type);
-        vertex->halfedge = subpath.halfedges.back().get();
-
-        previousVertex = vertex.get();
+        subpath.vertices.emplace_back(std::make_unique<Vertex>(pathPoint.point));
     }
 
-    addHalfedge(previousVertex, subpath.vertices.front().get(), pathPoints.back().type);
+    std::vector<Halfedge*> perimeterHalfedges;
+    for (auto index = 0; index < pathPoints.size(); ++index)
+    {
+        auto& vertex = subpath.vertices[index];
+        auto& nextVertex = subpath.vertices[(index + 1) % pathPoints.size()];
+        auto perimeterHalfedge = addHalfedge(vertex.get(), nextVertex.get(), pathPoints[index].type);
+        vertex->halfedge = perimeterHalfedge;
+        perimeterHalfedges.push_back(perimeterHalfedge);
+    }
 
     auto centerVertex = std::make_unique<Vertex>(center);
-    for (auto& vertex : subpath.vertices)
+    std::vector<Halfedge*> centerHalfedges;
+    for (size_t index = 0; index < perimeterHalfedges.size(); ++index)
     {
-        addHalfedge(centerVertex.get(), vertex.get(), Halfedge::Type::line);
+        auto centerHalfedge = addHalfedge(perimeterHalfedges[index]->tailVertex, centerVertex.get(), Halfedge::Type::line);
+        centerHalfedges.push_back(centerHalfedge);
+
+        auto& perimeterHalfedge = perimeterHalfedges[index];
+        auto& previousPerimeterHalfedge = perimeterHalfedges[(index + perimeterHalfedges.size() - 1) % perimeterHalfedges.size()];
+        perimeterHalfedge->next = centerHalfedge;
+        perimeterHalfedge->previous = previousPerimeterHalfedge->twin;
+
+        centerHalfedge->next = perimeterHalfedge;
+        centerHalfedge->previous = previousPerimeterHalfedge->twin;
+
+        previousPerimeterHalfedge->twin->previous = centerHalfedge;
+        previousPerimeterHalfedge->twin->next = perimeterHalfedge;
     }
-    centerVertex->halfedge = subpath.halfedges.back().get();
+
+    for (size_t index = 0; index < centerHalfedges.size(); ++index)
+    {
+        size_t nextIndex = (index + 1) % centerHalfedges.size();
+        size_t previousIndex = (index + centerHalfedges.size() - 1) % centerHalfedges.size();
+        auto& centerHalfedge = centerHalfedges[index]->twin;
+        centerHalfedge->next = centerHalfedges[nextIndex]->twin;
+        centerHalfedge->previous = centerHalfedges[previousIndex]->twin;
+    }
+
+    centerVertex->halfedge = subpath.halfedges.back()->twin;
     subpath.vertices.push_back(std::move(centerVertex));
-
-    subpath.vertices.front()->halfedge = subpath.halfedges.back().get();
-
-    for (auto& halfedge : subpath.halfedges)
-    {
-        halfedge->dump();
-    }
-
-    for (auto const& vertex : subpath.vertices)
-    {
-        vertex->dump();
-    }
 }

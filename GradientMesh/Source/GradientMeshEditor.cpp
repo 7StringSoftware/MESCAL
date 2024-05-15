@@ -3,13 +3,13 @@
 static Path makePath()
 {
     juce::Path p;
-    //p.addRoundedRectangle(juce::Rectangle<float>{ 100.0f, 100.0f, 500.0f, 500.0f }, 25.0f);
+    p.addRoundedRectangle(juce::Rectangle<float>{ 100.0f, 100.0f, 500.0f, 500.0f }, 25.0f);
     //p.addStar({ 350.0f, 350.0f }, 8, 200.0f, 300.0f);
     //p.addEllipse(10.0f, 10.0f, 500.0f, 500.0f);
     //p.addPolygon({ 400.0f, 400.0f }, 7, 300.0f);
     //p.applyTransform(juce::AffineTransform::rotation(0.2f, p.getBounds().getCentreX(), p.getBounds().getCentreY()));
     //p.addRectangle(10.0f, 10.0f, 500.0f, 500.0f);
-    p.addRectangle(200.0f, 200.0f, 500.0f, 500.0f);
+    //p.addRectangle(200.0f, 200.0f, 500.0f, 500.0f);
 
     return p;
 }
@@ -70,23 +70,26 @@ GradientMeshEditor::GradientMeshEditor() :
             vertexComponents.emplace_back(std::move(vertexComponent));
         }
 
-#if 0
-        for (auto const& edge : subpath.edges)
+        for (auto const& halfedge : subpath.halfedges)
         {
-            auto edgeComponent = std::make_unique<EdgeComponent>(edge);
-            //addAndMakeVisible(edgeComponent.get());
+            auto edgeComponent = std::make_unique<HalfEdgeComponent>(halfedge.get());
+            addAndMakeVisible(edgeComponent.get());
             edgeComponent->toBack();
 
-            juce::Component::SafePointer<EdgeComponent> edgeComponentSafePointer{ edgeComponent.get() };
+            juce::Component::SafePointer<HalfEdgeComponent> edgeComponentSafePointer{ edgeComponent.get() };
             edgeComponent->onMouseOver = [this, edgeComponentSafePointer]()
                 {
                     if (edgeComponentSafePointer)
                         highlightEdge(edgeComponentSafePointer);
                 };
-
+            edgeComponent->onMouseExit = [this]()
+                {
+                    clearHighlights();
+                };
             edgeComponents.emplace_back(std::move(edgeComponent));
         }
 
+#if 0
         for (auto const& patch : subpath.patches)
         {
             auto patchComponent = std::make_unique<PatchComponent>(patch);
@@ -266,6 +269,7 @@ void GradientMeshEditor::paintSubpath(juce::Graphics& g, const HalfEdgeMesh::Sub
             g.drawArrow(juce::Line<float>{ tail, head}, 2.0f, 10.0f, 10.0f);
         };
 
+#if 0
     for (auto const& halfedge : subpath.halfedges)
     {
         auto tail = halfedge->tailVertex->point;
@@ -274,10 +278,11 @@ void GradientMeshEditor::paintSubpath(juce::Graphics& g, const HalfEdgeMesh::Sub
         auto color = juce::Colours::aqua;
         drawArrow(juce::Colours::aqua, tail, head, 5.0f);
     }
+#endif
 
     for (auto const& vertex : subpath.vertices)
     {
-        drawArrow(juce::Colours::orange, vertex->point, vertex->halfedge->headVertex->point, 0.0f);
+        //drawArrow(juce::Colours::orange.withAlpha(0.25f), vertex->halfedge->tailVertex->point, vertex->halfedge->headVertex->point, 0.0f);
     }
 }
 
@@ -290,22 +295,12 @@ void GradientMeshEditor::resized()
 
     for (auto& vertexComponent : vertexComponents)
     {
-        vertexComponent->setSize(30, 30);
-
-        auto center = vertexComponent->vertex->point.roundToInt();
-        vertexComponent->setCentrePosition(center.x, center.y);
+        vertexComponent->setBounds(getLocalBounds());
     }
 
     for (auto& edgeComponent : edgeComponents)
     {
-        if (auto edge = edgeComponent->edge.lock())
-        {
-            auto vertexPair = edge->getVertices();
-            if (vertexPair.first && vertexPair.second)
-            {
-                edgeComponent->setBounds(juce::Rectangle<float>{ vertexPair.first->point, vertexPair.second->point }.expanded(5.0f).toNearestInt());
-            }
-        }
+        edgeComponent->setBounds(getLocalBounds());
     }
 
     for (auto& patchComponent : patchComponents)
@@ -333,6 +328,7 @@ void GradientMeshEditor::clearHighlights()
     for (auto const& vertexComponent : vertexComponents)
     {
         vertexComponent->setAlpha(0.5f);
+        vertexComponent->highlighted = false;
     }
 
     for (auto const& edgeComponent : edgeComponents)
@@ -347,6 +343,7 @@ void GradientMeshEditor::highlightVertex(VertexComponent* vertexComponent)
     clearHighlights();
 
     vertexComponent->setAlpha(1.0f);
+    vertexComponent->highlighted = true;
 
 #if 0
     for (auto const& edgeComponent : edgeComponents)
@@ -364,7 +361,7 @@ void GradientMeshEditor::highlightVertex(VertexComponent* vertexComponent)
 #endif
 }
 
-void GradientMeshEditor::highlightEdge(EdgeComponent* edgeComponent)
+void GradientMeshEditor::highlightEdge(HalfEdgeComponent* edgeComponent)
 {
     clearHighlights();
 
@@ -462,7 +459,9 @@ GradientMeshEditor::VertexComponent::VertexComponent(const HalfEdgeMesh::Vertex*
 
 bool GradientMeshEditor::VertexComponent::hitTest(int x, int y)
 {
-    return juce::Component::hitTest(x, y);
+    auto hitPoint = juce::Point<int>{ x, y }.toFloat();
+    auto distance = vertex->point.getDistanceFrom(hitPoint);
+    return distance < 20.0f;
 }
 
 void GradientMeshEditor::VertexComponent::mouseEnter(const juce::MouseEvent& event)
@@ -478,46 +477,65 @@ void GradientMeshEditor::VertexComponent::mouseExit(const MouseEvent& event)
 void GradientMeshEditor::VertexComponent::paint(juce::Graphics& g)
 {
     g.setColour(juce::Colours::red);
-    g.fillEllipse(getLocalBounds().toFloat());
+
+    g.fillEllipse(juce::Rectangle<float>{ 30.0f, 30.0f}.withCentre(vertex->point));
+    if (highlighted)
+        g.drawArrow({ vertex->halfedge->tailVertex->point, vertex->halfedge->headVertex->point }, 2.0f, 8.0f, 8.0f);
 }
 
-GradientMeshEditor::EdgeComponent::EdgeComponent(std::weak_ptr<Mesher::Edge> edge_) :
-    edge(edge_)
+GradientMeshEditor::HalfEdgeComponent::HalfEdgeComponent(const HalfEdgeMesh::Halfedge* halfedge_) :
+    halfedge(halfedge_)
 {
     setAlpha(0.7f);
+
+    juce::Line<float> line{ halfedge->tailVertex->point, halfedge->headVertex->point };
+    line = line.withShortenedEnd(40.0f).withShortenedStart(40.0f);
+    auto angle = line.getAngle();
+    auto tail = line.getStart().getPointOnCircumference(10.0f, angle + juce::MathConstants<float>::halfPi);
+    auto head = line.getEnd().getPointOnCircumference(10.0f, angle + juce::MathConstants<float>::halfPi);
+    paintedLine = juce::Line<float>{ tail, head };
     //setInterceptsMouseClicks(false, false);
 }
 
-bool GradientMeshEditor::EdgeComponent::hitTest(int x, int y)
+bool GradientMeshEditor::HalfEdgeComponent::hitTest(int x, int y)
 {
-    return juce::Component::hitTest(x, y);
+    auto hitPoint = juce::Point<int>{ x, y }.toFloat();
+    auto nearestPoint = paintedLine.findNearestPointTo(hitPoint);
+    auto distance = nearestPoint.getDistanceFrom(hitPoint);
+    return distance < 3.0f;
 }
 
-void GradientMeshEditor::EdgeComponent::mouseEnter(const juce::MouseEvent& event)
+void GradientMeshEditor::HalfEdgeComponent::mouseEnter(const juce::MouseEvent& event)
 {
     if (onMouseOver)
         onMouseOver();
 }
 
-void GradientMeshEditor::EdgeComponent::mouseExit(const MouseEvent& event)
+void GradientMeshEditor::HalfEdgeComponent::mouseExit(const MouseEvent& event)
 {
-
+   if (onMouseExit)
+     onMouseExit();
 }
 
-void GradientMeshEditor::EdgeComponent::paint(juce::Graphics& g)
+void GradientMeshEditor::HalfEdgeComponent::paint(juce::Graphics& g)
 {
-    //g.drawRect(getLocalBounds());
+    auto origin = getPosition().toFloat();
+    
+    g.setColour(juce::Colours::aqua);
+    g.drawArrow(paintedLine, 2.0f, 10.0f, 10.0f);
 
-    if (auto e = edge.lock())
+    if (highlighted)
     {
-        auto vertexPair = e->getVertices();
-        if (vertexPair.first && vertexPair.second)
+        if (halfedge->next)
         {
-            auto origin = getPosition().toFloat();
+            g.setColour(juce::Colours::orange);
+            g.drawArrow({ halfedge->next->tailVertex->point, halfedge->next->headVertex->point }, 2.0f, 8.0f, 8.0f);
+        }
 
-            auto color = highlighted ? juce::Colours::green : juce::Colours::blue;
-            g.setColour(color);
-            g.drawLine({ vertexPair.first->point - origin, vertexPair.second->point - origin }, 4.0f);
+        if (halfedge->previous)
+        {
+            g.setColour(juce::Colours::yellow);
+            g.drawArrow({ halfedge->previous->tailVertex->point, halfedge->previous->headVertex->point }, 2.0f, 8.0f, 8.0f);
         }
     }
 }

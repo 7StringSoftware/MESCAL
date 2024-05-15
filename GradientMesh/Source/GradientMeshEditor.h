@@ -25,7 +25,7 @@ public:
     void mouseMove(const MouseEvent& event) override;
 
 private:
-    struct EdgeComponent;
+    struct HalfEdgeComponent;
     struct VertexComponent : public juce::Component
     {
         VertexComponent(const HalfEdgeMesh::Vertex* const vertex_);
@@ -39,14 +39,15 @@ private:
         void paint(juce::Graphics& g) override;
 
         const HalfEdgeMesh::Vertex* const vertex;
+        bool highlighted = false;
 
         std::function<void()> onMouseOver;
     };
 
-    struct EdgeComponent : public juce::Component
+    struct HalfEdgeComponent : public juce::Component
     {
-        EdgeComponent(std::weak_ptr<Mesher::Edge> edge_);
-        ~EdgeComponent() override {}
+        HalfEdgeComponent(const HalfEdgeMesh::Halfedge* halfedge_);
+        ~HalfEdgeComponent() override {}
 
         bool hitTest(int x, int y) override;
 
@@ -55,10 +56,12 @@ private:
 
         void paint(juce::Graphics& g) override;
 
-        std::weak_ptr<Mesher::Edge> edge;
+        const HalfEdgeMesh::Halfedge* const halfedge;
         bool highlighted = false;
+        juce::Line<float> paintedLine;
 
         std::function<void()> onMouseOver;
+        std::function<void()> onMouseExit;
     };
 
     struct PatchComponent : public juce::Component
@@ -80,12 +83,12 @@ private:
 
     void clearHighlights();
     void highlightVertex(VertexComponent* vertexComponent);
-    void highlightEdge(EdgeComponent* edgeComponent);
+    void highlightEdge(HalfEdgeComponent* edgeComponent);
 
     GradientMesh mesh;
     juce::Image meshImage;
     std::vector<std::unique_ptr<VertexComponent>> vertexComponents;
-    std::vector<std::unique_ptr<EdgeComponent>> edgeComponents;
+    std::vector<std::unique_ptr<HalfEdgeComponent>> edgeComponents;
     std::vector<std::unique_ptr<ControlPointComponent>> controlPointComponents;
     std::vector<std::unique_ptr<PatchComponent>> patchComponents;
     juce::VBlankAttachment vblankAttachment{ this, [this]

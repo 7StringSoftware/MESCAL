@@ -33,10 +33,7 @@ public:
             return approximatelyEqual(point.x, other.point.x) && approximatelyEqual(point.y, other.point.y);
         }
 
-        void dump() const
-        {
-            DBG("Vertex " << point.toString());
-        }
+        void dump() const;
 
         JUCE_LEAK_DETECTOR(Vertex)
     };
@@ -59,9 +56,16 @@ public:
         Halfedge* next = nullptr;
         Halfedge* previous = nullptr;
 
+        juce::String print() const
+        {
+            juce::String line;
+            line << "Halfedge type:" << (int)type << " " << tailVertex->point.toString() << " -> " << headVertex->point.toString() << "   previous:" << (previous ? previous->tailVertex->point.toString() : "null") << "   next:" << (next ? next->tailVertex->point.toString() : "null");
+            return line;
+        }
+
         void dump(String indent = {}) const
         {
-            DBG(indent << "Halfedge " << (int)type << " " << tailVertex->point.toString() << " -> " << headVertex->point.toString());
+            DBG(indent << print());
         }
     };
 
