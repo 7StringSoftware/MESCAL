@@ -1,5 +1,81 @@
 #pragma once
 
+/*
+
+    D2D1_GRADIENT_MESH_PATCH
+
+    P00  Top left corner
+    P03  Top right corner
+    P30  Bottom left corner
+    P33  Bottom right corner
+
+    P01  Top edge control point #1
+    P02  Top edge control point #1
+
+    P10  Left edge control point #1
+    P20  Left edge control point #1
+
+    P13  Right edge control point #1
+    P23  Right edge control point #1
+
+    P31  Bottom edge control point #1
+    P32  Bottom edge control point #1
+
+    P11  Top left corner (inner)
+    P12  Top right corner (inner)
+    P21  Bottom left corner (inner)
+    P22  Bottom right corner (inner)
+
+
+         P01
+        /
+     P00--------------------P03
+    / |                    / | \
+ P10  |                  P02 |  P13
+      |                      |
+      |     P11     P12      |
+      |                      |
+      |     P21     P22      |
+      |                      |
+      | P20                  |
+      | /   P31          P23 |
+      |/   /               \ |
+     P30--------------------P33
+                          /
+                       P32
+
+
+    For three-sided faces, squish the upper right corner onto the upper left
+    corner so the top edge has zero length
+
+                    RIGHT EDGE
+    P00 / P01 / P02 / P03 -----------P33
+             |                        |
+             |                       /
+             |                      /
+             |                     /
+             |                    /
+             |                   /
+           L |                  /
+           E |                 / B
+           F |                / O
+           T |               / T
+             |              / T
+           E |             / O
+           D |            / M
+           G |           /
+           E |          / E
+             |         / D
+             |        / G
+             |       / E
+             |      /
+             |     /
+             |    /
+             |   /
+              P30
+
+*/
+
 class HalfEdgeMesh
 {
 public:
@@ -38,6 +114,8 @@ public:
         JUCE_LEAK_DETECTOR(Vertex)
     };
 
+    using ControlPoints = std::pair<juce::Point<float>, juce::Point<float>>;
+
     struct Halfedge
     {
         enum class Type
@@ -56,6 +134,8 @@ public:
         Halfedge* next = nullptr;
         Halfedge* previous = nullptr;
 
+        std::optional<ControlPoints> controlPoints;
+
         juce::String print() const
         {
             juce::String line;
@@ -69,6 +149,11 @@ public:
         }
     };
 
+    struct Face
+    {
+        std::array<Halfedge*, 3> halfedges;
+    };
+
     struct Patch
     {
 
@@ -79,8 +164,10 @@ public:
     {
         std::vector<std::unique_ptr<Vertex>> vertices;
         std::vector<std::unique_ptr<Halfedge>> halfedges;
+        std::vector<std::unique_ptr<Face>> faces;
         std::vector<std::shared_ptr<Patch>> patches;
 
+        void iterateFaces(const std::vector<Halfedge*>& perimeterHalfedges);
         void addPatches(juce::Point<float> center, int numPatchEdges);
     };
 
@@ -90,6 +177,6 @@ public:
 
     void iterateSubpath(juce::Path::Iterator& it, Point<float> subpathStart);
 
-//     struct Pimpl;
-//     std::unique_ptr<Pimpl> pimpl;
+    struct Pimpl;
+    std::unique_ptr<Pimpl> pimpl;
 };

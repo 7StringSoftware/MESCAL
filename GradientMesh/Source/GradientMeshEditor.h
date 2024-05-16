@@ -64,10 +64,10 @@ private:
         std::function<void()> onMouseExit;
     };
 
-    struct PatchComponent : public juce::Component
+    struct FaceComponent : public juce::Component
     {
-        PatchComponent(std::weak_ptr<Mesher::Patch> patch_);
-        ~PatchComponent() override {}
+        FaceComponent(const HalfEdgeMesh::Face* const face_);
+        ~FaceComponent() override {}
 
         bool hitTest(int x, int y) override;
 
@@ -76,7 +76,7 @@ private:
 
         void paint(juce::Graphics& g) override;
 
-        std::weak_ptr<Mesher::Patch> patch;
+        const HalfEdgeMesh::Face* const face;
         bool highlighted = false;
         juce::Path path;
     };
@@ -90,7 +90,7 @@ private:
     std::vector<std::unique_ptr<VertexComponent>> vertexComponents;
     std::vector<std::unique_ptr<HalfEdgeComponent>> edgeComponents;
     std::vector<std::unique_ptr<ControlPointComponent>> controlPointComponents;
-    std::vector<std::unique_ptr<PatchComponent>> patchComponents;
+    std::vector<std::unique_ptr<FaceComponent>> faceComponents;
     juce::VBlankAttachment vblankAttachment{ this, [this]
         {
             double now = juce::Time::getMillisecondCounterHiRes();

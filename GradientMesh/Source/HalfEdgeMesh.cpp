@@ -9,12 +9,47 @@
 #include <juce_graphics/native/juce_Direct2DImage_windows.h>
 #include "HalfEdgeMesh.h"
 
+struct HalfEdgeMesh::Pimpl
+{
+    Pimpl(HalfEdgeMesh& owner_) : owner(owner_)
+    {
+    }
+
+    void createResources(juce::Image image)
+    {
+        if (!deviceContext)
+        {
+            if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
+            {
+                if (auto adapter = pixelData->getAdapter())
+                {
+                    winrt::com_ptr<ID2D1DeviceContext1> deviceContext1;
+                    if (const auto hr = adapter->direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS,
+                        deviceContext1.put());
+                        FAILED(hr))
+                    {
+                        jassertfalse;
+                        return;
+                    }
+
+                    deviceContext = deviceContext1.as<ID2D1DeviceContext2>();
+                }
+            }
+        }
+    }
+
+    HalfEdgeMesh& owner;
+    winrt::com_ptr<ID2D1DeviceContext2> deviceContext;
+    winrt::com_ptr<ID2D1GradientMesh> gradientMesh;
+};
+
 void HalfEdgeMesh::Vertex::dump() const
 {
     DBG("Vertex " << point.toString() << "  halfedge:" << (halfedge ? halfedge->print() : "null"));
 }
 
 HalfEdgeMesh::HalfEdgeMesh(Path&& p) :
+    pimpl(std::make_unique<Pimpl>(*this)),
     path(p)
 {
 
@@ -68,7 +103,7 @@ void HalfEdgeMesh::iterateSubpath(juce::Path::Iterator& it, Point<float> subpath
     {
         juce::Point<float> point;
         Halfedge::Type type = Halfedge::Type::unknown;
-        std::pair<juce::Point<float>, juce::Point<float>> controlPoints;
+        std::optional<ControlPoints> controlPoints;
     };
     std::vector<PathPoint> pathPoints;
 
@@ -93,7 +128,7 @@ void HalfEdgeMesh::iterateSubpath(juce::Path::Iterator& it, Point<float> subpath
         {
             pathPoints.emplace_back(PathPoint{ juce::Point<float>{ it.x2, it.y2 },
                 Halfedge::Type::quadratic,
-                { juce::Point<float>{ it.x1, it.y1 }, juce::Point<float>{ it.x1, it.y1 } } });
+                ControlPoints{ juce::Point<float>{ it.x1, it.y1 }, juce::Point<float>{ it.x1, it.y1 } } });
             break;
         }
 
@@ -101,7 +136,7 @@ void HalfEdgeMesh::iterateSubpath(juce::Path::Iterator& it, Point<float> subpath
         {
             pathPoints.emplace_back(PathPoint{ juce::Point<float>{ it.x3, it.y3 },
                 Halfedge::Type::cubic,
-                { juce::Point<float>{ it.x1, it.y1 }, juce::Point<float>{ it.x2, it.y2 } } });
+                ControlPoints{ juce::Point<float>{ it.x1, it.y1 }, juce::Point<float>{ it.x2, it.y2 } } });
             break;
         }
 
@@ -113,7 +148,7 @@ void HalfEdgeMesh::iterateSubpath(juce::Path::Iterator& it, Point<float> subpath
         }
     }
 
-    auto addHalfedge = [&](Vertex* tailVertex, Vertex* headVertex, Halfedge::Type type) -> Halfedge*
+    auto addHalfedge = [&](Vertex* tailVertex, Vertex* headVertex, Halfedge::Type type, std::optional<ControlPoints> controlPoints) -> Halfedge*
         {
             auto halfedge = std::make_unique<Halfedge>();
             halfedge->type = type;
@@ -128,12 +163,21 @@ void HalfEdgeMesh::iterateSubpath(juce::Path::Iterator& it, Point<float> subpath
             halfedge->twin = twin.get();
             twin->twin = halfedge.get();
 
+            if (controlPoints.has_value())
+            {
+                halfedge->controlPoints = controlPoints;
+                twin->controlPoints = ControlPoints{ controlPoints->second, controlPoints->first };
+            }
+
             subpath.halfedges.push_back(std::move(twin));
             subpath.halfedges.push_back(std::move(halfedge));
 
             return subpath.halfedges.back().get();
         };
 
+    //
+    // Add vertices & halfedges around the perimeter
+    //
     for (const auto& pathPoint : pathPoints)
     {
         subpath.vertices.emplace_back(std::make_unique<Vertex>(pathPoint.point));
@@ -144,16 +188,19 @@ void HalfEdgeMesh::iterateSubpath(juce::Path::Iterator& it, Point<float> subpath
     {
         auto& vertex = subpath.vertices[index];
         auto& nextVertex = subpath.vertices[(index + 1) % pathPoints.size()];
-        auto perimeterHalfedge = addHalfedge(vertex.get(), nextVertex.get(), pathPoints[index].type);
+        auto perimeterHalfedge = addHalfedge(vertex.get(), nextVertex.get(), pathPoints[index].type, pathPoints[index].controlPoints);
         vertex->halfedge = perimeterHalfedge;
         perimeterHalfedges.push_back(perimeterHalfedge);
     }
 
+    //
+    // Add center vertex & halfedges to/from center
+    //
     auto centerVertex = std::make_unique<Vertex>(center);
     std::vector<Halfedge*> centerHalfedges;
-    for (size_t index = 0; index < perimeterHalfedges.size(); ++index)
+    for (size_t index = 0; index < perimeterHalfedges.size(); index++)
     {
-        auto centerHalfedge = addHalfedge(perimeterHalfedges[index]->tailVertex, centerVertex.get(), Halfedge::Type::line);
+        auto centerHalfedge = addHalfedge(perimeterHalfedges[index]->tailVertex, centerVertex.get(), perimeterHalfedges[index]->type, {});
         centerHalfedges.push_back(centerHalfedge);
 
         auto& perimeterHalfedge = perimeterHalfedges[index];
@@ -168,6 +215,9 @@ void HalfEdgeMesh::iterateSubpath(juce::Path::Iterator& it, Point<float> subpath
         previousPerimeterHalfedge->twin->next = perimeterHalfedge;
     }
 
+    //
+    // Set next/previous pointers for center halfedges
+    //
     for (size_t index = 0; index < centerHalfedges.size(); ++index)
     {
         size_t nextIndex = (index + 1) % centerHalfedges.size();
@@ -179,4 +229,18 @@ void HalfEdgeMesh::iterateSubpath(juce::Path::Iterator& it, Point<float> subpath
 
     centerVertex->halfedge = subpath.halfedges.back()->twin;
     subpath.vertices.push_back(std::move(centerVertex));
+
+    subpath.iterateFaces(perimeterHalfedges);
+}
+
+void HalfEdgeMesh::Subpath::iterateFaces(const std::vector<Halfedge*>& perimeterHalfedges)
+{
+    for (auto const& perimeterHalfedge : perimeterHalfedges)
+    {
+        auto face = std::make_unique<Face>();
+        face->halfedges[0] = perimeterHalfedge;
+        face->halfedges[1] = perimeterHalfedge->twin->previous;
+        face->halfedges[2] = face->halfedges[1]->twin->previous;
+        faces.push_back(std::move(face));
+    }
 }
