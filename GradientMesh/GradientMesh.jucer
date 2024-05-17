@@ -7,11 +7,6 @@
       <FILE id="GVjUdc" name="HalfEdgeMesh.cpp" compile="1" resource="0"
             file="Source/HalfEdgeMesh.cpp"/>
       <FILE id="NpagV2" name="HalfEdgeMesh.h" compile="0" resource="0" file="Source/HalfEdgeMesh.h"/>
-      <FILE id="bQe32Z" name="Mesher.cpp" compile="1" resource="0" file="Source/Mesher.cpp"/>
-      <FILE id="IzgBRn" name="Mesher.h" compile="0" resource="0" file="Source/Mesher.h"/>
-      <FILE id="xFrlu7" name="Triangulator.cpp" compile="1" resource="0"
-            file="Source/Triangulator.cpp"/>
-      <FILE id="N0Ol4b" name="Triangulator.h" compile="0" resource="0" file="Source/Triangulator.h"/>
       <FILE id="aXNKtb" name="Base.h" compile="0" resource="0" file="Source/Base.h"/>
       <FILE id="jEsi8N" name="Commander.cpp" compile="1" resource="0" file="Source/Commander.cpp"/>
       <FILE id="tv7bbM" name="Commander.h" compile="0" resource="0" file="Source/Commander.h"/>
@@ -31,9 +26,6 @@
             file="Source/ContentComponent.cpp"/>
       <FILE id="ouDHOJ" name="ContentComponent.h" compile="0" resource="0"
             file="Source/ContentComponent.h"/>
-      <FILE id="liRd3t" name="GradientMesh.h" compile="0" resource="0" file="Source/GradientMesh.h"/>
-      <FILE id="ij4tC3" name="GradientMesh.cpp" compile="1" resource="0"
-            file="Source/GradientMesh.cpp"/>
       <FILE id="TEUkPq" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
     </GROUP>
   </MAINGROUP>

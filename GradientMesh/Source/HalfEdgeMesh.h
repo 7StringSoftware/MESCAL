@@ -102,6 +102,12 @@ public:
         {
         }
 
+        Vertex(juce::Point<float> p, juce::Colour c) :
+            point(p),
+            color(c)
+        {
+        }
+
         Vertex(Vertex const& other) = default;
 
         bool operator==(Vertex const& other) const

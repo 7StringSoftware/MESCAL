@@ -1,10 +1,7 @@
 #pragma once
 
 #include "Base.h"
-#include "GradientMesh.h"
 #include "ControlPointComponent.h"
-#include "Triangulator.h"
-#include "Mesher.h"
 #include "HalfEdgeMesh.h"
 
 class GradientMeshEditor  : public juce::Component
@@ -85,7 +82,6 @@ private:
     void highlightVertex(VertexComponent* vertexComponent);
     void highlightEdge(HalfEdgeComponent* edgeComponent);
 
-    GradientMesh mesh;
     juce::Image meshImage;
     std::vector<std::unique_ptr<VertexComponent>> vertexComponents;
     std::vector<std::unique_ptr<HalfEdgeComponent>> edgeComponents;
@@ -107,8 +103,6 @@ private:
     float zoom = 1.0f;
     double lastMsec = juce::Time::getMillisecondCounterHiRes();
     double rotationAngle = 0.0;
-
-    Mesher mesher;
     HalfEdgeMesh halfedgeMesh;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GradientMeshEditor)

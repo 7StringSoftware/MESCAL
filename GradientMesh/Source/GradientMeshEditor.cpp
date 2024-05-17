@@ -3,10 +3,10 @@
 static Path makePath()
 {
     juce::Path p;
-    //p.addRoundedRectangle(juce::Rectangle<float>{ 100.0f, 100.0f, 500.0f, 500.0f }, 25.0f);
+    p.addRoundedRectangle(juce::Rectangle<float>{ 100.0f, 100.0f, 700.0f, 700.0f }, 300.0f);
     //p.addStar({ 350.0f, 350.0f }, 8, 200.0f, 300.0f);
     //p.addEllipse(10.0f, 10.0f, 500.0f, 500.0f);
-    p.addPolygon({ 400.0f, 400.0f }, 7, 300.0f);
+    //p.addPolygon({ 400.0f, 400.0f }, 7, 300.0f);
     //p.applyTransform(juce::AffineTransform::rotation(0.2f, p.getBounds().getCentreX(), p.getBounds().getCentreY()));
     //p.addRectangle(10.0f, 10.0f, 500.0f, 500.0f);
     //p.addRectangle(200.0f, 200.0f, 500.0f, 500.0f);
@@ -15,43 +15,11 @@ static Path makePath()
 }
 
 GradientMeshEditor::GradientMeshEditor() :
-    mesher(makePath()),
     halfedgeMesh(makePath())
 {
     setOpaque(false);
 
     halfedgeMesh.updateMesh();
-#if 0
-    auto clone = mesh.clonePatch(firstPatch, GradientMesh::Direction::north);
-    clone->setUpperLeftColor(colors[1]);
-    clone->setUpperRightColor(colors[2]);
-    clone->setLowerRightColor(colors[2]);
-    clone->setLowerLeftColor(colors[1]);
-    clone->applyTransform(juce::AffineTransform::rotation(angle + juce::MathConstants<float>::twoPi * -0.25f, radius, radius));
-
-    clone = mesh.clonePatch(clone, GradientMesh::Direction::west);
-    clone->setUpperLeftColor(colors[2]);
-    clone->setUpperRightColor(colors[3]);
-    clone->setLowerRightColor(colors[3]);
-    clone->setLowerLeftColor(colors[2]);
-    clone->applyTransform(juce::AffineTransform::rotation(angle + juce::MathConstants<float>::twoPi * -0.25f, radius, radius));
-
-    clone = mesh.clonePatch(clone, GradientMesh::Direction::south);
-    clone->setUpperLeftColor(colors[3]);
-    clone->setUpperRightColor(endColor);
-    clone->setLowerRightColor(endColor);
-    clone->setLowerLeftColor(colors[3]);
-    clone->applyTransform(juce::AffineTransform::rotation(angle + juce::MathConstants<float>::twoPi * -0.25f, radius, radius));
-#endif
-
-#if 0
-    for (auto patch : mesh.getPatches())
-    {
-        auto patchComponent = std::make_unique<PatchComponent>(patch);
-        addAndMakeVisible(patchComponent.get());
-        patchComponents.emplace_back(std::move(patchComponent));
-    }
-#endif
 
     for (auto const& subpath : halfedgeMesh.subpaths)
     {
@@ -241,16 +209,12 @@ void GradientMeshEditor::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::black);
 
-#if 0
-    mesher.path.applyTransform(juce::AffineTransform::rotation((float)rotationAngle, mesher.path.getBounds().getCentreX(), mesher.path.getBounds().getCentreY()));
-    mesher.updateMesh();
-    mesher.draw(meshImage, {});
-    g.drawImageAt(meshImage, 0, 0);
-#endif
+    halfedgeMesh.draw(meshImage, {});
+   g.drawImageAt(meshImage, 0, 0);
 
     for (auto const& subpath : halfedgeMesh.subpaths)
     {
-        paintSubpath(g, subpath, mesher.path.getBounds());
+        //paintSubpath(g, subpath, halfedgeMesh.path.getBounds());
     }
 }
 
@@ -343,21 +307,6 @@ void GradientMeshEditor::highlightVertex(VertexComponent* vertexComponent)
 
     vertexComponent->setAlpha(0.75f);
     vertexComponent->highlighted = true;
-
-#if 0
-    for (auto const& edgeComponent : edgeComponents)
-    {
-        if (auto edge = edgeComponent->edge.lock())
-        {
-            auto vertexPair = edge->getVertices();
-            if (vertexPair.first == vertexComponent->vertex.lock() || vertexPair.second == vertexComponent->vertex.lock())
-            {
-                edgeComponent->setAlpha(1.0f);
-                edgeComponent->highlighted = true;
-            }
-        }
-    }
-#endif
 }
 
 void GradientMeshEditor::highlightEdge(HalfEdgeComponent* edgeComponent)
@@ -366,20 +315,6 @@ void GradientMeshEditor::highlightEdge(HalfEdgeComponent* edgeComponent)
 
     edgeComponent->setAlpha(0.75f);
     edgeComponent->highlighted = true;
-
-#if 0
-    if (auto edge = edgeComponent->edge.lock())
-    {
-        for (auto const& vertexComponent : vertexComponents)
-        {
-            auto vertexPair = edge->getVertices();
-            if (vertexPair.first == vertexComponent->vertex.lock() || vertexPair.second == vertexComponent->vertex.lock())
-            {
-                vertexComponent->setAlpha(1.0f);
-            }
-        }
-    }
-#endif
 }
 
 GradientMeshEditor::FaceComponent::FaceComponent(const HalfEdgeMesh::Face* const face_) :
@@ -443,7 +378,7 @@ void GradientMeshEditor::VertexComponent::paint(juce::Graphics& g)
 {
     g.setColour(juce::Colours::red);
 
-    g.fillEllipse(juce::Rectangle<float>{ 30.0f, 30.0f}.withCentre(vertex->point));
+    g.fillEllipse(juce::Rectangle<float>{ 10.0f, 10.0f}.withCentre(vertex->point));
     if (highlighted)
         g.drawArrow({ vertex->halfedge->tailVertex->point, vertex->halfedge->headVertex->point }, 2.0f, 8.0f, 8.0f);
 }
@@ -502,5 +437,11 @@ void GradientMeshEditor::HalfEdgeComponent::paint(juce::Graphics& g)
             g.setColour(juce::Colours::yellow);
             g.drawArrow({ halfedge->previous->tailVertex->point, halfedge->previous->headVertex->point }, 2.0f, 8.0f, 8.0f);
         }
+
+        g.setColour(juce::Colours::black);
+        g.fillRect(getLocalBounds().withSizeKeepingCentre(100, 100));
+        g.setColour(juce::Colours::white);
+        g.drawText(juce::String((int)halfedge->type), getLocalBounds(), juce::Justification::centred);
     }
+
 }
