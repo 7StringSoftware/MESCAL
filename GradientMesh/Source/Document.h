@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Base.h"
+#include "GradientMesh.h"
 
 class Document : juce::FileBasedDocument
 {
@@ -10,4 +11,9 @@ public:
 
     juce::Result loadDocument(const juce::File& file) override;
     juce::Result saveDocument(const juce::File& file) override;
+    juce::File getLastDocumentOpened() override;
+    void setLastDocumentOpened(const juce::File& file) override;
+    juce::String getDocumentTitle() override;
+
+    GradientMesh gradientMesh;
 };

@@ -1,198 +1,36 @@
 #include "GradientMeshEditor.h"
+#include "Commander.h"
 
-static Path makePath()
+GradientMeshEditor::GradientMeshEditor(juce::ApplicationCommandManager& commandManager_)
+    : commandManager(commandManager_),
+    displayComponent(*this)
 {
-    juce::Path p;
-    p.addRoundedRectangle(juce::Rectangle<float>{ 100.0f, 100.0f, 700.0f, 700.0f }, 300.0f);
-    //p.addStar({ 350.0f, 350.0f }, 8, 200.0f, 300.0f);
-    //p.addEllipse(10.0f, 10.0f, 500.0f, 500.0f);
-    //p.addPolygon({ 400.0f, 400.0f }, 7, 300.0f);
-    //p.applyTransform(juce::AffineTransform::rotation(0.2f, p.getBounds().getCentreX(), p.getBounds().getCentreY()));
-    //p.addRectangle(10.0f, 10.0f, 500.0f, 500.0f);
-    //p.addRectangle(200.0f, 200.0f, 500.0f, 500.0f);
+    commandManager_.registerAllCommandsForTarget(this);
+    commandManager_.setFirstCommandTarget(this);
 
-    return p;
-}
-
-GradientMeshEditor::GradientMeshEditor() :
-    halfedgeMesh(makePath())
-{
     setOpaque(false);
 
-    halfedgeMesh.updateMesh();
+    addAndMakeVisible(displayComponent);
 
-    for (auto const& subpath : halfedgeMesh.subpaths)
+    auto patch = document.gradientMesh.getPatches().front();
+
+    auto patchComponent = std::make_unique<PatchComponent>(*this, patch);
+    addAndMakeVisible(patchComponent.get());
+    patchComponents.emplace_back(std::move(patchComponent));
+
+    for (auto& controlPointComponent : controlPointComponents.array)
     {
-        for (auto const& vertex : subpath.vertices)
-        {
-            auto vertexComponent = std::make_unique<VertexComponent>(vertex.get());
-            addAndMakeVisible(vertexComponent.get());
-
-            juce::Component::SafePointer<VertexComponent> safePointer{ vertexComponent.get() };
-            vertexComponent->onMouseOver = [this, safePointer]()
-                {
-                    if (safePointer)
-                        highlightVertex(safePointer);
-                };
-
-            vertexComponents.emplace_back(std::move(vertexComponent));
-        }
-
-        for (auto const& halfedge : subpath.halfedges)
-        {
-            auto edgeComponent = std::make_unique<HalfEdgeComponent>(halfedge.get());
-            addAndMakeVisible(edgeComponent.get());
-            edgeComponent->toBack();
-
-            juce::Component::SafePointer<HalfEdgeComponent> edgeComponentSafePointer{ edgeComponent.get() };
-            edgeComponent->onMouseOver = [this, edgeComponentSafePointer]()
-                {
-                    if (edgeComponentSafePointer)
-                        highlightEdge(edgeComponentSafePointer);
-                };
-            edgeComponent->onMouseExit = [this]()
-                {
-                    clearHighlights();
-                };
-            edgeComponents.emplace_back(std::move(edgeComponent));
-        }
-
-        for (auto const& face : subpath.faces)
-        {
-            auto faceComponent = std::make_unique<FaceComponent>(face.get());
-            addAndMakeVisible(faceComponent.get());
-            faceComponent->toBack();
-
-            faceComponents.emplace_back(std::move(faceComponent));
-        }
+        controlPointComponent = std::make_unique<ControlPointComponent>(zoomTransform);
+        controlPointComponent->onDrag = [this] { positionControls(); repaint(); };
+        addChildComponent(controlPointComponent.get());
     }
 
-}
-
-void GradientMeshEditor::createConic(float rotationAngle)
-{
-#if 0
-    //
-    // Squish the upper right corner onto the upper left corner so the top edge has zero length
-    //
-    //                            RIGHT EDGE
-    //     P00 / P01 / P02 / P03 -----------P33
-    //              |                        |
-    //              |                       /
-    //              |                      /
-    //              |                     /
-    //              |                    /
-    //              |                   /
-    //            L |                  /
-    //            E |                 / B
-    //            F |                / O
-    //            T |               / T
-    //              |              / T
-    //            E |             / O
-    //            D |            / M
-    //            G |           /
-    //            E |          / E
-    //              |         / D
-    //              |        / G
-    //              |       / E
-    //              |      /
-    //              |     /
-    //              |    /
-    //              |   /
-    //               P30
-    //
-
-    float radius = (float)juce::jmin(getWidth() * 0.5f, getHeight() * 0.5f);
-    auto center = juce::Point<float>{ getWidth() * 0.5f, getHeight() * 0.5f };
-    auto upperRight = center + juce::Point<float>{ radius, 0.0f };
-    auto lowerLeft = center + juce::Point<float>{ 0.0f, radius};
-    juce::Point<float> radialPoint = center.getPointOnCircumference(radius, juce::MathConstants<float>::twoPi * (90.0f + 45.0f) / 360.0f);
-
-    GradientMesh::PatchOptions options;
-    auto startColor = juce::Colours::red;
-    auto endColor = juce::Colours::violet;
-    std::array<juce::Colour, 5> colors
+    for (auto& edgeControlComponent : edgeControlComponents)
     {
-        startColor,
-        juce::Colours::orange,
-        juce::Colours::cyan,
-        juce::Colours::orange,
-        endColor
-    };
+        addAndMakeVisible(edgeControlComponent);
+    }
 
-    options.upperLeftCorner = { center, startColor };
-    options.upperRightCorner = { center, colors[1] };
-    options.lowerRightCorner = { upperRight, colors[1] };
-    options.lowerLeftCorner = { lowerLeft, startColor };
-
-    options.topEdge = { center, center };
-
-    juce::Line<float> leftEdgeLine(center, lowerLeft);
-    options.leftEdge = GradientMesh::PatchOptions::VerticalEdge{ leftEdgeLine.getPointAlongLineProportionally(0.5f), leftEdgeLine.getPointAlongLineProportionally(0.5f), GradientMesh::EdgeAliasingMode::inflated };
-
-    juce::Line<float> rightEdgeLine(center, upperRight);
-    options.rightEdge = { rightEdgeLine.getPointAlongLineProportionally(0.5f), rightEdgeLine.getPointAlongLineProportionally(0.5f), GradientMesh::EdgeAliasingMode::inflated };
-
-    auto controlPointOffset = radius * 0.55f;
-    options.bottomEdge = { lowerLeft.translated(controlPointOffset, 0.0f), upperRight.translated(0.0f, controlPointOffset), GradientMesh::EdgeAliasingMode::inflated };
-
-    mesh.reset();
-    auto firstPatch = mesh.addPatch(options);
-    firstPatch->applyTransform(juce::AffineTransform::rotation(rotationAngle, center.x, center.y));
-
-    auto clone = mesh.clonePatch(firstPatch, GradientMesh::Direction::north);
-    clone->setEdgeAliasingMode(GradientMesh::Edge::leftEdge, GradientMesh::EdgeAliasingMode::inflated);
-    clone->setEdgeAliasingMode(GradientMesh::Edge::rightEdge, GradientMesh::EdgeAliasingMode::inflated);
-    clone->setUpperLeftColor(colors[1]);
-    clone->setUpperRightColor(colors[2]);
-    clone->setLowerRightColor(colors[2]);
-    clone->setLowerLeftColor(colors[1]);
-    clone->applyTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::twoPi * -0.25f, center.x, center.y));
-
-    clone = mesh.clonePatch(clone, GradientMesh::Direction::west);
-    clone->setUpperLeftColor(colors[2]);
-    clone->setUpperRightColor(colors[3]);
-    clone->setLowerRightColor(colors[3]);
-    clone->setLowerLeftColor(colors[2]);
-    clone->applyTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::twoPi * -0.25f, center.x, center.y));
-
-    clone = mesh.clonePatch(clone, GradientMesh::Direction::south);
-    clone->setEdgeAliasingMode(GradientMesh::Edge::rightEdge, GradientMesh::EdgeAliasingMode::inflated);
-    clone->setUpperLeftColor(colors[3]);
-    clone->setUpperRightColor(endColor);
-    clone->setLowerRightColor(endColor);
-    clone->setLowerLeftColor(colors[3]);
-    clone->applyTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::twoPi * -0.25f, center.x, center.y));
-#endif
-}
-
-void GradientMeshEditor::createSinglePatch()
-{
-#if 0
-    mesh.reset();
-
-    GradientMesh::PatchOptions options;
-    auto bounds = getLocalBounds().toFloat().reduced(100.0f);
-
-    float alpha = (float)std::sin(phase) * 0.5f + 0.5f;
-    options.upperLeftCorner = { bounds.getTopLeft(), juce::Colours::magenta.withAlpha(alpha) };
-
-    alpha = (float)std::sin(phase + juce::MathConstants<float>::halfPi) * 0.5f + 0.5f;
-    options.upperRightCorner = { bounds.getTopRight(), juce::Colours::cyan.withAlpha(alpha) };
-
-    alpha = (float)std::sin(phase + juce::MathConstants<float>::pi) * 0.5f + 0.5f;
-    options.lowerRightCorner = { bounds.getBottomRight(), juce::Colours::yellow.withAlpha(alpha) };
-
-    alpha = (float)std::sin(phase + 1.5f * juce::MathConstants<float>::pi) * 0.5f + 0.5f;
-    options.lowerLeftCorner = { bounds.getBottomLeft(), juce::Colours::aliceblue.withAlpha(alpha) };
-
-    options.topEdge = { { bounds.proportionOfWidth(0.25f), bounds.getY() - 50.0f }, { bounds.proportionOfWidth(0.75f), bounds.getY() + 50.0f} };
-    options.leftEdge = { { bounds.getX() - 50.0f, bounds.proportionOfHeight(0.25f) }, { bounds.getX() - 50.0f, bounds.proportionOfHeight(0.75f) } };
-    options.rightEdge = { { bounds.getRight() + 50.0f, bounds.proportionOfHeight(0.25f) }, { bounds.getRight() + 50.0f, bounds.proportionOfHeight(0.75f) } };
-    options.bottomEdge = { { bounds.proportionOfWidth(0.25f), bounds.getBottom() - 50.0f }, { bounds.proportionOfWidth(0.75f), bounds.getBottom() + 50.0f } };
-
-    mesh.addPatch(options);
-#endif
+    selectPatch(patch);
 }
 
 GradientMeshEditor::~GradientMeshEditor()
@@ -202,246 +40,394 @@ GradientMeshEditor::~GradientMeshEditor()
 juce::Rectangle<int> GradientMeshEditor::getPreferredSize()
 {
     return { 2048, 1024 };
-    //return mesh.getBounds().toNearestInt().expanded(50);
 }
 
 void GradientMeshEditor::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::black);
-
-    halfedgeMesh.draw(meshImage, {});
-   g.drawImageAt(meshImage, 0, 0);
-
-    for (auto const& subpath : halfedgeMesh.subpaths)
-    {
-        //paintSubpath(g, subpath, halfedgeMesh.path.getBounds());
-    }
-}
-
-void GradientMeshEditor::paintSubpath(juce::Graphics& g, const HalfEdgeMesh::Subpath& subpath, juce::Rectangle<float> area)
-{
-#if 0
-    auto drawArrow = [&](juce::Colour color, HalfEdgeMesh::Halfedge* halfedge, float offset)
-        {
-            g.setColour(color);
-            juce::Line<float> line{ halfedge->tailVertex->point, halfedge->headVertex->point };
-            line = line.withShortenedEnd(40.0f).withShortenedStart(40.0f);
-            auto angle = line.getAngle();
-            auto tail = line.getStart().getPointOnCircumference(offset, angle + juce::MathConstants<float>::halfPi);
-            auto head = line.getEnd().getPointOnCircumference(offset, angle + juce::MathConstants<float>::halfPi);
-            g.drawArrow(juce::Line<float>{ tail, head}, 2.0f, 10.0f, 10.0f);
-        };
-
-
-    for (auto const& face : subpath.faces)
-    {
-        Path path;
-//         path.addArrow({ face->halfedges[0]->tailVertex->point, face->halfedges[0]->headVertex->point }, 2.0f, 10.0f, 10.0f);
-//         path.addArrow({ face->halfedges[1]->tailVertex->point, face->halfedges[1]->headVertex->point }, 2.0f, 10.0f, 10.0f);
-//         path.addArrow({ face->halfedges[2]->tailVertex->point, face->halfedges[2]->headVertex->point }, 2.0f, 10.0f, 10.0f);
-        path.addTriangle(face->halfedges[0]->tailVertex->point, face->halfedges[1]->tailVertex->point, face->halfedges[2]->tailVertex->point);
-
-        path.applyTransform(juce::AffineTransform::scale(0.9f, 0.9f, path.getBounds().getCentreX(), path.getBounds().getCentreY()));
-        g.setColour(juce::Colours::green);
-        //g.strokePath(path, juce::PathStrokeType(2.0f));
-        g.fillPath(path);
-    }
-#endif
 }
 
 void GradientMeshEditor::resized()
 {
-    meshImage = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
-    //createConic();
-    //createSinglePatch();
-    //mesh.draw(meshImage, {});
+    displayComponent.setBounds(getLocalBounds());
 
-    for (auto& vertexComponent : vertexComponents)
+    for (auto& patchComponent : patchComponents)
     {
-        vertexComponent->setBounds(getLocalBounds());
+        patchComponent->setBounds(getLocalBounds());
     }
 
-    for (auto& edgeComponent : edgeComponents)
-    {
-        edgeComponent->setBounds(getLocalBounds());
-    }
+    auto bounds = juce::Rectangle<float>{ getWidth() * 0.75f, getHeight() * 0.75f }.withCentre({ getWidth() * 0.5f, getHeight() * 0.5f });
+    auto meshBounds = document.gradientMesh.getBounds();
+    juce::RectanglePlacement placement{ juce::RectanglePlacement::centred };
+    auto transform = placement.getTransformToFit(meshBounds, bounds);
+    document.gradientMesh.applyTransform(transform);
 
-    for (auto& faceComponent : faceComponents)
-    {
-        faceComponent->setBounds(getLocalBounds());
-    }
+    positionControls();
+
+    selectPatch(selectedPatch);
 }
 
-void GradientMeshEditor::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel)
+void GradientMeshEditor::mouseWheelMove(const juce::MouseEvent& mouseEvent, const juce::MouseWheelDetails& wheel)
 {
-#if 0
     wheel.deltaY > 0 ? zoom *= 1.1f : zoom *= 0.9f;
     zoom = juce::jlimit(0.1f, 10.0f, zoom);
-    setTransform(juce::AffineTransform::scale(zoom, zoom, getWidth() * 0.5f, getHeight() * 0.5f));
+    //setTransform(juce::AffineTransform::scale(zoom, zoom, mouseEvent.x, mouseEvent.y));
+
+    positionControls();
+
     repaint();
-#endif
 }
 
-void GradientMeshEditor::mouseMove(const MouseEvent& event)
+void GradientMeshEditor::mouseMove(const MouseEvent&)
 {
 }
 
-void GradientMeshEditor::clearHighlights()
+void GradientMeshEditor::selectPatch(std::weak_ptr<GradientMesh::Patch> patch)
 {
-    for (auto const& vertexComponent : vertexComponents)
+    selectedPatch = patch;
+
+    for (auto& patchComponent : patchComponents)
     {
-        vertexComponent->setAlpha(0.1f);
-        vertexComponent->highlighted = false;
+        patchComponent->selected = patchComponent->patch.lock() == patch.lock();
     }
 
-    for (auto const& edgeComponent : edgeComponents)
+    if (auto p = selectedPatch.lock())
     {
-        edgeComponent->setAlpha(0.1f);
-        edgeComponent->highlighted = false;
+        for (int row = 0; row < GradientMesh::Patch::numRows; ++row)
+        {
+            for (int column = 0; column < GradientMesh::Patch::numColumns; ++column)
+            {
+                controlPointComponents.get(row, column)->setControlPoint(p->getControlPoint(row, column));
+            }
+        }
+    }
+
+    std::array<size_t, 4> edgePositions{ GradientMesh::Edge::top, GradientMesh::Edge::right, GradientMesh::Edge::bottom, GradientMesh::Edge::left };
+    for (size_t edgePosition : edgePositions)
+    {
+        auto& edgeComponent = edgeControlComponents[edgePosition];
+        bool visible = false;
+        if (auto p = patch.lock())
+        {
+            visible = true;
+        }
+
+        edgeComponent.setVisible(visible);
     }
 }
 
-void GradientMeshEditor::highlightVertex(VertexComponent* vertexComponent)
+void GradientMeshEditor::getAllCommands(Array<CommandID>& commands)
 {
-    clearHighlights();
-
-    vertexComponent->setAlpha(0.75f);
-    vertexComponent->highlighted = true;
+    commands.add(addConnectedPatchCommand);
 }
 
-void GradientMeshEditor::highlightEdge(HalfEdgeComponent* edgeComponent)
+void GradientMeshEditor::getCommandInfo(CommandID commandID, ApplicationCommandInfo& result)
 {
-    clearHighlights();
+    char constexpr editCategory[] = "Edit";
 
-    edgeComponent->setAlpha(0.75f);
-    edgeComponent->highlighted = true;
+    switch (commandID)
+    {
+    case addConnectedPatchCommand:
+    {
+        result.setInfo(juce::translate("Add connected patch"),
+            juce::translate("Add a new patch to this patch edge"),
+            editCategory, 0);
+        break;
+    }
+    }
 }
 
-GradientMeshEditor::FaceComponent::FaceComponent(const HalfEdgeMesh::Face* const face_) :
-    face(face_)
+bool GradientMeshEditor::perform(const InvocationInfo& info)
+{
+    switch (info.commandID)
+    {
+    case addConnectedPatchCommand:
+    {
+        addConnectedPatch(info);
+        return true;
+    }
+    }
+
+    return false;
+}
+
+void GradientMeshEditor::positionControls()
+{
+    zoomTransform = juce::AffineTransform::scale(zoom, zoom, getWidth() * 0.5f, getHeight() * 0.5f);
+
+    if (auto p = selectedPatch.lock())
+    {
+        for (int row = 0; row < GradientMesh::Patch::numRows; ++row)
+        {
+            for (int column = 0; column < GradientMesh::Patch::numColumns; ++column)
+            {
+                auto controlPointComponent = controlPointComponents.get(row, column);
+                controlPointComponent->updateTransform(p->getControlPoint(row, column)->getPosition());
+            }
+        }
+    }
+
+    if (auto p = selectedPatch.lock())
+    {
+        auto bounds = p->getPath().getBounds().transformedBy(zoomTransform).expanded(40).toNearestInt();
+        edgeControlComponents[GradientMesh::Edge::top].setCentrePosition(bounds.getCentreX(), bounds.getY());
+        edgeControlComponents[GradientMesh::Edge::right].setCentrePosition(bounds.getRight(), bounds.getCentreY());
+        edgeControlComponents[GradientMesh::Edge::bottom].setCentrePosition(bounds.getCentreX(), bounds.getBottom());
+        edgeControlComponents[GradientMesh::Edge::left].setCentrePosition(bounds.getX(), bounds.getCentreY());
+    }
+
+    displayComponent.toBack();
+
+    for (auto& patchComponent : patchComponents)
+    {
+        patchComponent->toFront(false);
+    }
+
+    for (auto& controlPointComponent : controlPointComponents.array)
+    {
+        controlPointComponent->toFront(false);
+    }
+
+    for (auto& edgeControlComponent : edgeControlComponents)
+    {
+        edgeControlComponent.toFront(false);
+    }
+}
+
+GradientMeshEditor::PatchComponent::PatchComponent(GradientMeshEditor& owner_, std::weak_ptr<GradientMesh::Patch> patch_) :
+    owner(owner_),
+    patch(patch_)
 {
     setOpaque(false);
     setRepaintsOnMouseActivity(true);
-
-    path.addTriangle(face->halfedges[0]->tailVertex->point, face->halfedges[1]->tailVertex->point, face->halfedges[2]->tailVertex->point);
 }
 
-bool GradientMeshEditor::FaceComponent::hitTest(int x, int y)
+bool GradientMeshEditor::PatchComponent::hitTest(int x, int y)
 {
-    return path.contains((float)x, (float)y);
-}
-
-void GradientMeshEditor::FaceComponent::mouseEnter(const juce::MouseEvent& event)
-{
-
-}
-
-void GradientMeshEditor::FaceComponent::mouseExit(const MouseEvent& event)
-{
-
-}
-
-void GradientMeshEditor::FaceComponent::paint(juce::Graphics& g)
-{
-    if (isMouseOver(true))
+    if (auto p = patch.lock())
     {
-        g.setColour(juce::Colours::purple);
-        g.fillPath(path);
+        return p->getPath().contains(Point<int>{ x, y }.toFloat());
+    }
+
+    return false;
+}
+
+void GradientMeshEditor::PatchComponent::mouseEnter(const juce::MouseEvent&)
+{
+
+}
+
+void GradientMeshEditor::PatchComponent::mouseExit(const MouseEvent&)
+{
+
+}
+
+void GradientMeshEditor::PatchComponent::mouseUp(const MouseEvent& event)
+{
+    if (event.mods.isLeftButtonDown())
+    {
+        owner.selectPatch(patch);
     }
 }
 
-GradientMeshEditor::VertexComponent::VertexComponent(const HalfEdgeMesh::Vertex* const vertex_) :
-    vertex(vertex_)
+void GradientMeshEditor::PatchComponent::paint(juce::Graphics& g)
 {
-    setAlpha(0.1f);
-    //setInterceptsMouseClicks(false, false);
-}
-
-bool GradientMeshEditor::VertexComponent::hitTest(int x, int y)
-{
-    auto hitPoint = juce::Point<int>{ x, y }.toFloat();
-    auto distance = vertex->point.getDistanceFrom(hitPoint);
-    return distance < 20.0f;
-}
-
-void GradientMeshEditor::VertexComponent::mouseEnter(const juce::MouseEvent& event)
-{
-    if (onMouseOver)
-        onMouseOver();
-}
-
-void GradientMeshEditor::VertexComponent::mouseExit(const MouseEvent& event)
-{
-}
-
-void GradientMeshEditor::VertexComponent::paint(juce::Graphics& g)
-{
-    g.setColour(juce::Colours::red);
-
-    g.fillEllipse(juce::Rectangle<float>{ 10.0f, 10.0f}.withCentre(vertex->point));
-    if (highlighted)
-        g.drawArrow({ vertex->halfedge->tailVertex->point, vertex->halfedge->headVertex->point }, 2.0f, 8.0f, 8.0f);
-}
-
-GradientMeshEditor::HalfEdgeComponent::HalfEdgeComponent(const HalfEdgeMesh::Halfedge* halfedge_) :
-    halfedge(halfedge_)
-{
-    setAlpha(0.1f);
-
-    juce::Line<float> line{ halfedge->tailVertex->point, halfedge->headVertex->point };
-    line = line.withShortenedEnd(40.0f).withShortenedStart(40.0f);
-    auto angle = line.getAngle();
-    auto tail = line.getStart().getPointOnCircumference(10.0f, angle + juce::MathConstants<float>::halfPi);
-    auto head = line.getEnd().getPointOnCircumference(10.0f, angle + juce::MathConstants<float>::halfPi);
-    paintedLine = juce::Line<float>{ tail, head };
-    //setInterceptsMouseClicks(false, false);
-}
-
-bool GradientMeshEditor::HalfEdgeComponent::hitTest(int x, int y)
-{
-    auto hitPoint = juce::Point<int>{ x, y }.toFloat();
-    auto nearestPoint = paintedLine.findNearestPointTo(hitPoint);
-    auto distance = nearestPoint.getDistanceFrom(hitPoint);
-    return distance < 3.0f;
-}
-
-void GradientMeshEditor::HalfEdgeComponent::mouseEnter(const juce::MouseEvent& event)
-{
-    if (onMouseOver)
-        onMouseOver();
-}
-
-void GradientMeshEditor::HalfEdgeComponent::mouseExit(const MouseEvent& event)
-{
-   if (onMouseExit)
-     onMouseExit();
-}
-
-void GradientMeshEditor::HalfEdgeComponent::paint(juce::Graphics& g)
-{
-    auto origin = getPosition().toFloat();
-
-    g.setColour(juce::Colours::aqua);
-    g.drawArrow(paintedLine, 2.0f, 10.0f, 10.0f);
-
-    if (highlighted)
+    if (selected)
     {
-        if (halfedge->next)
+        if (auto p = patch.lock())
         {
-            g.setColour(juce::Colours::orange);
-            g.drawArrow({ halfedge->next->tailVertex->point, halfedge->next->headVertex->point }, 2.0f, 8.0f, 8.0f);
+            g.setColour(juce::Colours::white);
+            auto transform = juce::AffineTransform::translation(-getPosition().toFloat()).followedBy(owner.zoomTransform);
+            g.strokePath(p->getPath(), juce::PathStrokeType{ 3.0f }, transform);
         }
+    }
+}
 
-        if (halfedge->previous)
+GradientMeshEditor::ControlPointComponent::ControlPointComponent(juce::AffineTransform& zoomTransform_) :
+    zoomTransform(zoomTransform_)
+{
+    setSize(120, 120);
+    setCentrePosition(0, 0);
+}
+
+void GradientMeshEditor::ControlPointComponent::setControlPoint(std::weak_ptr<GradientMesh::ControlPoint> controlPoint_)
+{
+    controlPoint = controlPoint_;
+    if (auto cp = controlPoint_.lock())
+    {
+        updateTransform(cp->getPosition());
+
+        auto id = cp->row * 10 + cp->column;
+        switch (id)
         {
-            g.setColour(juce::Colours::yellow);
-            g.drawArrow({ halfedge->previous->tailVertex->point, halfedge->previous->headVertex->point }, 2.0f, 8.0f, 8.0f);
-        }
+        case 11:
+        case 12:
+        case 21:
+        case 22:
+            break;
 
-        g.setColour(juce::Colours::black);
-        g.fillRect(getLocalBounds().withSizeKeepingCentre(100, 100));
-        g.setColour(juce::Colours::white);
-        g.drawText(juce::String((int)halfedge->type), getLocalBounds(), juce::Justification::centred);
+        default:
+            setVisible(true);
+            break;
+        }
+    }
+}
+
+void GradientMeshEditor::ControlPointComponent::updateTransform(juce::Point<float> position)
+{
+    auto transformedPosition = position.transformedBy(zoomTransform);
+    setTransform(juce::AffineTransform::translation(transformedPosition));
+}
+
+bool GradientMeshEditor::ControlPointComponent::hitTest(int x, int y)
+{
+    return getLocalBounds().getCentre().getDistanceFrom({ x, y }) < 15;
+}
+
+void GradientMeshEditor::ControlPointComponent::mouseEnter(const juce::MouseEvent&)
+{
+}
+
+void GradientMeshEditor::ControlPointComponent::mouseExit(const MouseEvent&)
+{
+}
+
+void GradientMeshEditor::ControlPointComponent::mouseDown(const MouseEvent& event)
+{
+    if (event.mods.isLeftButtonDown())
+    {
+        if (auto cp = controlPoint.lock())
+        {
+            startPosition = cp->getPosition();
+            dragging = true;
+        }
+    }
+}
+
+void GradientMeshEditor::ControlPointComponent::mouseDrag(const MouseEvent& event)
+{
+    if (dragging)
+    {
+        if (auto cp = controlPoint.lock())
+        {
+            auto position = startPosition + (event.position - event.mouseDownPosition);
+            cp->setPosition(position);
+            updateTransform(cp->getPosition());
+
+            if (onDrag)
+            {
+                onDrag();
+            }
+        }
+    }
+}
+
+void GradientMeshEditor::ControlPointComponent::mouseUp(const MouseEvent& event)
+{
+    dragging = false;
+}
+
+void GradientMeshEditor::ControlPointComponent::paint(juce::Graphics& g)
+{
+    auto color = juce::Colours::white;
+    int size = isMouseOver(true) ? 24 : 18;
+    if (auto cp = controlPoint.lock())
+    {
+        if (cp->hasColor())
+        {
+            size = isMouseOver(true) ? 32 : 26;
+            color = cp->getColor();
+        }
     }
 
+    g.setColour(color.contrasting());
+    g.fillEllipse(getLocalBounds().withSizeKeepingCentre(size, size).toFloat());
+    g.setColour(color);
+    g.fillEllipse(getLocalBounds().withSizeKeepingCentre(size - 4, size - 4).toFloat());
+}
+
+GradientMeshEditor::AddPatchButton::AddPatchButton() :
+    juce::Button("Add Patch")
+{
+    setSize(40, 40);
+}
+
+void GradientMeshEditor::AddPatchButton::paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
+{
+    g.setColour(juce::Colours::white);
+
+    g.drawEllipse(getLocalBounds().toFloat().reduced(4.0f), 2.0f);
+
+    juce::Rectangle<float> r{ getLocalBounds().toFloat().reduced(10.0f) };
+    g.drawLine({ r.getCentreX(), r.getY(), r.getCentreX(), r.getBottom() }, 2.0f);
+    g.drawLine({ r.getX(), r.getCentreY(), r.getRight(), r.getCentreY() }, 2.0f);
+}
+
+void GradientMeshEditor::addConnectedPatch(const InvocationInfo& info)
+{
+    auto originalPatch = selectedPatch.lock();
+    if (!originalPatch)
+    {
+        return;
+    }
+
+    auto edgePosition = GradientMesh::Edge::top;
+    for (auto& edgeControlComponent : edgeControlComponents)
+    {
+        if (&edgeControlComponent.addPatchButton == info.originatingComponent)
+        {
+            auto newPatch = originalPatch->createConnectedPatch(edgePosition);
+            document.gradientMesh.addPatch(newPatch);
+
+            auto patchComponent = std::make_unique<PatchComponent>(*this, newPatch);
+            addAndMakeVisible(patchComponent.get());
+            patchComponent->setBounds(getLocalBounds());
+            patchComponents.emplace_back(std::move(patchComponent));
+
+            repaint();
+            positionControls();
+
+            return;
+        }
+
+        ++edgePosition;
+    }
+}
+
+GradientMeshEditor::DisplayComponent::DisplayComponent(GradientMeshEditor& owner_) :
+    owner(owner_)
+{
+}
+
+void GradientMeshEditor::DisplayComponent::paint(juce::Graphics& g)
+{
+    if (meshImage.isNull() || meshImage.getWidth() != getWidth() || meshImage.getHeight() != getHeight())
+    {
+        meshImage = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
+    }
+
+    owner.document.gradientMesh.draw(meshImage, owner.zoomTransform);
+    g.drawImageAt(meshImage, 0, 0);
+}
+
+GradientMeshEditor::EdgeControlComponent::EdgeControlComponent(GradientMeshEditor& owner_, size_t edgePosition_) :
+    owner(owner_),
+    edgePosition(edgePosition_)
+{
+    addAndMakeVisible(addPatchButton);
+    addPatchButton.setCommandToTrigger(&owner.commandManager, addConnectedPatchCommand, true);
+    addAndMakeVisible(addPatchButton);
+
+    setSize(60, 60);
+}
+
+void GradientMeshEditor::EdgeControlComponent::resized()
+{
+    auto bounds = getLocalBounds();
+    addPatchButton.setBounds(bounds.reduced(10));
+}
+
+void GradientMeshEditor::EdgeControlComponent::paint(juce::Graphics& g)
+{
+    //g.fillAll(juce::Colours::darkgrey);
 }

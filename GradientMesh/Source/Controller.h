@@ -6,6 +6,7 @@
 class Controller
 {
 public:
+    Controller();
 
     Commander commander;
 };

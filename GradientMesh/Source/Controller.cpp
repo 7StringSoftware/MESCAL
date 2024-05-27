@@ -9,3 +9,8 @@
 */
 
 #include "Controller.h"
+
+Controller::Controller()
+{
+    commander.initialize(this);
+}

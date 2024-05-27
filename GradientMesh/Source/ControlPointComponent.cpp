@@ -11,14 +11,14 @@
 #include "ControlPointComponent.h"
 
 
-ControlPointComponent::ControlPointComponent(GridPosition gridPosition_, std::optional<juce::Colour> color_)
+BezierControlPointComponent::BezierControlPointComponent(GridPosition gridPosition_, std::optional<juce::Colour> color_)
     : Button({}),
     gridPosition(gridPosition_),
     color(color_)
 {
 }
 
-void ControlPointComponent::clicked(const ModifierKeys& modifiers)
+void BezierControlPointComponent::clicked(const ModifierKeys& modifiers)
 {
     if (! color.has_value())
     {
@@ -36,7 +36,7 @@ void ControlPointComponent::clicked(const ModifierKeys& modifiers)
         nullptr);
 }
 
-void ControlPointComponent::paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
+void BezierControlPointComponent::paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
 {
 #if 0
     float radius = juce::jmin(getWidth() * 0.45f, getHeight() * 0.45f);
@@ -92,21 +92,21 @@ void ControlPointComponent::paintButton(Graphics& g, bool shouldDrawButtonAsHigh
 #endif
 }
 
-void ControlPointComponent::mouseDown(const juce::MouseEvent& e)
+void BezierControlPointComponent::mouseDown(const juce::MouseEvent& e)
 {
     Button::mouseDown(e);
 
     dragger.startDraggingComponent(this, e);
 }
 
-void ControlPointComponent::mouseDrag(const juce::MouseEvent& e)
+void BezierControlPointComponent::mouseDrag(const juce::MouseEvent& e)
 {
     Button::mouseDrag(e);
 
     dragger.dragComponent(this, e, nullptr);
 }
 
-void ControlPointComponent::mouseUp(const juce::MouseEvent& e)
+void BezierControlPointComponent::mouseUp(const juce::MouseEvent& e)
 {
     if (e.getDistanceFromDragStart() >= 5.0f)
     {
@@ -116,7 +116,7 @@ void ControlPointComponent::mouseUp(const juce::MouseEvent& e)
     Button::mouseUp(e);
 }
 
-void ControlPointComponent::moved()
+void BezierControlPointComponent::moved()
 {
     if (onMove)
     {
@@ -124,7 +124,7 @@ void ControlPointComponent::moved()
     }
 }
 
-void ControlPointComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
+void BezierControlPointComponent::changeListenerCallback(juce::ChangeBroadcaster* source)
 {
     if (colorSelector)
     {

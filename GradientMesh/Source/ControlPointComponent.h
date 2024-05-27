@@ -7,11 +7,11 @@ struct GridPosition
     int row, column;
 };
 
-class ControlPointComponent : public juce::Button, public juce::ChangeListener
+class BezierControlPointComponent : public juce::Button, public juce::ChangeListener
 {
 public:
-    ControlPointComponent(GridPosition gridPosition_, std::optional<juce::Colour> color_);
-    ~ControlPointComponent() override = default;
+    BezierControlPointComponent(GridPosition gridPosition_, std::optional<juce::Colour> color_);
+    ~BezierControlPointComponent() override = default;
 
     void clicked(const ModifierKeys& modifiers) override;
     void paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;

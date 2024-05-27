@@ -1,39 +1,41 @@
 #include "Base.h"
 #include "ContentComponent.h"
+#include "Controller.h"
 
-class Application    : public juce::JUCEApplication
+class Application : public juce::JUCEApplication
 {
 public:
     Application() = default;
 
-    const juce::String getApplicationName() override       { return "GradientMesh"; }
-    const juce::String getApplicationVersion() override    { return ""; }
+    const juce::String getApplicationName() override { return "GradientMesh"; }
+    const juce::String getApplicationVersion() override { return ""; }
 
-    void initialise (const juce::String&) override
+    void initialise(const juce::String&) override
     {
-        mainWindow.reset (new MainWindow ("GradientMesh", new ContentComponent, *this));
+        controller = std::make_unique <Controller>();
+        mainWindow.reset(new MainWindow("GradientMesh", new ContentComponent{ controller->commander.commandManager }, *this));
     }
 
-    void shutdown() override                         { mainWindow = nullptr; }
+    void shutdown() override { mainWindow = nullptr; }
 
 private:
-    class MainWindow    : public juce::DocumentWindow
+    class MainWindow : public juce::DocumentWindow
     {
     public:
-        MainWindow (const juce::String& name, juce::Component* c, JUCEApplication& a)
-            : DocumentWindow (name, juce::Desktop::getInstance().getDefaultLookAndFeel()
-                                                                .findColour (ResizableWindow::backgroundColourId),
-                              juce::DocumentWindow::allButtons),
-              app (a)
+        MainWindow(const juce::String& name, juce::Component* c, JUCEApplication& a)
+            : DocumentWindow(name, juce::Desktop::getInstance().getDefaultLookAndFeel()
+                .findColour(ResizableWindow::backgroundColourId),
+                juce::DocumentWindow::allButtons),
+            app(a)
         {
-            setUsingNativeTitleBar (true);
-            setContentOwned (c, true);
+            setUsingNativeTitleBar(true);
+            setContentOwned(c, true);
 
-            setResizable (true, false);
-            setResizeLimits (300, 250, 10000, 10000);
-            centreWithSize (getWidth(), getHeight());
+            setResizable(true, false);
+            setResizeLimits(300, 250, 10000, 10000);
+            centreWithSize(getWidth(), getHeight());
 
-            setVisible (true);
+            setVisible(true);
         }
 
         void closeButtonPressed() override
@@ -44,10 +46,11 @@ private:
     private:
         JUCEApplication& app;
 
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainWindow)
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
     };
 
+    std::unique_ptr<Controller> controller;
     std::unique_ptr<MainWindow> mainWindow;
 };
 
-START_JUCE_APPLICATION (Application)
+START_JUCE_APPLICATION(Application)
