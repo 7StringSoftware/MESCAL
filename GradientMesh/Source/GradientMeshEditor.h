@@ -4,14 +4,14 @@
 #include "ControlPointComponent.h"
 #include "Document.h"
 
-class GradientMeshEditor  : public juce::Component, public juce::ApplicationCommandTarget
+class GradientMeshEditor : public juce::Component, public juce::ApplicationCommandTarget
 {
 public:
     GradientMeshEditor(juce::ApplicationCommandManager& commandManager_);
     ~GradientMeshEditor() override;
 
     juce::Rectangle<int> getPreferredSize();
-    void paint (juce::Graphics&) override;
+    void paint(juce::Graphics&) override;
     void resized() override;
     void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override;
     void mouseMove(const MouseEvent& event) override;
@@ -107,6 +107,18 @@ private:
         GradientMesh::Edge edge;
     };
 
+    struct PathButton : public juce::Button
+    {
+        PathButton() :
+            Button({})
+        {
+        }
+
+        void paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
+
+        juce::Path path;
+    };
+
     struct EdgeControlComponent : public juce::Component
     {
         EdgeControlComponent(GradientMeshEditor& owner_, size_t edgePosition_);
@@ -115,7 +127,10 @@ private:
 
         GradientMeshEditor& owner;
         size_t const edgePosition;
-        AddPatchButton addPatchButton;
+        PathButton addPatchButton;
+        PathButton lineButton;
+        PathButton quadraticButton;
+        PathButton cubicButton;
     };
 
     std::vector<std::unique_ptr<PatchComponent>> patchComponents;
@@ -143,6 +158,7 @@ private:
     void positionControls();
 
     void addConnectedPatch(const InvocationInfo& info);
+    void setEdgeType(const InvocationInfo& info, GradientMesh::Edge::Type type);
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GradientMeshEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GradientMeshEditor)
 };

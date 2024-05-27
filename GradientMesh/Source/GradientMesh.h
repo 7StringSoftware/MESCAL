@@ -184,6 +184,7 @@ public:struct Patch;
         {
             return edgeTypes[edgePosition];
         }
+        void setEdgeType(size_t edgePosition, Edge::Type type);
 
         static constexpr size_t numRows = 4;
         static constexpr size_t numColumns = 4;
@@ -195,7 +196,7 @@ public:struct Patch;
         std::array<std::shared_ptr<ControlPoint>, 16> controlPoints{};
         std::array <Edge::Type, 4 > edgeTypes
         {
-            Edge::Type::cubic, Edge::Type::quadratic, Edge::Type::straight, Edge::Type::cubic
+            Edge::Type::cubic, Edge::Type::cubic, Edge::Type::cubic, Edge::Type::cubic
         };
     };
 

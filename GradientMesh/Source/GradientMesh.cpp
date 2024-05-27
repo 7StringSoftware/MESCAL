@@ -156,6 +156,8 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::Patch::createConnectedPatch(s
                 destPoint->setColor(sourcePoint->getColor());
             }
         }
+
+        patch->setEdgeType(edgePosition, getEdgeType(Edge::bottom));
         break;
     }
 
@@ -177,6 +179,8 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::Patch::createConnectedPatch(s
                 destPoint->setColor(sourcePoint->getColor());
             }
         }
+
+        patch->setEdgeType(edgePosition, getEdgeType(Edge::left));
         break;
     }
 
@@ -198,6 +202,8 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::Patch::createConnectedPatch(s
                 destPoint->setColor(sourcePoint->getColor());
             }
         }
+
+        patch->setEdgeType(edgePosition, getEdgeType(Edge::top));
         break;
     }
 
@@ -219,6 +225,8 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::Patch::createConnectedPatch(s
                 destPoint->setColor(sourcePoint->getColor());
             }
         }
+
+        patch->setEdgeType(edgePosition, getEdgeType(Edge::right));
         break;
     }
     }
@@ -463,6 +471,12 @@ GradientMesh::Edge GradientMesh::Patch::getEdge(size_t edge) const
     }
 
     return Edge{};
+}
+
+void GradientMesh::Patch::setEdgeType(size_t edgePosition, Edge::Type type)
+{
+    edgeTypes[edgePosition] = type;
+    update();
 }
 
 void GradientMesh::ControlPoint::setPosition(juce::Point<float> position_)
