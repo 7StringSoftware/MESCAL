@@ -14,9 +14,10 @@ public:
     void resized() override;
 
 private:
-    juce::Image image;
-    Direct2DEdgeDetectionEffect edgeDetectionEffect;
-    Direct2DEmbossEffect embossEffect;
+    juce::VBlankAttachment vblank{ this, [this] { repaint(); } };
+    juce::Image input, blurred, output;
+    std::unique_ptr<Direct2DEffect> blur = Direct2DEffect::create(Direct2DEffect::EffectType::gaussianBlur);
+    std::unique_ptr<Direct2DEffect> effect = Direct2DEffect::create(Direct2DEffect::EffectType::spotDiffuseLighting);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

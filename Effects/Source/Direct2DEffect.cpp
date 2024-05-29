@@ -43,27 +43,72 @@ struct Direct2DEffect::Pimpl
             }
         }
 
+        auto effectGuid = *effectGuids[(size_t)effectType];
         if (auto hr = deviceContext->CreateEffect(effectGuid, d2dEffect.put()); FAILED(hr))
         {
             jassertfalse;
         }
     }
 
-    virtual void configureEffect() = 0;
+    void configureEffect()
+    {
+        switch (effectType)
+        {
+        case EffectType::spotSpecularLighting:
+            d2dEffect->SetValue(D2D1_SPOTSPECULAR_PROP_LIGHT_POSITION, D2D1_VECTOR_3F{ 50.0f, 50.0f, 100.0f });
+            d2dEffect->SetValue(D2D1_SPOTSPECULAR_PROP_POINTS_AT, D2D1_VECTOR_3F{ 0.0f, 0.0f, 0.0f });
+            d2dEffect->SetValue(D2D1_SPOTSPECULAR_PROP_FOCUS, 1.0f);
+            d2dEffect->SetValue(D2D1_SPOTSPECULAR_PROP_LIMITING_CONE_ANGLE, 90.0f);
+            d2dEffect->SetValue(D2D1_SPOTSPECULAR_PROP_SPECULAR_EXPONENT, 10.0f);
+            d2dEffect->SetValue(D2D1_SPOTSPECULAR_PROP_SPECULAR_CONSTANT, 1.0f);
+            d2dEffect->SetValue(D2D1_SPOTSPECULAR_PROP_SURFACE_SCALE, 1.0f);
+            d2dEffect->SetValue(D2D1_SPOTSPECULAR_PROP_COLOR, D2D1_VECTOR_3F{ 1.0f, 0.0f, 1.0f });
+            break;
 
-    GUID const effectGuid;
+        case EffectType::spotDiffuseLighting:
+            d2dEffect->SetValue(D2D1_SPOTDIFFUSE_PROP_LIGHT_POSITION, D2D1_VECTOR_3F{ 50.0f, 50.0f, 100.0f });
+            d2dEffect->SetValue(D2D1_SPOTDIFFUSE_PROP_POINTS_AT, D2D1_VECTOR_3F{ 0.0f, 0.0f, 0.0f });
+            d2dEffect->SetValue(D2D1_SPOTDIFFUSE_PROP_FOCUS, 1.0f);
+            d2dEffect->SetValue(D2D1_SPOTDIFFUSE_PROP_LIMITING_CONE_ANGLE, 90.0f);
+            d2dEffect->SetValue(D2D1_SPOTDIFFUSE_PROP_DIFFUSE_CONSTANT, 1.0f);
+            d2dEffect->SetValue(D2D1_SPOTDIFFUSE_PROP_SURFACE_SCALE, 1.0f);
+            d2dEffect->SetValue(D2D1_SPOTDIFFUSE_PROP_COLOR, D2D1_VECTOR_3F{ 1.0f, 0.0f, 1.0f });
+            break;
+        }
+    }
+
+    EffectType effectType;
     juce::DxgiAdapter::Ptr adapter;
     winrt::com_ptr<ID2D1DeviceContext2> deviceContext;
     winrt::com_ptr<ID2D1Effect> d2dEffect;
     juce::Direct2DPixelData::Ptr outputPixelData;
+
+    static constexpr std::array<GUID const * const, (size_t)EffectType::numEffectTypes> effectGuids
+    {
+        &CLSID_D2D1GaussianBlur,
+        &CLSID_D2D1SpotSpecular,
+        &CLSID_D2D1SpotDiffuse
+    };
 };
 
-Direct2DEffect::Direct2DEffect()
+std::unique_ptr<Direct2DEffect> Direct2DEffect::create(EffectType effectType)
+{
+    return std::make_unique<Direct2DEffect>(effectType);
+}
+
+Direct2DEffect::Direct2DEffect(EffectType effectType_) :
+    effectType(effectType_),
+    pimpl(std::make_unique<Pimpl>(effectType_))
 {
 }
 
 Direct2DEffect::~Direct2DEffect()
 {
+}
+
+void Direct2DEffect::setProperty(int index, PropertyValue&& value)
+{
+
 }
 
 void Direct2DEffect::applyEffect(juce::Image& sourceImage, juce::Graphics& destContext, float scaleFactor, float alpha)
@@ -105,5 +150,35 @@ void Direct2DEffect::applyEffect(juce::Image& sourceImage, juce::Graphics& destC
     destContext.drawImageAt(outputImage, 0, 0);
 }
 
-#include "Direct2DEdgeDetectionEffect.cpp"
-#include "Direct2DEmbossEffect.cpp"
+void Direct2DEffect::applyEffect(juce::Image& sourceImage, juce::Image& outputImage, float scaleFactor, float alpha)
+{
+    auto sourcePixelData = dynamic_cast<juce::Direct2DPixelData*>(sourceImage.getPixelData());
+    if (!sourcePixelData)
+    {
+        return;
+    }
+
+    pimpl->createResources(sourceImage);
+    if (!pimpl->deviceContext || !pimpl->adapter || !pimpl->adapter->dxgiAdapter || !pimpl->d2dEffect)
+    {
+        return;
+    }
+
+    auto& outputPixelData = pimpl->outputPixelData;
+    if (!outputPixelData || outputPixelData->width < sourceImage.getWidth() || outputPixelData->height < sourceImage.getHeight())
+    {
+        outputPixelData = juce::Direct2DPixelData::make(juce::Image::ARGB, sourceImage.getWidth(), sourceImage.getHeight(), true, pimpl->adapter);
+    }
+
+    pimpl->configureEffect();
+
+    pimpl->d2dEffect->SetInput(0, sourcePixelData->getAdapterD2D1Bitmap());
+
+    pimpl->deviceContext->SetTarget(outputPixelData->getAdapterD2D1Bitmap());
+    pimpl->deviceContext->BeginDraw();
+    pimpl->deviceContext->DrawImage(pimpl->d2dEffect.get());
+    pimpl->deviceContext->EndDraw();
+}
+
+// #include "Direct2DEdgeDetectionEffect.cpp"
+// #include "Direct2DEmbossEffect.cpp"
