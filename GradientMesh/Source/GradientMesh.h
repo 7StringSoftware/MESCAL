@@ -78,12 +78,28 @@
 
 class GradientMesh
 {
-public:struct Patch;
-    struct ControlPoint
+public:
+
+    struct Patch;
+
+    enum class EdgeType
     {
+        unknown = -1,
+        straight,
+        quadratic,
+        cubic
+    };
+
+    class ControlPoint
+    {
+    public:
         explicit ControlPoint(Patch& patch_, size_t row_, size_t column_) :
             patch(patch_),
             row(row_), column(column_)
+        {
+        }
+
+        ~ControlPoint()
         {
         }
 
@@ -94,7 +110,15 @@ public:struct Patch;
             neighbors.push_back(neighbor);
         }
 
-        void setPosition(juce::Point<float> position_);
+        auto const& getNeighbors() const { return neighbors; }
+
+        enum UpdateType
+        {
+            update,
+            doNotUpdate
+        };
+
+        virtual void setPosition(juce::Point<float> position_, UpdateType updateType = update);
 
         juce::Point<float>& getPosition()
         {
@@ -114,23 +138,71 @@ public:struct Patch;
         void setColor(juce::Colour color_)
         {
             color = color_;
-            patch.update();
         }
 
         void applyTransform(const AffineTransform& transform) noexcept;
 
         void swapWith(std::shared_ptr<ControlPoint> other) noexcept;
 
+        virtual void release()
+        {
+            neighbors.clear();
+        }
+
         size_t const row;
         size_t const column;
 
-    private:
+    protected:
         Patch& patch;
         juce::Point<float> position;
         std::optional<juce::Colour> color;
         std::vector<std::shared_ptr<ControlPoint>> neighbors;
 
-        JUCE_DECLARE_WEAK_REFERENCEABLE(ControlPoint)
+        static void updateNeighbors(ControlPoint* cp, UpdateType updateType)
+            {
+                for (auto& neighbor : cp->neighbors)
+                {
+                    neighbor->position = cp->position;
+
+                    if (updateType == ControlPoint::update)
+                    {
+                        neighbor->patch.update();
+                    }
+                }
+            };
+
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ControlPoint)
+    };
+
+    struct Edge;
+    class BezeierControlPoint : public ControlPoint
+    {
+    public:
+        explicit BezeierControlPoint(Patch& patch_, size_t row_, size_t column_, std::shared_ptr<ControlPoint> corner_) :
+            ControlPoint(patch_, row_, column_), corner(corner_)
+        {
+        }
+
+        void configure(Edge* edge_, std::shared_ptr<BezeierControlPoint> buddy_)
+        {
+            edge = edge_;
+            buddy = buddy_;
+        }
+
+        void release() override
+        {
+            corner.reset();
+            buddy.reset();
+
+            ControlPoint::release();
+        }
+
+        void setPosition(juce::Point<float> position_, UpdateType updateType = update) override;
+
+    protected:
+        std::shared_ptr<ControlPoint> corner;
+        Edge* edge = nullptr;
+        std::shared_ptr<BezeierControlPoint> buddy;
     };
 
     struct Edge
@@ -140,12 +212,7 @@ public:struct Patch;
         static constexpr size_t bottom = 2;
         static constexpr size_t left = 3;
 
-        enum class Type
-        {
-            straight,
-            quadratic,
-            cubic
-        } type;
+        EdgeType type = EdgeType::cubic;
 
         bool isValid() const noexcept
         {
@@ -153,15 +220,21 @@ public:struct Patch;
                 bezierControlPoints.first && bezierControlPoints.second;
         }
 
+        static size_t getOppositePosition(size_t position)
+        {
+            return (position + 2) % 4;
+        }
+
         std::pair<std::shared_ptr<ControlPoint>, std::shared_ptr<ControlPoint>> corners;
-        std::pair<std::shared_ptr<ControlPoint>, std::shared_ptr<ControlPoint>> bezierControlPoints;
+        std::pair<std::shared_ptr<BezeierControlPoint>, std::shared_ptr<BezeierControlPoint>> bezierControlPoints;
     };
 
     struct Patch
     {
         Patch();
-        static std::shared_ptr<Patch> create();
+        ~Patch();
 
+        static std::shared_ptr<Patch> create();
         std::shared_ptr<Patch> createConnectedPatch(size_t edgePosition) const;
 
         void applyTransform(const AffineTransform& transform) noexcept;
@@ -179,12 +252,13 @@ public:struct Patch;
             return path;
         }
 
-        Edge getEdge(size_t edgePosition) const;
-        Edge::Type getEdgeType(size_t edgePosition) const
+        const Edge* const getEdge(size_t edgePosition) const;
+        const Edge* const getOppositeEdge(size_t edgePosition) const;
+        void setEdgeType(size_t edgePosition, EdgeType type);
+        EdgeType getEdgeType(size_t edgePosition) const
         {
-            return edgeTypes[edgePosition];
+            return edges[edgePosition]->type;
         }
-        void setEdgeType(size_t edgePosition, Edge::Type type);
 
         static constexpr size_t numRows = 4;
         static constexpr size_t numColumns = 4;
@@ -194,10 +268,7 @@ public:struct Patch;
         bool modified = true;
 
         std::array<std::shared_ptr<ControlPoint>, 16> controlPoints{};
-        std::array <Edge::Type, 4 > edgeTypes
-        {
-            Edge::Type::cubic, Edge::Type::cubic, Edge::Type::cubic, Edge::Type::cubic
-        };
+        std::array <std::unique_ptr<Edge>, 4 > edges{};
     };
 
     GradientMesh();

@@ -18,7 +18,7 @@ public:
 
     void selectPatch(std::weak_ptr<GradientMesh::Patch> patch);
 
-    juce::ApplicationCommandTarget* getNextCommandTarget() override { return nullptr; }
+    juce::ApplicationCommandTarget* getNextCommandTarget() override;
     void getAllCommands(Array<CommandID>& commands) override;
     void getCommandInfo(CommandID commandID, ApplicationCommandInfo& result) override;
     bool perform(const InvocationInfo& info) override;
@@ -26,10 +26,7 @@ public:
 private:
     enum
     {
-        addConnectedPatchCommand = 1000,
-        straightEdgeCommand,
-        quadraticEdgeCommand,
-        cubicEdgeCommand
+        addConnectedPatchCommand = 0x100
     };
 
     juce::ApplicationCommandManager& commandManager;
@@ -122,6 +119,7 @@ private:
     struct EdgeControlComponent : public juce::Component
     {
         EdgeControlComponent(GradientMeshEditor& owner_, size_t edgePosition_);
+        void setEdgeType(GradientMesh::EdgeType type);
         void resized() override;
         void paint(juce::Graphics& g) override;
 
@@ -158,7 +156,7 @@ private:
     void positionControls();
 
     void addConnectedPatch(const InvocationInfo& info);
-    void setEdgeType(const InvocationInfo& info, GradientMesh::Edge::Type type);
+    void setEdgeType(size_t edgePosition, GradientMesh::EdgeType type);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GradientMeshEditor)
 };

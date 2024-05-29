@@ -9,6 +9,7 @@
 #include <juce_graphics/native/juce_Direct2DImage_windows.h>
 #include "GradientMesh.h"
 
+
 struct GradientMesh::Pimpl
 {
     Pimpl(GradientMesh& owner_) : owner(owner_)
@@ -58,36 +59,38 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::Patch::create()
 
     juce::Rectangle<float> r{ 100.0f, 100.0f };
 
-    patch->getControlPoint(0, 0)->setPosition(r.getTopLeft());
-    patch->getControlPoint(0, 1)->setPosition(r.getTopLeft() + juce::Point<float>{ 25.0f, -10.0f });
-    patch->getControlPoint(0, 2)->setPosition(r.getTopLeft() + juce::Point<float>{ 75.0f, 10.0f });
+    patch->getControlPoint(0, 0)->setPosition(r.getTopLeft(), ControlPoint::doNotUpdate);
+    patch->getControlPoint(0, 1)->setPosition(r.getTopLeft() + juce::Point<float>{ 25.0f, -10.0f }, ControlPoint::doNotUpdate);
+    patch->getControlPoint(0, 2)->setPosition(r.getTopLeft() + juce::Point<float>{ 75.0f, 10.0f }, ControlPoint::doNotUpdate);
 
-    patch->getControlPoint(0, 3)->setPosition(r.getTopRight());
-    patch->getControlPoint(1, 3)->setPosition(r.getTopRight() + juce::Point<float>{ 10.0f, 25.0f });
-    patch->getControlPoint(2, 3)->setPosition(r.getTopRight() + juce::Point<float>{ -10.0f, 75.0f });
+    patch->getControlPoint(0, 3)->setPosition(r.getTopRight(), ControlPoint::doNotUpdate);
+    patch->getControlPoint(1, 3)->setPosition(r.getTopRight() + juce::Point<float>{ 10.0f, 25.0f }, ControlPoint::doNotUpdate);
+    patch->getControlPoint(2, 3)->setPosition(r.getTopRight() + juce::Point<float>{ -10.0f, 75.0f }, ControlPoint::doNotUpdate);
 
-    patch->getControlPoint(3, 3)->setPosition(r.getBottomRight());
-    patch->getControlPoint(3, 2)->setPosition(r.getBottomRight() + juce::Point<float>{ -25.0f, 10.0f });
-    patch->getControlPoint(3, 1)->setPosition(r.getBottomRight() + juce::Point<float>{ -75.0f, -10.0f });
+    patch->getControlPoint(3, 3)->setPosition(r.getBottomRight(), ControlPoint::doNotUpdate);
+    patch->getControlPoint(3, 2)->setPosition(r.getBottomRight() + juce::Point<float>{ -25.0f, 10.0f }, ControlPoint::doNotUpdate);
+    patch->getControlPoint(3, 1)->setPosition(r.getBottomRight() + juce::Point<float>{ -75.0f, -10.0f }, ControlPoint::doNotUpdate);
 
-    patch->getControlPoint(3, 0)->setPosition(r.getBottomLeft());
-    patch->getControlPoint(2, 0)->setPosition(r.getBottomLeft() + juce::Point<float>{ -10.0f, -25.0f });
-    patch->getControlPoint(1, 0)->setPosition(r.getBottomLeft() + juce::Point<float>{ 10.0f, -75.0f });
+    patch->getControlPoint(3, 0)->setPosition(r.getBottomLeft(), ControlPoint::doNotUpdate);
+    patch->getControlPoint(2, 0)->setPosition(r.getBottomLeft() + juce::Point<float>{ -10.0f, -25.0f }, ControlPoint::doNotUpdate);
+    patch->getControlPoint(1, 0)->setPosition(r.getBottomLeft() + juce::Point<float>{ 10.0f, -75.0f }, ControlPoint::doNotUpdate);
 
-    patch->getControlPoint(1, 1)->setPosition(patch->getControlPoint(0, 0)->getPosition());
-    patch->getControlPoint(1, 2)->setPosition(patch->getControlPoint(0, 3)->getPosition());
-    patch->getControlPoint(2, 1)->setPosition(patch->getControlPoint(3, 0)->getPosition());
-    patch->getControlPoint(2, 2)->setPosition(patch->getControlPoint(3, 3)->getPosition());
+    patch->getControlPoint(1, 1)->setPosition(patch->getControlPoint(0, 0)->getPosition(), ControlPoint::doNotUpdate);
+    patch->getControlPoint(1, 2)->setPosition(patch->getControlPoint(0, 3)->getPosition(), ControlPoint::doNotUpdate);
+    patch->getControlPoint(2, 1)->setPosition(patch->getControlPoint(3, 0)->getPosition(), ControlPoint::doNotUpdate);
+    patch->getControlPoint(2, 2)->setPosition(patch->getControlPoint(3, 3)->getPosition(), ControlPoint::doNotUpdate);
 
     patch->getControlPoint(0, 0)->setColor(juce::Colours::red);
     patch->getControlPoint(0, 3)->setColor(juce::Colours::green);
     patch->getControlPoint(3, 0)->setColor(juce::Colours::blue);
     patch->getControlPoint(3, 3)->setColor(juce::Colours::yellow);
 
+    patch->update();
+
     return patch;
 }
 
-std::shared_ptr<GradientMesh::Patch> GradientMesh::Patch::createConnectedPatch(size_t edgePosition) const
+std::shared_ptr<GradientMesh::Patch> GradientMesh::Patch::createConnectedPatch(size_t connectedEdgePosition) const
 {
     auto patch = std::make_shared<Patch>();
 
@@ -99,7 +102,7 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::Patch::createConnectedPatch(s
         {
             auto sourcePoint = getControlPoint(row, column);
             auto destPoint = patch->getControlPoint(row, column);
-            destPoint->setPosition(sourcePoint->getPosition());
+            destPoint->setPosition(sourcePoint->getPosition(), ControlPoint::doNotUpdate);
             if (sourcePoint->hasColor())
             {
                 destPoint->setColor(sourcePoint->getColor());
@@ -107,6 +110,62 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::Patch::createConnectedPatch(s
         }
     }
 
+    switch (connectedEdgePosition)
+    {
+    case Edge::top:
+    {
+        delta = getControlPoint(0, 0)->getPosition() - getControlPoint(3, 0)->getPosition();
+        break;
+    }
+
+    case Edge::right:
+    {
+        delta = getControlPoint(0, 3)->getPosition() - getControlPoint(0, 0)->getPosition();
+        break;
+    }
+
+    case Edge::bottom:
+    {
+        delta = getControlPoint(3, 0)->getPosition() - getControlPoint(0, 0)->getPosition();
+        break;
+    }
+
+    case Edge::left:
+    {
+        delta = getControlPoint(0, 0)->getPosition() - getControlPoint(0, 3)->getPosition();
+        break;
+    }
+    }
+
+    patch->applyTransform(juce::AffineTransform::translation(delta));
+
+    {
+        auto sourceEdge = getEdge(connectedEdgePosition);
+        auto destEdge = patch->getOppositeEdge(connectedEdgePosition);
+
+        destEdge->corners.first->setPosition(sourceEdge->corners.second->getPosition(), ControlPoint::doNotUpdate);
+        destEdge->corners.second->setPosition(sourceEdge->corners.first->getPosition(), ControlPoint::doNotUpdate);
+
+        destEdge->bezierControlPoints.first->setPosition(sourceEdge->bezierControlPoints.second->getPosition(), ControlPoint::doNotUpdate);
+        destEdge->bezierControlPoints.second->setPosition(sourceEdge->bezierControlPoints.first->getPosition(), ControlPoint::doNotUpdate);
+
+        destEdge->corners.first->setColor(sourceEdge->corners.second->getColor());
+        destEdge->corners.second->setColor(sourceEdge->corners.first->getColor());
+
+        sourceEdge->corners.first->addNeighbor(destEdge->corners.second);
+        sourceEdge->corners.second->addNeighbor(destEdge->corners.first);
+        destEdge->corners.first->addNeighbor(sourceEdge->corners.second);
+        destEdge->corners.second->addNeighbor(sourceEdge->corners.first);
+
+        sourceEdge->bezierControlPoints.first->addNeighbor(destEdge->bezierControlPoints.second);
+        sourceEdge->bezierControlPoints.second->addNeighbor(destEdge->bezierControlPoints.first);
+        destEdge->bezierControlPoints.first->addNeighbor(sourceEdge->bezierControlPoints.second);
+        destEdge->bezierControlPoints.second->addNeighbor(sourceEdge->bezierControlPoints.first);
+
+        patch->setEdgeType(Edge::getOppositePosition(connectedEdgePosition), sourceEdge->type);
+    }
+
+#if 0
     switch (edgePosition)
     {
     case Edge::top:
@@ -157,7 +216,7 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::Patch::createConnectedPatch(s
             }
         }
 
-        patch->setEdgeType(edgePosition, getEdgeType(Edge::bottom));
+        patch->setEdgeType(Edge::bottom, getEdgeType(Edge::top));
         break;
     }
 
@@ -180,7 +239,7 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::Patch::createConnectedPatch(s
             }
         }
 
-        patch->setEdgeType(edgePosition, getEdgeType(Edge::left));
+        patch->setEdgeType(Edge::left, getEdgeType(Edge::right));
         break;
     }
 
@@ -203,7 +262,7 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::Patch::createConnectedPatch(s
             }
         }
 
-        patch->setEdgeType(edgePosition, getEdgeType(Edge::top));
+        patch->setEdgeType(Edge::top, getEdgeType(Edge::bottom));
         break;
     }
 
@@ -226,10 +285,11 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::Patch::createConnectedPatch(s
             }
         }
 
-        patch->setEdgeType(edgePosition, getEdgeType(Edge::right));
+        patch->setEdgeType(Edge::right, getEdgeType(Edge::left));
         break;
     }
     }
+#endif
 
     return patch;
 }
@@ -284,7 +344,7 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
                 return D2D1_POINT_2F{ p.x, p.y };
             };
 
-        auto convertEdge = [&](Edge::Type edgeType,
+        auto convertEdge = [&](EdgeType edgeType,
             D2D1_POINT_2F& cp0,
             D2D1_POINT_2F& cp1,
             D2D1_POINT_2F& corner0,
@@ -292,13 +352,12 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
             {
                 switch (edgeType)
                 {
-                case Edge::Type::straight:
+                case EdgeType::straight:
                     cp0 = corner0;
                     cp1 = corner1;
                     break;
 
-                case Edge::Type::quadratic:
-                    cp1 = cp0;
+                default:
                     break;
                 }
             };
@@ -384,16 +443,80 @@ juce::Rectangle<float> GradientMesh::getBounds() const noexcept
 
 GradientMesh::Patch::Patch()
 {
-    int row = 0, column = 0;
-    for (auto& controlPoint : controlPoints)
-    {
-        controlPoint = std::make_shared<ControlPoint>(*this, row, column);
-        ++column;
-        if (column == numColumns)
+    auto makeControlPoint = [&](size_t row, size_t column)
         {
-            column = 0;
-            ++row;
-        }
+            controlPoints[row * numColumns + column] = std::make_shared<ControlPoint>(*this, row, column);
+        };
+
+    auto makeBezierControlPoint = [&](size_t row, size_t column, std::shared_ptr<ControlPoint> corner)
+        {
+            auto cp = std::make_shared<BezeierControlPoint>(*this, row, column, corner);
+            controlPoints[row * numColumns + column] = cp;
+            return cp;
+        };
+
+    makeControlPoint(0, 0);
+    makeControlPoint(0, 3);
+    makeControlPoint(3, 0);
+    makeControlPoint(3, 3);
+
+    auto bezier01 = makeBezierControlPoint(0, 1, getControlPoint(0, 0));
+    auto bezier02 = makeBezierControlPoint(0, 2, getControlPoint(0, 3));
+
+    auto bezier10 = makeBezierControlPoint(1, 0, getControlPoint(0, 0));
+    auto bezier20 = makeBezierControlPoint(2, 0, getControlPoint(3, 0));
+
+    auto bezier13 = makeBezierControlPoint(1, 3, getControlPoint(0, 3));
+    auto bezier23 = makeBezierControlPoint(2, 3, getControlPoint(3, 3));
+
+    auto bezier31 = makeBezierControlPoint(3, 1, getControlPoint(3, 0));
+    auto bezier32 = makeBezierControlPoint(3, 2, getControlPoint(3, 3));
+
+    makeControlPoint(1, 1);
+    makeControlPoint(1, 2);
+    makeControlPoint(2, 1);
+    makeControlPoint(2, 2);
+
+    for (auto& edge : edges)
+    {
+        edge = std::make_unique<Edge>();
+    }
+
+    edges[Edge::top]->corners = { getControlPoint(0, 0), getControlPoint(0, 3) };
+    edges[Edge::top]->bezierControlPoints = { bezier01, bezier02 };
+
+    edges[Edge::right]->corners = { getControlPoint(0, 3), getControlPoint(3, 3) };
+    edges[Edge::right]->bezierControlPoints = { bezier13, bezier23 };
+
+    edges[Edge::bottom]->corners = { getControlPoint(3, 3), getControlPoint(3, 0) };
+    edges[Edge::bottom]->bezierControlPoints = { bezier32, bezier31 };
+
+    edges[Edge::left]->corners = { getControlPoint(3, 0), getControlPoint(0, 0) };
+    edges[Edge::left]->bezierControlPoints = { bezier20, bezier10 };
+
+    bezier01->configure(edges[Edge::top].get(), bezier02);
+    bezier02->configure(edges[Edge::top].get(), bezier01);
+
+    bezier13->configure(edges[Edge::right].get(), bezier23);
+    bezier23->configure(edges[Edge::right].get(), bezier13);
+
+    bezier31->configure(edges[Edge::bottom].get(), bezier32);
+    bezier32->configure(edges[Edge::bottom].get(), bezier31);
+
+    bezier10->configure(edges[Edge::left].get(), bezier20);
+    bezier20->configure(edges[Edge::left].get(), bezier10);
+}
+
+GradientMesh::Patch::~Patch()
+{
+    for (auto& edge : edges)
+    {
+        edge.reset();
+    }
+
+    for (const auto& controlPoint : controlPoints)
+    {
+        controlPoint->release();
     }
 }
 
@@ -410,22 +533,17 @@ void GradientMesh::Patch::update()
     for (size_t position = Edge::top; position <= Edge::left; ++position)
     {
         auto edge = getEdge(position);
-        switch (edge.type)
+        switch (edge->type)
         {
-        case Edge::Type::straight:
-            path.lineTo(edge.corners.second->getPosition());
+        case EdgeType::straight:
+            path.lineTo(edge->corners.second->getPosition());
             break;
 
-        case Edge::Type::quadratic:
-            path.cubicTo(edge.bezierControlPoints.first->getPosition(),
-                edge.bezierControlPoints.first->getPosition(),
-                edge.corners.second->getPosition());
-            break;
-
-        case Edge::Type::cubic:
-            path.cubicTo(edge.bezierControlPoints.first->getPosition(),
-                edge.bezierControlPoints.second->getPosition(),
-                edge.corners.second->getPosition());
+        case EdgeType::quadratic:
+        case EdgeType::cubic:
+            path.cubicTo(edge->bezierControlPoints.first->getPosition(),
+                edge->bezierControlPoints.second->getPosition(),
+                edge->corners.second->getPosition());
             break;
         }
     }
@@ -433,8 +551,11 @@ void GradientMesh::Patch::update()
     path.closeSubPath();
 }
 
-GradientMesh::Edge GradientMesh::Patch::getEdge(size_t edge) const
+const GradientMesh::Edge* const GradientMesh::Patch::getEdge(size_t edgePosition) const
 {
+    return edges[edgePosition].get();
+
+#if 0
     switch (edge)
     {
     case Edge::top:
@@ -471,24 +592,48 @@ GradientMesh::Edge GradientMesh::Patch::getEdge(size_t edge) const
     }
 
     return Edge{};
+#endif
 }
 
-void GradientMesh::Patch::setEdgeType(size_t edgePosition, Edge::Type type)
+const GradientMesh::Edge* const GradientMesh::Patch::getOppositeEdge(size_t edgePosition) const
 {
-    edgeTypes[edgePosition] = type;
+    return getEdge((edgePosition + 2) & 3);
+}
+
+void GradientMesh::Patch::setEdgeType(size_t edgePosition, EdgeType type)
+{
+    auto& edge = edges[edgePosition];
+
+    edge->type = type;
+
+    if (type == EdgeType::quadratic)
+    {
+        edge->bezierControlPoints.first->setPosition(edge->bezierControlPoints.first->getPosition(), ControlPoint::doNotUpdate);
+    }
+
+    auto oppositeEdgePosition = Edge::getOppositePosition(edgePosition);
+    if (edge->isValid())
+    {
+        for (auto& neighbor : edge->corners.first->getNeighbors())
+        {
+            neighbor->getPatch().edges[oppositeEdgePosition]->type = type;
+            neighbor->getPatch().update();
+        }
+    }
+
     update();
 }
 
-void GradientMesh::ControlPoint::setPosition(juce::Point<float> position_)
+void GradientMesh::ControlPoint::setPosition(juce::Point<float> position_, ControlPoint::UpdateType updateType)
 {
     position = position_;
-    patch.update();
 
-    for (auto& neighbor : neighbors)
+    if (updateType == ControlPoint::update)
     {
-        neighbor->position = position_;
-        neighbor->patch.update();
+        patch.update();
     }
+
+    updateNeighbors(this, updateType);
 }
 
 void GradientMesh::ControlPoint::applyTransform(const AffineTransform& transform) noexcept
@@ -503,5 +648,25 @@ void GradientMesh::ControlPoint::swapWith(std::shared_ptr<ControlPoint> other) n
     if (hasColor())
     {
         std::swap(*color, *other->color);
+    }
+}
+
+void GradientMesh::BezeierControlPoint::setPosition(juce::Point<float> position_, UpdateType updateType /*= update*/)
+{
+    ControlPoint::setPosition(position_, updateType);
+
+    if (edge->type == EdgeType::quadratic)
+    {
+        juce::Line<float> edgeLine{ corner->getPosition(), buddy->corner->getPosition() };
+        juce::Line<float> line{ corner->getPosition(), position_ };
+
+        auto edgeLineAngle = edgeLine.getAngle();
+        auto theta = edgeLineAngle - line.getAngle();
+        auto distance = line.getLength();
+        auto buddyAngle = edgeLineAngle + juce::MathConstants<float>::pi + theta;
+
+        buddy->position = buddy->corner->getPosition().getPointOnCircumference(distance, buddyAngle);
+
+        updateNeighbors(buddy.get(), updateType);
     }
 }
