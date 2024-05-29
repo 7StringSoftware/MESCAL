@@ -103,7 +103,7 @@ void GradientMeshEditor::selectPatch(std::weak_ptr<GradientMesh::Patch> patch)
         }
     }
 
-    std::array<size_t, 4> edgePositions{ GradientMesh::Edge::top, GradientMesh::Edge::right, GradientMesh::Edge::bottom, GradientMesh::Edge::left };
+    std::array<size_t, 4> edgePositions{ GradientMesh::EdgePosition::top, GradientMesh::EdgePosition::right, GradientMesh::EdgePosition::bottom, GradientMesh::EdgePosition::left };
     for (size_t edgePosition : edgePositions)
     {
         auto& edgeComponent = edgeControlComponents[edgePosition];
@@ -176,10 +176,10 @@ void GradientMeshEditor::positionControls()
     if (auto p = selectedPatch.lock())
     {
         auto bounds = p->getPath().getBounds().transformedBy(zoomTransform).expanded(40).toNearestInt();
-        edgeControlComponents[GradientMesh::Edge::top].setCentrePosition(bounds.getCentreX(), bounds.getY());
-        edgeControlComponents[GradientMesh::Edge::right].setCentrePosition(bounds.getRight(), bounds.getCentreY());
-        edgeControlComponents[GradientMesh::Edge::bottom].setCentrePosition(bounds.getCentreX(), bounds.getBottom());
-        edgeControlComponents[GradientMesh::Edge::left].setCentrePosition(bounds.getX(), bounds.getCentreY());
+        edgeControlComponents[GradientMesh::EdgePosition::top].setCentrePosition(bounds.getCentreX(), bounds.getY());
+        edgeControlComponents[GradientMesh::EdgePosition::right].setCentrePosition(bounds.getRight(), bounds.getCentreY());
+        edgeControlComponents[GradientMesh::EdgePosition::bottom].setCentrePosition(bounds.getCentreX(), bounds.getBottom());
+        edgeControlComponents[GradientMesh::EdgePosition::left].setCentrePosition(bounds.getX(), bounds.getCentreY());
     }
 
     displayComponent.toBack();
@@ -376,7 +376,7 @@ void GradientMeshEditor::addConnectedPatch(const InvocationInfo& info)
         return;
     }
 
-    auto edgePosition = GradientMesh::Edge::top;
+    auto edgePosition = GradientMesh::EdgePosition::top;
     for (auto& edgeControlComponent : edgeControlComponents)
     {
         if (&edgeControlComponent.addPatchButton == info.originatingComponent)

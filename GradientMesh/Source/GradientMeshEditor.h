@@ -134,10 +134,10 @@ private:
     std::vector<std::unique_ptr<PatchComponent>> patchComponents;
     std::array<EdgeControlComponent, 4> edgeControlComponents
     {
-        EdgeControlComponent{ *this, GradientMesh::Edge::top },
-        EdgeControlComponent{ *this, GradientMesh::Edge::right },
-        EdgeControlComponent{ *this, GradientMesh::Edge::bottom },
-        EdgeControlComponent{ *this, GradientMesh::Edge::left }
+        EdgeControlComponent{ *this, GradientMesh::EdgePosition::top },
+        EdgeControlComponent{ *this, GradientMesh::EdgePosition::right },
+        EdgeControlComponent{ *this, GradientMesh::EdgePosition::bottom },
+        EdgeControlComponent{ *this, GradientMesh::EdgePosition::left }
     };
 
     juce::VBlankAttachment vblankAttachment{ this, [this]

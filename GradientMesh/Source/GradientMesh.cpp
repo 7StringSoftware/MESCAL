@@ -112,25 +112,25 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::Patch::createConnectedPatch(s
 
     switch (connectedEdgePosition)
     {
-    case Edge::top:
+    case EdgePosition::top:
     {
         delta = getControlPoint(0, 0)->getPosition() - getControlPoint(3, 0)->getPosition();
         break;
     }
 
-    case Edge::right:
+    case EdgePosition::right:
     {
         delta = getControlPoint(0, 3)->getPosition() - getControlPoint(0, 0)->getPosition();
         break;
     }
 
-    case Edge::bottom:
+    case EdgePosition::bottom:
     {
         delta = getControlPoint(3, 0)->getPosition() - getControlPoint(0, 0)->getPosition();
         break;
     }
 
-    case Edge::left:
+    case EdgePosition::left:
     {
         delta = getControlPoint(0, 0)->getPosition() - getControlPoint(0, 3)->getPosition();
         break;
@@ -379,13 +379,13 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
         d2dPatch.point32 = convertPoint(3, 2);
         d2dPatch.point33 = convertPoint(3, 3);
 
-        convertEdge(patch->getEdgeType(Edge::top),
+        convertEdge(patch->getEdgeType(EdgePosition::top),
             d2dPatch.point01, d2dPatch.point02, d2dPatch.point00, d2dPatch.point03);
-        convertEdge(patch->getEdgeType(Edge::right),
+        convertEdge(patch->getEdgeType(EdgePosition::right),
             d2dPatch.point13, d2dPatch.point23, d2dPatch.point03, d2dPatch.point33);
-        convertEdge(patch->getEdgeType(Edge::bottom),
+        convertEdge(patch->getEdgeType(EdgePosition::bottom),
             d2dPatch.point32, d2dPatch.point31, d2dPatch.point33, d2dPatch.point30);
-        convertEdge(patch->getEdgeType(Edge::left),
+        convertEdge(patch->getEdgeType(EdgePosition::left),
             d2dPatch.point20, d2dPatch.point10, d2dPatch.point30, d2dPatch.point00);
 
         auto convertColor = [&](int row, int column)
@@ -482,29 +482,40 @@ GradientMesh::Patch::Patch()
         edge = std::make_unique<Edge>();
     }
 
-    edges[Edge::top]->corners = { getControlPoint(0, 0), getControlPoint(0, 3) };
-    edges[Edge::top]->bezierControlPoints = { bezier01, bezier02 };
+    edges[EdgePosition::top]->corners = { getControlPoint(0, 0), getControlPoint(0, 3) };
+    edges[EdgePosition::top]->bezierControlPoints = { bezier01, bezier02 };
 
-    edges[Edge::right]->corners = { getControlPoint(0, 3), getControlPoint(3, 3) };
-    edges[Edge::right]->bezierControlPoints = { bezier13, bezier23 };
+    edges[EdgePosition::right]->corners = { getControlPoint(0, 3), getControlPoint(3, 3) };
+    edges[EdgePosition::right]->bezierControlPoints = { bezier13, bezier23 };
 
-    edges[Edge::bottom]->corners = { getControlPoint(3, 3), getControlPoint(3, 0) };
-    edges[Edge::bottom]->bezierControlPoints = { bezier32, bezier31 };
+    edges[EdgePosition::bottom]->corners = { getControlPoint(3, 3), getControlPoint(3, 0) };
+    edges[EdgePosition::bottom]->bezierControlPoints = { bezier32, bezier31 };
 
-    edges[Edge::left]->corners = { getControlPoint(3, 0), getControlPoint(0, 0) };
-    edges[Edge::left]->bezierControlPoints = { bezier20, bezier10 };
+    edges[EdgePosition::left]->corners = { getControlPoint(3, 0), getControlPoint(0, 0) };
+    edges[EdgePosition::left]->bezierControlPoints = { bezier20, bezier10 };
 
-    bezier01->configure(edges[Edge::top].get(), bezier02);
-    bezier02->configure(edges[Edge::top].get(), bezier01);
+    bezier01->configure(edges[EdgePosition::top].get(), bezier02);
+    bezier02->configure(edges[EdgePosition::top].get(), bezier01);
 
-    bezier13->configure(edges[Edge::right].get(), bezier23);
-    bezier23->configure(edges[Edge::right].get(), bezier13);
+    bezier13->configure(edges[EdgePosition::right].get(), bezier23);
+    bezier23->configure(edges[EdgePosition::right].get(), bezier13);
 
-    bezier31->configure(edges[Edge::bottom].get(), bezier32);
-    bezier32->configure(edges[Edge::bottom].get(), bezier31);
+    bezier31->configure(edges[EdgePosition::bottom].get(), bezier32);
+    bezier32->configure(edges[EdgePosition::bottom].get(), bezier31);
 
-    bezier10->configure(edges[Edge::left].get(), bezier20);
-    bezier20->configure(edges[Edge::left].get(), bezier10);
+    bezier10->configure(edges[EdgePosition::left].get(), bezier20);
+    bezier20->configure(edges[EdgePosition::left].get(), bezier10);
+}
+
+GradientMesh::Patch::Patch(std::shared_ptr<Halfedge> connectedHalfedge, size_t connectedHalfedgePosition)
+{
+    if (!connectedHalfedgePosition)
+    {
+
+    }
+    halfedges[connectedHalfedgePosition] = connectedHalfedge;
+
+
 }
 
 GradientMesh::Patch::~Patch()
@@ -530,7 +541,7 @@ void GradientMesh::Patch::update()
     path.clear();
     path.startNewSubPath(getPosition(0, 0));
 
-    for (size_t position = Edge::top; position <= Edge::left; ++position)
+    for (size_t position = EdgePosition::top; position <= EdgePosition::left; ++position)
     {
         auto edge = getEdge(position);
         switch (edge->type)

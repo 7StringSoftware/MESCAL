@@ -82,12 +82,47 @@ public:
 
     struct Patch;
 
+    struct EdgePosition
+    {
+        static constexpr size_t top = 0;
+        static constexpr size_t right = 1;
+        static constexpr size_t bottom = 2;
+        static constexpr size_t left = 3;
+    };
+
+    struct CornerPosition
+    {
+        static constexpr size_t topLeft = 0;
+        static constexpr size_t topRight = 1;
+        static constexpr size_t bottomRight = 2;
+        static constexpr size_t bottomLeft = 3;
+    };
+
     enum class EdgeType
     {
         unknown = -1,
         straight,
         quadratic,
         cubic
+    };
+
+    struct Halfedge;
+    struct Vertex
+    {
+        juce::Point<float> position;
+        std::shared_ptr<Vertex> vertex;
+    };
+
+    struct Halfedge
+    {
+        std::shared_ptr<Vertex> tail;
+        std::pair<std::shared_ptr<Vertex>, std::shared_ptr<Vertex>> bezierControlPoints;
+        std::shared_ptr<Vertex> head;
+
+        std::shared_ptr<Halfedge> twin;
+
+        std::shared_ptr<Halfedge> next;
+        std::shared_ptr<Halfedge> prev;
     };
 
     class ControlPoint
@@ -207,11 +242,6 @@ public:
 
     struct Edge
     {
-        static constexpr size_t top = 0;
-        static constexpr size_t right = 1;
-        static constexpr size_t bottom = 2;
-        static constexpr size_t left = 3;
-
         EdgeType type = EdgeType::cubic;
 
         bool isValid() const noexcept
@@ -232,6 +262,7 @@ public:
     struct Patch
     {
         Patch();
+        Patch(std::shared_ptr<Halfedge> connectedHalfedge, size_t connectedHalfedgePosition);
         ~Patch();
 
         static std::shared_ptr<Patch> create();
@@ -269,6 +300,8 @@ public:
 
         std::array<std::shared_ptr<ControlPoint>, 16> controlPoints{};
         std::array <std::unique_ptr<Edge>, 4 > edges{};
+
+        std::array<std::shared_ptr<Halfedge>, 4> halfedges;
     };
 
     GradientMesh();
@@ -282,6 +315,8 @@ public:
     auto const& getPatches() const { return patches; }
 
 private:
+    std::vector<std::shared_ptr<Vertex>> vertices;
+    std::vector<std::shared_ptr<Halfedge>> halfedges;
     std::vector<std::shared_ptr<Patch>> patches;
 
     struct Pimpl;
