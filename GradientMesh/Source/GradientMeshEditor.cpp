@@ -6,7 +6,6 @@ GradientMeshEditor::GradientMeshEditor(juce::ApplicationCommandManager& commandM
     displayComponent(*this)
 {
     commandManager_.registerAllCommandsForTarget(this);
-    commandManager_.setFirstCommandTarget(this);
 
     setOpaque(false);
 
@@ -29,6 +28,8 @@ GradientMeshEditor::GradientMeshEditor(juce::ApplicationCommandManager& commandM
     {
         addAndMakeVisible(edgeControlComponent);
     }
+
+    commandManager_.setFirstCommandTarget(this);
 
     selectPatch(patch);
 }
@@ -116,12 +117,14 @@ void GradientMeshEditor::selectPatch(std::weak_ptr<GradientMesh::Patch> patch)
     }
 }
 
+juce::ApplicationCommandTarget* GradientMeshEditor::getNextCommandTarget()
+{
+    return nullptr;
+}
+
 void GradientMeshEditor::getAllCommands(Array<CommandID>& commands)
 {
     commands.add(addConnectedPatchCommand);
-    commands.add(straightEdgeCommand);
-    commands.add(quadraticEdgeCommand);
-    commands.add(cubicEdgeCommand);
 }
 
 void GradientMeshEditor::getCommandInfo(CommandID commandID, ApplicationCommandInfo& result)
@@ -137,30 +140,6 @@ void GradientMeshEditor::getCommandInfo(CommandID commandID, ApplicationCommandI
             editCategory, 0);
         break;
     }
-
-    case straightEdgeCommand:
-    {
-        result.setInfo(juce::translate("Straight edge"),
-            juce::translate("Set the edge to be a straight line"),
-            editCategory, 0);
-        break;
-    }
-
-    case quadraticEdgeCommand:
-    {
-        result.setInfo(juce::translate("Quadratic edge"),
-            juce::translate("Set the edge to be a quadratic curve"),
-            editCategory, 0);
-        break;
-    }
-
-    case cubicEdgeCommand:
-    {
-        result.setInfo(juce::translate("Cubic edge"),
-            juce::translate("Set the edge to be a cubic curve"),
-            editCategory, 0);
-        break;
-    }
     }
 }
 
@@ -171,24 +150,6 @@ bool GradientMeshEditor::perform(const InvocationInfo& info)
     case addConnectedPatchCommand:
     {
         addConnectedPatch(info);
-        return true;
-    }
-
-    case straightEdgeCommand:
-    {
-        setEdgeType(info, GradientMesh::Edge::Type::straight);
-        return true;
-    }
-
-    case quadraticEdgeCommand:
-    {
-        setEdgeType(info, GradientMesh::Edge::Type::quadratic);
-        return true;
-    }
-
-    case cubicEdgeCommand:
-    {
-        setEdgeType(info, GradientMesh::Edge::Type::cubic);
         return true;
     }
     }
@@ -438,7 +399,7 @@ void GradientMeshEditor::addConnectedPatch(const InvocationInfo& info)
     }
 }
 
-void GradientMeshEditor::setEdgeType(const InvocationInfo& info, GradientMesh::Edge::Type type)
+void GradientMeshEditor::setEdgeType(size_t edgePosition, GradientMesh::EdgeType type)
 {
     auto patch= selectedPatch.lock();
     if (!patch)
@@ -446,20 +407,9 @@ void GradientMeshEditor::setEdgeType(const InvocationInfo& info, GradientMesh::E
         return;
     }
 
-    auto edgePosition = GradientMesh::Edge::top;
-    for (auto& edgeControlComponent : edgeControlComponents)
-    {
-        if (&edgeControlComponent == info.originatingComponent->getParentComponent())
-        {
-            patch->setEdgeType(edgePosition, type);
-            repaint();
-            positionControls();
-
-            return;
-        }
-
-        ++edgePosition;
-    }
+    patch->setEdgeType(edgePosition, type);
+    repaint();
+    positionControls();
 }
 
 GradientMeshEditor::DisplayComponent::DisplayComponent(GradientMeshEditor& owner_) :
@@ -490,17 +440,33 @@ GradientMeshEditor::EdgeControlComponent::EdgeControlComponent(GradientMeshEdito
 
     lineButton.path.addLineSegment(juce::Line{ 0.0f, 0.7f, 1.0f, 0.3f }, 0.1f);
     addAndMakeVisible(lineButton);
-    lineButton.setCommandToTrigger(&owner.commandManager, straightEdgeCommand, true);
+    lineButton.setClickingTogglesState(true);
+    lineButton.onClick = [this]
+        {
+            owner.setEdgeType(edgePosition, GradientMesh::EdgeType::straight);
+        };
+    lineButton.setRadioGroupId(1);
 
     quadraticButton.path.quadraticTo({ 0.5f, 1.0f }, { 1.0f, 0.0f });
     addAndMakeVisible(quadraticButton);
-    quadraticButton.setCommandToTrigger(&owner.commandManager, quadraticEdgeCommand, true);
+    quadraticButton.setClickingTogglesState(true);
+    quadraticButton.onClick = [this]
+        {
+            owner.setEdgeType(edgePosition, GradientMesh::EdgeType::quadratic);
+        };
+    quadraticButton.setRadioGroupId(1);
 
     cubicButton.path.cubicTo({ 0.25f, 0.85f },
         { 0.75f, 0.15f },
         { 1.0f, 1.0f });
     addAndMakeVisible(cubicButton);
-    cubicButton.setCommandToTrigger(&owner.commandManager, cubicEdgeCommand, true);
+    cubicButton.setClickingTogglesState(true);
+    cubicButton.onClick = [this]
+        {
+            owner.setEdgeType(edgePosition, GradientMesh::EdgeType::cubic);
+        };
+    cubicButton.setRadioGroupId(1);
+    cubicButton.setToggleState(true, juce::dontSendNotification);
 
     setSize(30, 120);
 }
@@ -536,6 +502,12 @@ void GradientMeshEditor::PathButton::paintButton(Graphics& g, bool shouldDrawBut
 
     if (shouldDrawButtonAsDown)
         transform = transform.scaled(0.8f, 0.8f, getWidth() * 0.5f, getHeight() * 0.5f);
+
+    if (getToggleState())
+    {
+        strokeWidth = 4.0f;
+        color = juce::Colours::aqua;
+    }
 
     g.setColour(color);
     g.strokePath(path, juce::PathStrokeType{ strokeWidth }, transform);
