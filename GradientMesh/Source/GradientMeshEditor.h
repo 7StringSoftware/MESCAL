@@ -64,12 +64,36 @@ private:
         bool selected = false;
     };
 
+    struct PatchCornerComponent : public juce::Component
+    {
+        PatchCornerComponent(juce::AffineTransform& zoomTransform_, GradientMesh::CornerPosition cornerPosition_);
+        ~PatchCornerComponent() override = default;
+
+        bool hitTest(int x, int y) override;
+        void mouseEnter(const juce::MouseEvent& event) override;
+        void mouseExit(const MouseEvent& event) override;
+        void mouseDown(const MouseEvent& event) override;
+        void mouseDrag(const MouseEvent& event) override;
+        void mouseUp(const MouseEvent& event) override;
+
+        void paint(juce::Graphics& g) override;
+
+        juce::AffineTransform& zoomTransform;
+        GradientMesh::CornerPosition const cornerPosition;
+        juce::Point<float> startPosition;
+        bool highlighted = false;
+        bool dragging = true;
+        std::weak_ptr<GradientMesh::Vertex> controlPoint;
+
+        std::function<void()> onDrag;
+    };
+
     struct ControlPointComponent : public juce::Component
     {
         ControlPointComponent(juce::AffineTransform& zoomTransform_);
         ~ControlPointComponent() override = default;
 
-        void setControlPoint(std::weak_ptr<GradientMesh::ControlPoint> controlPoint_);
+        void setControlPoint(std::weak_ptr<GradientMesh::Vertex> controlPoint_);
         void updateTransform(juce::Point<float> position);
 
         bool hitTest(int x, int y) override;
@@ -85,23 +109,26 @@ private:
         juce::Point<float> startPosition;
         bool highlighted = false;
         bool dragging = true;
-        std::weak_ptr<GradientMesh::ControlPoint> controlPoint;
+        std::weak_ptr<GradientMesh::Vertex> controlPoint;
 
-        std::function<void()> onDrag;
+        std::function<void(GradientMesh::Vertex*) > onDrag;
     };
 
+
+#if 0
     struct ControlPointComponents
     {
         std::array<std::unique_ptr<ControlPointComponent>, 16> array;
         auto get(size_t row, size_t column) { return array[row * 4 + column].get(); }
     } controlPointComponents;
+#endif
 
     struct AddPatchButton : public juce::Button
     {
         AddPatchButton();
         void paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
 
-        GradientMesh::Edge edge;
+        //GradientMesh::Edge edge;
     };
 
     struct PathButton : public juce::Button
@@ -132,6 +159,9 @@ private:
     };
 
     std::vector<std::unique_ptr<PatchComponent>> patchComponents;
+
+    std::array<std::unique_ptr<ControlPointComponent>, 4> cornerControlComponents;
+
     std::array<EdgeControlComponent, 4> edgeControlComponents
     {
         EdgeControlComponent{ *this, GradientMesh::EdgePosition::top },

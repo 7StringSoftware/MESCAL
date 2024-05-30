@@ -109,196 +109,70 @@ public:
     struct Halfedge;
     struct Vertex
     {
+        explicit Vertex(juce::Point<float> position_) :
+            position(position_)
+        {
+        }
+
         juce::Point<float> position;
         std::shared_ptr<Halfedge> halfedge;
     };
 
+    using BezierPair = std::pair<std::shared_ptr<Vertex>, std::shared_ptr<Vertex>>;
+
     struct Halfedge
     {
         std::shared_ptr<Vertex> tail;
-        std::pair<std::shared_ptr<Vertex>, std::shared_ptr<Vertex>> bezierControlPoints;
+        BezierPair bezierControlPoints;
         std::shared_ptr<Vertex> head;
 
         std::shared_ptr<Halfedge> twin;
 
         std::shared_ptr<Halfedge> next;
         std::shared_ptr<Halfedge> prev;
+
+        EdgeType edgeType = EdgeType::cubic;
     };
-
-#if 0
-    class ControlPoint
-    {
-    public:
-        explicit ControlPoint(Patch& patch_, size_t row_, size_t column_) :
-            patch(patch_),
-            row(row_), column(column_)
-        {
-        }
-
-        ~ControlPoint()
-        {
-        }
-
-        auto& getPatch() const { return patch; }
-
-        void addNeighbor(std::shared_ptr<ControlPoint> neighbor)
-        {
-            neighbors.push_back(neighbor);
-        }
-
-        auto const& getNeighbors() const { return neighbors; }
-
-        enum UpdateType
-        {
-            update,
-            doNotUpdate
-        };
-
-        virtual void setPosition(juce::Point<float> position_, UpdateType updateType = update);
-
-        juce::Point<float>& getPosition()
-        {
-            return position;
-        }
-
-        bool hasColor() const
-        {
-            return color.has_value();
-        }
-
-        juce::Colour getColor()
-        {
-            return color.value_or(juce::Colours::white);
-        }
-
-        void setColor(juce::Colour color_)
-        {
-            color = color_;
-        }
-
-        void applyTransform(const AffineTransform& transform) noexcept;
-
-        void swapWith(std::shared_ptr<ControlPoint> other) noexcept;
-
-        virtual void release()
-        {
-            neighbors.clear();
-        }
-
-        size_t const row;
-        size_t const column;
-
-    protected:
-        Patch& patch;
-        juce::Point<float> position;
-        std::optional<juce::Colour> color;
-        std::vector<std::shared_ptr<ControlPoint>> neighbors;
-
-        static void updateNeighbors(ControlPoint* cp, UpdateType updateType)
-            {
-                for (auto& neighbor : cp->neighbors)
-                {
-                    neighbor->position = cp->position;
-
-                    if (updateType == ControlPoint::update)
-                    {
-                        neighbor->patch.update();
-                    }
-                }
-            };
-
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ControlPoint)
-    };
-
-    struct Edge;
-    class BezeierControlPoint : public ControlPoint
-    {
-    public:
-        explicit BezeierControlPoint(Patch& patch_, size_t row_, size_t column_, std::shared_ptr<ControlPoint> corner_) :
-            ControlPoint(patch_, row_, column_), corner(corner_)
-        {
-        }
-
-        void configure(Edge* edge_, std::shared_ptr<BezeierControlPoint> buddy_)
-        {
-            edge = edge_;
-            buddy = buddy_;
-        }
-
-        void release() override
-        {
-            corner.reset();
-            buddy.reset();
-
-            ControlPoint::release();
-        }
-
-        void setPosition(juce::Point<float> position_, UpdateType updateType = update) override;
-
-    protected:
-        std::shared_ptr<ControlPoint> corner;
-        Edge* edge = nullptr;
-        std::shared_ptr<BezeierControlPoint> buddy;
-    };
-    using BezierPair = std::pair< std::shared_ptr<Vertex>, std::shared_ptr<Vertex>>;
-
-    struct Edge
-    {
-        EdgeType type = EdgeType::cubic;
-
-        bool isValid() const noexcept
-        {
-            return corners.first && corners.second &&
-                bezierControlPoints.first && bezierControlPoints.second;
-        }
-
-        static size_t getOppositePosition(size_t position)
-        {
-            return (position + 2) % 4;
-        }
-
-        std::pair<std::shared_ptr<ControlPoint>, std::shared_ptr<ControlPoint>> corners;
-        BezierPair bezierControlPoints;
-    };
-#endif
 
     struct Patch
     {
         Patch(std::array<std::shared_ptr<Halfedge>, 4>& halfedges_);
         ~Patch();
 
-        static std::shared_ptr<Patch> create();
         std::shared_ptr<Patch> createConnectedPatch(size_t edgePosition) const;
-
-        void applyTransform(const AffineTransform& transform) noexcept;
 
         void update();
 
-        //auto getControlPoint(size_t row, size_t column) const;
-        
+        auto getControlPoint(size_t row, size_t column) const;
+        auto getCornerVertex(size_t cornerPosition) const
+        {
+            return halfedges[cornerPosition]->tail;
+        }
+
         const Path& getPath() const
         {
             return path;
         }
 
-#if 0
-        const Edge* const getEdge(size_t edgePosition) const;
-        const Edge* const getOppositeEdge(size_t edgePosition) const;
-        void setEdgeType(size_t edgePosition, EdgeType type);
-        EdgeType getEdgeType(size_t edgePosition) const
+        const auto& getHalfedges() const
         {
-            return edges[edgePosition]->type;
+            return halfedges;
         }
 
-        static constexpr size_t numRows = 4;
-        static constexpr size_t numColumns = 4;
-#endif
+        const auto& getColors() const
+        {
+            return cornerColors;
+        }
 
     private:
         Path path;
         bool modified = true;
 
         std::array<std::shared_ptr<Halfedge>, 4> halfedges;
+        std::array<juce::Colour, 4> cornerColors
+        {
+            juce::Colours::red, juce::Colours::green, juce::Colours::blue, juce::Colours::yellow
+        };
     };
 
     GradientMesh();
@@ -308,6 +182,8 @@ public:
     void addPatch(std::shared_ptr<Patch> patch);
     void applyTransform(const AffineTransform& transform) noexcept;
     void draw(juce::Image image, juce::AffineTransform transform);
+
+    void setVertexPosition(Vertex* vertex, juce::Point<float> position);
 
     juce::Rectangle<float> getBounds() const noexcept;
     auto const& getPatches() const { return patches; }

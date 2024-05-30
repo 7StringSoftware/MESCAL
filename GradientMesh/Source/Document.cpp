@@ -13,7 +13,7 @@
 Document::Document() :
     juce::FileBasedDocument(".mescal.gradientmesh", "*.mescal.gradientmesh", "Open a gradient mesh file", "Save gradient mesh")
 {
-    gradientMesh.addPatch(GradientMesh::Patch::create());
+    gradientMesh.addPatch({ 100.0f, 100.0f });
 }
 
 Document::~Document()
