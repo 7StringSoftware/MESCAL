@@ -110,7 +110,7 @@ public:
     struct Vertex
     {
         juce::Point<float> position;
-        std::shared_ptr<Vertex> vertex;
+        std::shared_ptr<Halfedge> halfedge;
     };
 
     struct Halfedge
@@ -125,6 +125,7 @@ public:
         std::shared_ptr<Halfedge> prev;
     };
 
+#if 0
     class ControlPoint
     {
     public:
@@ -239,6 +240,7 @@ public:
         Edge* edge = nullptr;
         std::shared_ptr<BezeierControlPoint> buddy;
     };
+    using BezierPair = std::pair< std::shared_ptr<Vertex>, std::shared_ptr<Vertex>>;
 
     struct Edge
     {
@@ -256,33 +258,30 @@ public:
         }
 
         std::pair<std::shared_ptr<ControlPoint>, std::shared_ptr<ControlPoint>> corners;
-        std::pair<std::shared_ptr<BezeierControlPoint>, std::shared_ptr<BezeierControlPoint>> bezierControlPoints;
+        BezierPair bezierControlPoints;
     };
+#endif
 
     struct Patch
     {
-        Patch();
-        Patch(std::shared_ptr<Halfedge> connectedHalfedge, size_t connectedHalfedgePosition);
+        Patch(std::array<std::shared_ptr<Halfedge>, 4>& halfedges_);
         ~Patch();
 
         static std::shared_ptr<Patch> create();
         std::shared_ptr<Patch> createConnectedPatch(size_t edgePosition) const;
 
         void applyTransform(const AffineTransform& transform) noexcept;
-        void flipHorizontally();
 
         void update();
 
-        auto getControlPoint(size_t row, size_t column) const
-        {
-            return controlPoints[row * numColumns + column];
-        }
-
+        //auto getControlPoint(size_t row, size_t column) const;
+        
         const Path& getPath() const
         {
             return path;
         }
 
+#if 0
         const Edge* const getEdge(size_t edgePosition) const;
         const Edge* const getOppositeEdge(size_t edgePosition) const;
         void setEdgeType(size_t edgePosition, EdgeType type);
@@ -293,13 +292,11 @@ public:
 
         static constexpr size_t numRows = 4;
         static constexpr size_t numColumns = 4;
+#endif
 
     private:
         Path path;
         bool modified = true;
-
-        std::array<std::shared_ptr<ControlPoint>, 16> controlPoints{};
-        std::array <std::unique_ptr<Edge>, 4 > edges{};
 
         std::array<std::shared_ptr<Halfedge>, 4> halfedges;
     };
@@ -307,6 +304,7 @@ public:
     GradientMesh();
     ~GradientMesh();
 
+    void addPatch(juce::Rectangle<float> bounds);
     void addPatch(std::shared_ptr<Patch> patch);
     void applyTransform(const AffineTransform& transform) noexcept;
     void draw(juce::Image image, juce::AffineTransform transform);
@@ -318,6 +316,9 @@ private:
     std::vector<std::shared_ptr<Vertex>> vertices;
     std::vector<std::shared_ptr<Halfedge>> halfedges;
     std::vector<std::shared_ptr<Patch>> patches;
+
+    std::shared_ptr<Vertex> addVertex(juce::Point<float> tail);
+    std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head, BezierPair beziers);
 
     struct Pimpl;
     std::unique_ptr<Pimpl> pimpl;
