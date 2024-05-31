@@ -150,6 +150,39 @@ public:
         cubic
     };
 
+    struct HalfedgeDirection
+    {
+        static constexpr size_t north = 0;
+        static constexpr size_t east = 1;
+        static constexpr size_t south = 2;
+        static constexpr size_t west = 3;
+
+        size_t direction = north;
+
+        HalfedgeDirection opposite() const noexcept
+        {
+            return { (direction + 2) % 4 };
+        }
+
+        void moveClockwise()
+        {
+            direction = (direction + 1) % 4;
+        }
+
+        void moveCounterclockwise()
+        {
+            direction = (direction - 1) % 4;
+        }
+    };
+
+    static constexpr std::array<size_t, 4> directions{ HalfedgeDirection::north, HalfedgeDirection::east, HalfedgeDirection::south, HalfedgeDirection::west };
+
+    static HalfedgeDirection edgePlacementToDirection(EdgePlacement edgePlacement)
+    {
+        auto index = (edgePlacement.placement + 1) % 4;
+        return { GradientMesh::directions[index] };
+    }
+
     struct Halfedge;
     struct Vertex
     {
@@ -162,7 +195,7 @@ public:
 
         size_t const index;
         juce::Point<float> position;
-        std::shared_ptr<Halfedge> halfedge;
+        std::array<std::shared_ptr<Halfedge>, 4> halfedges;
         GradientMesh& mesh;
     };
 
@@ -185,9 +218,6 @@ public:
         std::shared_ptr<Vertex> head;
 
         std::shared_ptr<Halfedge> twin;
-
-        std::shared_ptr<Halfedge> next;
-        std::shared_ptr<Halfedge> prev;
 
         EdgeType edgeType = EdgeType::cubic;
     };
@@ -222,6 +252,15 @@ public:
         void setColor(CornerPlacement corner, juce::Colour color)
         {
             cornerColors[corner.placement] = color;
+        }
+
+        bool isConnected(EdgePlacement edgePlacement) const
+        {
+            std::array<HalfedgeDirection, 4> constexpr edgeDirections{ HalfedgeDirection::north, HalfedgeDirection::east, HalfedgeDirection::south, HalfedgeDirection::west };
+            auto halfedge = halfedges[edgePlacement.placement];
+            auto direction = edgeDirections[edgePlacement.placement];
+
+            return halfedge->tail->halfedges[direction.direction] != nullptr && halfedge->head->halfedges[direction.direction] != nullptr;
         }
 
     private:
@@ -262,7 +301,8 @@ private:
     std::shared_ptr<Vertex> addVertex(juce::Point<float> tail);
     std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head,
         std::shared_ptr<BezierControlPoint> b0,
-        std::shared_ptr<BezierControlPoint> b1);
+        std::shared_ptr<BezierControlPoint> b1,
+        HalfedgeDirection direction);
 
 #if JUCE_DEBUG
     void checkForDuplicates();

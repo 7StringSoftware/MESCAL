@@ -209,8 +209,13 @@ void GradientMeshEditor::positionControls()
             auto center = lineCenter.getPointOnCircumference(100.0f, angle - juce::MathConstants<float>::halfPi);
             edgeControlComponent.setCentrePosition(center.roundToInt());
 
+            group->edgeControl.addPatchButton.setVisible(!p->isConnected(edgePlacement));
+
             setCompCenter(group->bezierControlPair.first.get(), halfedge->b0->position);
             setCompCenter(group->bezierControlPair.second.get(), halfedge->b1->position);
+
+            group->bezierControlPair.first->setVisible(halfedge->edgeType != GradientMesh::EdgeType::straight);
+            group->bezierControlPair.second->setVisible(group->bezierControlPair.first->isVisible());
 
             edgePlacement.moveClockwise();
         }
@@ -260,8 +265,7 @@ void GradientMeshEditor::PatchComponent::paint(juce::Graphics& g)
         if (auto p = patch.lock())
         {
             g.setColour(juce::Colours::white);
-            auto transform = juce::AffineTransform::translation(-getControlPointPosition().toFloat()).followedBy(owner.zoomTransform);
-            g.strokePath(p->getPath(), juce::PathStrokeType{ 3.0f }, transform);
+            g.strokePath(p->getPath(), juce::PathStrokeType{ 3.0f }, owner.zoomTransform);
         }
     }
 }
