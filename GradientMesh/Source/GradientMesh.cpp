@@ -96,6 +96,8 @@ void GradientMesh::addPatch(juce::Rectangle<float> bounds)
     auto patch = std::make_shared<Patch>(patchHalfedges);
     patch->update();
     patches.push_back(patch);
+
+    checkForDuplicates();
 }
 
 void GradientMesh::addPatch(std::shared_ptr<Patch> patch)
@@ -156,6 +158,8 @@ void GradientMesh::addConnectedPatch(Patch* sourcePatch, EdgePlacement sourceEdg
 
     patch->update();
     patches.push_back(patch);
+
+    checkForDuplicates();
 }
 
 std::shared_ptr<GradientMesh::Vertex> GradientMesh::addVertex(juce::Point<float> point)
@@ -187,6 +191,32 @@ std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_pt
     halfedges.push_back(twin);
 
     return halfedge;
+}
+
+void GradientMesh::checkForDuplicates()
+{
+    for (auto i = 0; i < vertices.size(); ++i)
+    {
+        for (auto j = i + 1; j < vertices.size(); ++j)
+        {
+            if (vertices[i]->position == vertices[j]->position)
+            {
+                DBG("Duplicate vertex found at " << i << " and " << j);
+            }
+        }
+    }
+
+    for (auto i = 0; i < halfedges.size(); ++i)
+    {
+        for (auto j = i + 1; j < halfedges.size(); ++j)
+        {
+            if (halfedges[i]->tail->position == halfedges[j]->tail->position &&
+                halfedges[i]->head->position == halfedges[j]->head->position)
+            {
+                DBG("Duplicate halfedge found at " << i << " and " << j);
+            }
+        }
+    }
 }
 
 void GradientMesh::applyTransform(const AffineTransform& transform) noexcept
@@ -330,6 +360,12 @@ void GradientMesh::setVertexPosition(Vertex* vertex, juce::Point<float> position
             }
         }
     }
+}
+
+void GradientMesh::setEdgeType(Halfedge* edge, EdgeType edgeType)
+{
+    edge->edgeType = edgeType;
+    edge->twin->edgeType = edgeType;
 }
 
 juce::Rectangle<float> GradientMesh::getBounds() const noexcept

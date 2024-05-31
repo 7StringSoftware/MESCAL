@@ -246,6 +246,7 @@ public:
     void draw(juce::Image image, juce::AffineTransform transform);
 
     void setVertexPosition(Vertex* vertex, juce::Point<float> position);
+    void setEdgeType(Halfedge* edge, EdgeType edgeType);
 
     juce::Rectangle<float> getBounds() const noexcept;
     auto const& getPatches() const { return patches; }
@@ -262,6 +263,10 @@ private:
     std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head,
         std::shared_ptr<BezierControlPoint> b0,
         std::shared_ptr<BezierControlPoint> b1);
+
+#if JUCE_DEBUG
+    void checkForDuplicates();
+#endif
 
     struct Pimpl;
     std::unique_ptr<Pimpl> pimpl;

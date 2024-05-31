@@ -402,7 +402,7 @@ void GradientMeshEditor::setEdgeType(GradientMesh::EdgePlacement edgePlacement, 
         return;
     }
 
-    patch->getHalfedges()[edgePlacement.placement]->edgeType = type;
+    document.gradientMesh.setEdgeType(patch->getHalfedges()[edgePlacement.placement].get(), type);
     patch->update();
     repaint();
     positionControls();
