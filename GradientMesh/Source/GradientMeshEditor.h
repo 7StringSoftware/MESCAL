@@ -64,36 +64,11 @@ private:
         bool selected = false;
     };
 
-    struct PatchCornerComponent : public juce::Component
-    {
-        PatchCornerComponent(juce::AffineTransform& zoomTransform_, GradientMesh::CornerPosition cornerPosition_);
-        ~PatchCornerComponent() override = default;
-
-        bool hitTest(int x, int y) override;
-        void mouseEnter(const juce::MouseEvent& event) override;
-        void mouseExit(const MouseEvent& event) override;
-        void mouseDown(const MouseEvent& event) override;
-        void mouseDrag(const MouseEvent& event) override;
-        void mouseUp(const MouseEvent& event) override;
-
-        void paint(juce::Graphics& g) override;
-
-        juce::AffineTransform& zoomTransform;
-        GradientMesh::CornerPosition const cornerPosition;
-        juce::Point<float> startPosition;
-        bool highlighted = false;
-        bool dragging = true;
-        std::weak_ptr<GradientMesh::Vertex> controlPoint;
-
-        std::function<void()> onDrag;
-    };
-
     struct ControlPointComponent : public juce::Component
     {
         ControlPointComponent(juce::AffineTransform& zoomTransform_);
         ~ControlPointComponent() override = default;
 
-        void setControlPoint(std::weak_ptr<GradientMesh::Vertex> controlPoint_);
         void updateTransform(juce::Point<float> position);
 
         bool hitTest(int x, int y) override;
@@ -102,26 +77,37 @@ private:
         void mouseDown(const MouseEvent& event) override;
         void mouseDrag(const MouseEvent& event) override;
         void mouseUp(const MouseEvent& event) override;
+        void moved() override;
 
         void paint(juce::Graphics& g) override;
 
         juce::AffineTransform& zoomTransform;
+        juce::Colour color = juce::Colours::white;
         juce::Point<float> startPosition;
         bool highlighted = false;
         bool dragging = true;
-        std::weak_ptr<GradientMesh::Vertex> controlPoint;
-
-        std::function<void(GradientMesh::Vertex*) > onDrag;
+        std::function<void(ControlPointComponent*) > onMoved;
     };
 
-
-#if 0
-    struct ControlPointComponents
+    struct PatchCornerComponent : public ControlPointComponent
     {
-        std::array<std::unique_ptr<ControlPointComponent>, 16> array;
-        auto get(size_t row, size_t column) { return array[row * 4 + column].get(); }
-    } controlPointComponents;
-#endif
+        PatchCornerComponent(size_t cornerPosition_, juce::AffineTransform& zoomTransform_);
+
+        void setVertex(std::weak_ptr<GradientMesh::Vertex> controlPoint_);
+        void paint(juce::Graphics& g) override;
+
+        size_t const cornerPosition;
+        std::weak_ptr<GradientMesh::Vertex> controlPoint;
+    };
+
+    struct BezierControlComponent : public ControlPointComponent
+    {
+        BezierControlComponent(juce::AffineTransform& zoomTransform_);
+
+        void setBezierControlPoint(std::weak_ptr<GradientMesh::BezierControlPoint> bezier_);
+        void paint(juce::Graphics& g) override;
+        std::weak_ptr<GradientMesh::BezierControlPoint> bezier;
+    };
 
     struct AddPatchButton : public juce::Button
     {
@@ -145,7 +131,7 @@ private:
 
     struct EdgeControlComponent : public juce::Component
     {
-        EdgeControlComponent(GradientMeshEditor& owner_, size_t edgePosition_);
+        explicit EdgeControlComponent(GradientMeshEditor& owner_, size_t edgePosition_);
         void setEdgeType(GradientMesh::EdgeType type);
         void resized() override;
         void paint(juce::Graphics& g) override;
@@ -160,15 +146,17 @@ private:
 
     std::vector<std::unique_ptr<PatchComponent>> patchComponents;
 
-    std::array<std::unique_ptr<ControlPointComponent>, 4> cornerControlComponents;
+    std::array<std::unique_ptr<PatchCornerComponent>, 4> cornerControlComponents;
 
-    std::array<EdgeControlComponent, 4> edgeControlComponents
+    struct EdgeControlGroup
     {
-        EdgeControlComponent{ *this, GradientMesh::EdgePosition::top },
-        EdgeControlComponent{ *this, GradientMesh::EdgePosition::right },
-        EdgeControlComponent{ *this, GradientMesh::EdgePosition::bottom },
-        EdgeControlComponent{ *this, GradientMesh::EdgePosition::left }
+        explicit EdgeControlGroup(GradientMeshEditor& owner_, size_t edgePosition_, juce::AffineTransform& zoomTransform_);
+
+        EdgeControlComponent edgeControl;
+        std::pair<std::unique_ptr<BezierControlComponent>, std::unique_ptr<BezierControlComponent>> bezierControlPair;
     };
+
+    std::array<std::unique_ptr<EdgeControlGroup>, 4> edgeControlGroups;
 
     juce::VBlankAttachment vblankAttachment{ this, [this]
         {

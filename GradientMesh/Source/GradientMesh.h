@@ -109,21 +109,36 @@ public:
     struct Halfedge;
     struct Vertex
     {
-        explicit Vertex(juce::Point<float> position_) :
-            position(position_)
+        explicit Vertex(juce::Point<float> position_, GradientMesh& mesh_, size_t index_) :
+            position(position_),
+            mesh(mesh_),
+            index(index_)
         {
         }
 
+        size_t const index;
         juce::Point<float> position;
         std::shared_ptr<Halfedge> halfedge;
+        GradientMesh& mesh;
     };
 
-    using BezierPair = std::pair<std::shared_ptr<Vertex>, std::shared_ptr<Vertex>>;
+    struct BezierControlPoint
+    {
+        explicit BezierControlPoint(juce::Point<float> position_, GradientMesh& mesh_) :
+            position(position_),
+            mesh(mesh_)
+        {
+        }
+
+        size_t const index;
+        juce::Point<float> position;
+        GradientMesh& mesh;
+    };
 
     struct Halfedge
     {
         std::shared_ptr<Vertex> tail;
-        BezierPair bezierControlPoints;
+        std::shared_ptr<BezierControlPoint> b0, b1;
         std::shared_ptr<Vertex> head;
 
         std::shared_ptr<Halfedge> twin;
@@ -188,13 +203,18 @@ public:
     juce::Rectangle<float> getBounds() const noexcept;
     auto const& getPatches() const { return patches; }
 
+    String toString() const;
+
 private:
     std::vector<std::shared_ptr<Vertex>> vertices;
+    std::vector<std::shared_ptr<BezierControlPoint>> bezierControlPoints;
     std::vector<std::shared_ptr<Halfedge>> halfedges;
     std::vector<std::shared_ptr<Patch>> patches;
 
     std::shared_ptr<Vertex> addVertex(juce::Point<float> tail);
-    std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head, BezierPair beziers);
+    std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head, 
+        std::shared_ptr<BezierControlPoint> b0, 
+        std::shared_ptr<BezierControlPoint> b1);
 
     struct Pimpl;
     std::unique_ptr<Pimpl> pimpl;
