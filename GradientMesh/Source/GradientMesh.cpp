@@ -235,19 +235,43 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
         d2dPatch.point02 = convertBezier(halfedge->b1.get());
         d2dPatch.point03 = convertVertex(halfedge->head.get());
 
+        if (halfedge->edgeType == EdgeType::straight)
+        {
+            d2dPatch.point01 = d2dPatch.point00;
+            d2dPatch.point02 = d2dPatch.point03;
+        }
+
         halfedge = patchHalfedges[EdgePlacement::right];
         d2dPatch.point13 = convertBezier(halfedge->b0.get());
         d2dPatch.point23 = convertBezier(halfedge->b1.get());
         d2dPatch.point33 = convertVertex(halfedge->head.get());
+
+        if (halfedge->edgeType == EdgeType::straight)
+        {
+            d2dPatch.point13 = d2dPatch.point03;
+            d2dPatch.point23 = d2dPatch.point33;
+        }
 
         halfedge = patchHalfedges[EdgePlacement::bottom];
         d2dPatch.point32 = convertBezier(halfedge->b0.get());
         d2dPatch.point31 = convertBezier(halfedge->b1.get());
         d2dPatch.point30 = convertVertex(halfedge->head.get());
 
+        if (halfedge->edgeType == EdgeType::straight)
+        {
+            d2dPatch.point32 = d2dPatch.point33;
+            d2dPatch.point31 = d2dPatch.point30;
+        }
+
         halfedge = patchHalfedges[EdgePlacement::left];
         d2dPatch.point20 = convertBezier(halfedge->b0.get());
         d2dPatch.point10 = convertBezier(halfedge->b1.get());
+
+        if (halfedge->edgeType == EdgeType::straight)
+        {
+            d2dPatch.point20 = d2dPatch.point30;
+            d2dPatch.point10 = d2dPatch.point00;
+        }
 
         const auto& colors = patch->getColors();
         d2dPatch.color00 = D2DUtilities::toCOLOR_F(colors[CornerPlacement::topLeft]);

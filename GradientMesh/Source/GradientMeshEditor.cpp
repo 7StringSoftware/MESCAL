@@ -136,32 +136,6 @@ void GradientMeshEditor::selectPatch(std::weak_ptr<GradientMesh::Patch> patch)
             group->bezierControlPair.second->bezier = halfedge->b1;
         }
     }
-
-#if 0
-    if (auto p = selectedPatch.lock())
-    {
-        for (int row = 0; row < GradientMesh::Patch::numRows; ++row)
-        {
-            for (int column = 0; column < GradientMesh::Patch::numColumns; ++column)
-            {
-                controlPointComponents.get(row, column)->setControlPoint(p->getControlPoint(row, column));
-            }
-        }
-    }
-
-    std::array<size_t, 4> edgePositions{ GradientMesh::EdgePosition::top, GradientMesh::EdgePosition::right, GradientMesh::EdgePosition::bottom, GradientMesh::EdgePosition::left };
-    for (size_t edgePosition : edgePositions)
-    {
-        auto& edgeComponent = edgeControlComponents[edgePosition];
-        bool visible = false;
-        if (auto p = patch.lock())
-        {
-            visible = true;
-        }
-
-        edgeComponent.setVisible(visible);
-    }
-#endif
 }
 
 juce::ApplicationCommandTarget* GradientMeshEditor::getNextCommandTarget()
@@ -429,6 +403,7 @@ void GradientMeshEditor::setEdgeType(GradientMesh::EdgePlacement edgePlacement, 
     }
 
     patch->getHalfedges()[edgePlacement.placement]->edgeType = type;
+    patch->update();
     repaint();
     positionControls();
 }
