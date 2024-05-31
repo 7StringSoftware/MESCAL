@@ -56,7 +56,7 @@ void GradientMesh::addPatch(juce::Rectangle<float> bounds)
 {
     std::array<std::shared_ptr<Halfedge>, 4> patchHalfedges;
 
-    std::array<juce::Point<float>, 4> const corners
+    std::array<juce::Point<float>, 4> const boundsCorners
     {
         bounds.getTopLeft(),
         bounds.getTopRight(),
@@ -104,16 +104,58 @@ void GradientMesh::addPatch(std::shared_ptr<Patch> patch)
     patches.push_back(patch);
 }
 
-std::shared_ptr<GradientMesh::Patch> GradientMesh::createConnectedPatch(Patch* sourcePatch, EdgePlacement edge) const
+void GradientMesh::addConnectedPatch(Patch* sourcePatch, EdgePlacement sourceEdgePlacement)
 {
     std::array<std::shared_ptr<Halfedge>, 4> patchHalfedges;
 
-    auto oppositeEdge = edge.opposite();
-    patchHalfedges[oppositeEdge.placement] = sourcePatch->getHalfedges()[edge.placement]->twin;
+    auto destinationEdgePlacement = sourceEdgePlacement.opposite();
+    auto destinationStartHalfedge = sourcePatch->getHalfedges()[sourceEdgePlacement.placement]->twin;
+    patchHalfedges[destinationEdgePlacement.placement] = destinationStartHalfedge;
+    auto tail = destinationStartHalfedge->head;
 
+    auto translationEdgePlacement = sourceEdgePlacement;
+    translationEdgePlacement.moveCounterclockwise();
+    auto translationHalfedge = sourcePatch->getHalfedges()[translationEdgePlacement.placement];
+    auto translation = translationHalfedge->head->position - translationHalfedge->tail->position;
 
+    {
+        destinationEdgePlacement.moveClockwise();
+        auto sourceHalfedge = sourcePatch->getHalfedges()[destinationEdgePlacement.placement];
+        auto vertex = addVertex(sourceHalfedge->head->position + translation);
+        auto b0 = std::make_shared<BezierControlPoint>(sourceHalfedge->b0->position + translation, *this);
+        auto b1 = std::make_shared<BezierControlPoint>(sourceHalfedge->b1->position + translation, *this);
+        patchHalfedges[destinationEdgePlacement.placement] = addHalfedge(tail, vertex, b0, b1);
+        tail = vertex;
+    }
 
-    return std::shared_ptr<Patch>();
+    {
+        destinationEdgePlacement.moveClockwise();
+        auto sourceHalfedge = sourcePatch->getHalfedges()[destinationEdgePlacement.placement];
+        auto vertex = addVertex(sourceHalfedge->head->position + translation);
+        auto b0 = std::make_shared<BezierControlPoint>(sourceHalfedge->b0->position + translation, *this);
+        auto b1 = std::make_shared<BezierControlPoint>(sourceHalfedge->b1->position + translation, *this);
+        patchHalfedges[destinationEdgePlacement.placement] = addHalfedge(tail, vertex, b0, b1);
+        tail = vertex;
+    }
+
+    {
+        destinationEdgePlacement.moveClockwise();
+        auto sourceHalfedge = sourcePatch->getHalfedges()[destinationEdgePlacement.placement];
+        auto b0 = std::make_shared<BezierControlPoint>(sourceHalfedge->b0->position + translation, *this);
+        auto b1 = std::make_shared<BezierControlPoint>(sourceHalfedge->b1->position + translation, *this);
+        patchHalfedges[destinationEdgePlacement.placement] = addHalfedge(tail, destinationStartHalfedge->tail, b0, b1);
+    }
+
+    auto patch = std::make_shared<Patch>(patchHalfedges);
+
+    auto const& sourceColors = sourcePatch->getColors();
+    auto sourceEdgeCorners = CornerPlacement::getEdgeCorners(sourceEdgePlacement);
+    auto destEdgeCorners = CornerPlacement::getEdgeCorners(sourceEdgePlacement.opposite());
+    patch->setColor(destEdgeCorners.second, sourceColors[sourceEdgeCorners.first.placement]);
+    patch->setColor(destEdgeCorners.first, sourceColors[sourceEdgeCorners.second.placement]);
+
+    patch->update();
+    patches.push_back(patch);
 }
 
 std::shared_ptr<GradientMesh::Vertex> GradientMesh::addVertex(juce::Point<float> point)
@@ -168,12 +210,12 @@ void GradientMesh::applyTransform(const AffineTransform& transform) noexcept
 void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
 {
     auto convertVertex = [&](Vertex* vertex)
-    {
-        auto p = vertex->position.transformedBy(transform);
-        return D2D1_POINT_2F{ p.x, p.y };
-    };
+        {
+            auto p = vertex->position.transformedBy(transform);
+            return D2D1_POINT_2F{ p.x, p.y };
+        };
 
-    auto convertBezier= [&](BezierControlPoint* bezier)
+    auto convertBezier = [&](BezierControlPoint* bezier)
         {
             auto p = bezier->position.transformedBy(transform);
             return D2D1_POINT_2F{ p.x, p.y };
@@ -321,7 +363,7 @@ juce::String GradientMesh::toString() const
     String text = "\nPatch";
 
     int index = 0;
-    for (auto const &vertex : vertices)
+    for (auto const& vertex : vertices)
     {
         DBG("   " << index++ << "  " << vertex->position.toString());
     }

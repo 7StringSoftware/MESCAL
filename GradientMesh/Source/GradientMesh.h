@@ -100,7 +100,14 @@ public:
         {
             placement = (placement + 1) % 4;
         }
+
+        void moveCounterclockwise()
+        {
+            placement = (placement - 1) % 4;
+        }
     };
+
+    static constexpr std::array<size_t, 4> edges{ EdgePlacement::top, EdgePlacement::right, EdgePlacement::bottom, EdgePlacement::left };
 
     struct CornerPlacement
     {
@@ -115,7 +122,25 @@ public:
         {
             placement = (placement + 1) % 4;
         }
+
+        static std::pair<CornerPlacement, CornerPlacement> getEdgeCorners(EdgePlacement edgePlacement)
+        {
+            switch (edgePlacement.placement)
+            {
+            default:
+            case EdgePlacement::top:
+                return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::topLeft }, { CornerPlacement::topRight } };
+            case EdgePlacement::right:
+                return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::topRight }, { CornerPlacement::bottomRight } };
+            case EdgePlacement::bottom:
+                return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::bottomRight }, { CornerPlacement::bottomLeft } };
+            case EdgePlacement::left:
+                return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::bottomLeft }, { CornerPlacement::topLeft } };
+            }
+        }
     };
+
+    static constexpr std::array<size_t, 4> corners{ CornerPlacement::topLeft, CornerPlacement::topRight, CornerPlacement::bottomRight, CornerPlacement::bottomLeft };
 
     enum class EdgeType
     {
@@ -194,6 +219,11 @@ public:
             return cornerColors;
         }
 
+        void setColor(CornerPlacement corner, juce::Colour color)
+        {
+            cornerColors[corner.placement] = color;
+        }
+
     private:
         Path path;
         bool modified = true;
@@ -210,7 +240,7 @@ public:
 
     void addPatch(juce::Rectangle<float> bounds);
     void addPatch(std::shared_ptr<Patch> patch);
-    std::shared_ptr<Patch> createConnectedPatch(Patch* sourcePatch, EdgePlacement sourceEdgePosition) const;
+    void addConnectedPatch(Patch* sourcePatch, EdgePlacement sourceEdgePosition);
 
     void applyTransform(const AffineTransform& transform) noexcept;
     void draw(juce::Image image, juce::AffineTransform transform);

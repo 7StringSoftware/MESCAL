@@ -170,7 +170,7 @@ private:
         void paint(juce::Graphics& g) override;
 
         GradientMeshEditor& owner;
-        const GradientMesh::EdgePlacement edge;
+        const GradientMesh::EdgePlacement edgePlacement;
         PathButton addPatchButton;
         PathButton lineButton;
         PathButton quadraticButton;
@@ -207,7 +207,7 @@ private:
     void positionControls();
 
     void addConnectedPatch(const InvocationInfo& info);
-    void setEdgeType(GradientMesh::EdgePlacement edge, GradientMesh::EdgeType type);
+    void setEdgeType(GradientMesh::EdgePlacement edgePlacement, GradientMesh::EdgeType type);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GradientMeshEditor)
 };
