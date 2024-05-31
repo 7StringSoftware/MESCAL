@@ -82,20 +82,39 @@ public:
 
     struct Patch;
 
-    struct EdgePosition
+    struct EdgePlacement
     {
         static constexpr size_t top = 0;
         static constexpr size_t right = 1;
         static constexpr size_t bottom = 2;
         static constexpr size_t left = 3;
+
+        size_t placement = top;
+
+        EdgePlacement opposite() const
+        {
+            return EdgePlacement{ (placement + 2) % 4 };
+        }
+
+        void moveClockwise()
+        {
+            placement = (placement + 1) % 4;
+        }
     };
 
-    struct CornerPosition
+    struct CornerPlacement
     {
         static constexpr size_t topLeft = 0;
         static constexpr size_t topRight = 1;
         static constexpr size_t bottomRight = 2;
         static constexpr size_t bottomLeft = 3;
+
+        size_t placement = topLeft;
+
+        void moveClockwise()
+        {
+            placement = (placement + 1) % 4;
+        }
     };
 
     enum class EdgeType
@@ -153,14 +172,11 @@ public:
         Patch(std::array<std::shared_ptr<Halfedge>, 4>& halfedges_);
         ~Patch();
 
-        std::shared_ptr<Patch> createConnectedPatch(size_t edgePosition) const;
-
         void update();
 
-        auto getControlPoint(size_t row, size_t column) const;
-        auto getCornerVertex(size_t cornerPosition) const
+        auto getCornerVertex(CornerPlacement corner) const
         {
-            return halfedges[cornerPosition]->tail;
+            return halfedges[corner.placement]->tail;
         }
 
         const Path& getPath() const
@@ -194,6 +210,8 @@ public:
 
     void addPatch(juce::Rectangle<float> bounds);
     void addPatch(std::shared_ptr<Patch> patch);
+    std::shared_ptr<Patch> createConnectedPatch(Patch* sourcePatch, EdgePlacement sourceEdgePosition) const;
+
     void applyTransform(const AffineTransform& transform) noexcept;
     void draw(juce::Image image, juce::AffineTransform transform);
 

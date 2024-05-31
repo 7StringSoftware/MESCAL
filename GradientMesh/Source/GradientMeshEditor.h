@@ -94,7 +94,7 @@ private:
 
     struct PatchCornerComponent : public ControlPointComponent
     {
-        PatchCornerComponent(size_t cornerPosition_, juce::AffineTransform& zoomTransform_);
+        PatchCornerComponent(GradientMesh::CornerPlacement corner_, juce::AffineTransform& zoomTransform_);
 
         juce::Point<float> getControlPointPosition() const noexcept override
         {
@@ -114,7 +114,7 @@ private:
         }
         void paint(juce::Graphics& g) override;
 
-        size_t const cornerPosition;
+        const GradientMesh::CornerPlacement corner;
         std::weak_ptr<GradientMesh::Vertex> vertex;
     };
 
@@ -164,13 +164,13 @@ private:
 
     struct EdgeControlComponent : public juce::Component
     {
-        explicit EdgeControlComponent(GradientMeshEditor& owner_, size_t edgePosition_);
+        explicit EdgeControlComponent(GradientMeshEditor& owner_, GradientMesh::EdgePlacement edge_);
         void setEdgeType(GradientMesh::EdgeType type);
         void resized() override;
         void paint(juce::Graphics& g) override;
 
         GradientMeshEditor& owner;
-        size_t const edgePosition;
+        const GradientMesh::EdgePlacement edge;
         PathButton addPatchButton;
         PathButton lineButton;
         PathButton quadraticButton;
@@ -183,7 +183,7 @@ private:
 
     struct EdgeControlGroup
     {
-        explicit EdgeControlGroup(GradientMeshEditor& owner_, size_t edgePosition_, juce::AffineTransform& zoomTransform_);
+        explicit EdgeControlGroup(GradientMeshEditor& owner_, GradientMesh::EdgePlacement edge_, juce::AffineTransform& zoomTransform_);
 
         EdgeControlComponent edgeControl;
         std::pair<std::unique_ptr<BezierControlComponent>, std::unique_ptr<BezierControlComponent>> bezierControlPair;
@@ -207,7 +207,7 @@ private:
     void positionControls();
 
     void addConnectedPatch(const InvocationInfo& info);
-    void setEdgeType(size_t edgePosition, GradientMesh::EdgeType type);
+    void setEdgeType(GradientMesh::EdgePlacement edge, GradientMesh::EdgeType type);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GradientMeshEditor)
 };

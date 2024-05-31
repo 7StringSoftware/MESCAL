@@ -88,10 +88,10 @@ void GradientMesh::addPatch(juce::Rectangle<float> bounds)
     auto bottomRightVertex = addVertex(bounds.getBottomRight());
     auto bottomLeftVertex = addVertex(bounds.getBottomLeft());
 
-    patchHalfedges[EdgePosition::top] = addBezierPointsAndHalfedges(topLeftVertex, topRightVertex);
-    patchHalfedges[EdgePosition::right] = addBezierPointsAndHalfedges(topRightVertex, bottomRightVertex);
-    patchHalfedges[EdgePosition::bottom] = addBezierPointsAndHalfedges(bottomRightVertex, bottomLeftVertex);
-    patchHalfedges[EdgePosition::left] = addBezierPointsAndHalfedges(bottomLeftVertex, topLeftVertex);
+    patchHalfedges[EdgePlacement::top] = addBezierPointsAndHalfedges(topLeftVertex, topRightVertex);
+    patchHalfedges[EdgePlacement::right] = addBezierPointsAndHalfedges(topRightVertex, bottomRightVertex);
+    patchHalfedges[EdgePlacement::bottom] = addBezierPointsAndHalfedges(bottomRightVertex, bottomLeftVertex);
+    patchHalfedges[EdgePlacement::left] = addBezierPointsAndHalfedges(bottomLeftVertex, topLeftVertex);
 
     auto patch = std::make_shared<Patch>(patchHalfedges);
     patch->update();
@@ -102,6 +102,18 @@ void GradientMesh::addPatch(std::shared_ptr<Patch> patch)
 {
     patch->update();
     patches.push_back(patch);
+}
+
+std::shared_ptr<GradientMesh::Patch> GradientMesh::createConnectedPatch(Patch* sourcePatch, EdgePlacement edge) const
+{
+    std::array<std::shared_ptr<Halfedge>, 4> patchHalfedges;
+
+    auto oppositeEdge = edge.opposite();
+    patchHalfedges[oppositeEdge.placement] = sourcePatch->getHalfedges()[edge.placement]->twin;
+
+
+
+    return std::shared_ptr<Patch>();
 }
 
 std::shared_ptr<GradientMesh::Vertex> GradientMesh::addVertex(juce::Point<float> point)
@@ -174,32 +186,32 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
         auto& d2dPatch = d2dPatches.back();
 
         const auto& patchHalfedges = patch->getHalfedges();
-        auto halfedge = patchHalfedges[EdgePosition::top];
+        auto halfedge = patchHalfedges[EdgePlacement::top];
         d2dPatch.point00 = convertVertex(halfedge->tail.get());
 
         d2dPatch.point01 = convertBezier(halfedge->b0.get());
         d2dPatch.point02 = convertBezier(halfedge->b1.get());
         d2dPatch.point03 = convertVertex(halfedge->head.get());
 
-        halfedge = patchHalfedges[EdgePosition::right];
+        halfedge = patchHalfedges[EdgePlacement::right];
         d2dPatch.point13 = convertBezier(halfedge->b0.get());
         d2dPatch.point23 = convertBezier(halfedge->b1.get());
         d2dPatch.point33 = convertVertex(halfedge->head.get());
 
-        halfedge = patchHalfedges[EdgePosition::bottom];
+        halfedge = patchHalfedges[EdgePlacement::bottom];
         d2dPatch.point32 = convertBezier(halfedge->b0.get());
         d2dPatch.point31 = convertBezier(halfedge->b1.get());
         d2dPatch.point30 = convertVertex(halfedge->head.get());
 
-        halfedge = patchHalfedges[EdgePosition::left];
+        halfedge = patchHalfedges[EdgePlacement::left];
         d2dPatch.point20 = convertBezier(halfedge->b0.get());
         d2dPatch.point10 = convertBezier(halfedge->b1.get());
 
         const auto& colors = patch->getColors();
-        d2dPatch.color00 = D2DUtilities::toCOLOR_F(colors[CornerPosition::topLeft]);
-        d2dPatch.color03 = D2DUtilities::toCOLOR_F(colors[CornerPosition::topRight]);
-        d2dPatch.color33 = D2DUtilities::toCOLOR_F(colors[CornerPosition::bottomRight]);
-        d2dPatch.color30 = D2DUtilities::toCOLOR_F(colors[CornerPosition::bottomLeft]);
+        d2dPatch.color00 = D2DUtilities::toCOLOR_F(colors[CornerPlacement::topLeft]);
+        d2dPatch.color03 = D2DUtilities::toCOLOR_F(colors[CornerPlacement::topRight]);
+        d2dPatch.color33 = D2DUtilities::toCOLOR_F(colors[CornerPlacement::bottomRight]);
+        d2dPatch.color30 = D2DUtilities::toCOLOR_F(colors[CornerPlacement::bottomLeft]);
 
         d2dPatch.point11 = d2dPatch.point00;
         d2dPatch.point12 = d2dPatch.point03;
@@ -282,7 +294,7 @@ GradientMesh::Patch::~Patch()
 void GradientMesh::Patch::update()
 {
     path.clear();
-    path.startNewSubPath(halfedges[EdgePosition::top]->tail->position);
+    path.startNewSubPath(halfedges[EdgePlacement::top]->tail->position);
 
     for (auto const& halfedge : halfedges)
     {
@@ -302,11 +314,6 @@ void GradientMesh::Patch::update()
     }
 
     path.closeSubPath();
-}
-
-auto GradientMesh::Patch::getControlPoint(size_t row, size_t column) const
-{
-
 }
 
 juce::String GradientMesh::toString() const
