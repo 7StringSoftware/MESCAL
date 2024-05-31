@@ -130,7 +130,6 @@ public:
         {
         }
 
-        size_t const index;
         juce::Point<float> position;
         GradientMesh& mesh;
     };
@@ -212,8 +211,8 @@ private:
     std::vector<std::shared_ptr<Patch>> patches;
 
     std::shared_ptr<Vertex> addVertex(juce::Point<float> tail);
-    std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head, 
-        std::shared_ptr<BezierControlPoint> b0, 
+    std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head,
+        std::shared_ptr<BezierControlPoint> b0,
         std::shared_ptr<BezierControlPoint> b1);
 
     struct Pimpl;

@@ -81,30 +81,63 @@ private:
 
         void paint(juce::Graphics& g) override;
 
+        virtual juce::Point<float> getControlPointPosition() const noexcept = 0;
+        virtual void setControlPointPosition(juce::Point<float> position) noexcept = 0;
+
         juce::AffineTransform& zoomTransform;
         juce::Colour color = juce::Colours::white;
         juce::Point<float> startPosition;
         bool highlighted = false;
         bool dragging = true;
-        std::function<void(ControlPointComponent*) > onMoved;
+        std::function<void() > onMoved;
     };
 
     struct PatchCornerComponent : public ControlPointComponent
     {
         PatchCornerComponent(size_t cornerPosition_, juce::AffineTransform& zoomTransform_);
 
-        void setVertex(std::weak_ptr<GradientMesh::Vertex> controlPoint_);
+        juce::Point<float> getControlPointPosition() const noexcept override
+        {
+            if (auto cp = vertex.lock())
+            {
+                return cp->position;
+            }
+
+            return {};
+        }
+        void setControlPointPosition(juce::Point<float> position) noexcept override
+        {
+            if (auto cp = vertex.lock())
+            {
+                cp->position = position;
+            }
+        }
         void paint(juce::Graphics& g) override;
 
         size_t const cornerPosition;
-        std::weak_ptr<GradientMesh::Vertex> controlPoint;
+        std::weak_ptr<GradientMesh::Vertex> vertex;
     };
 
     struct BezierControlComponent : public ControlPointComponent
     {
         BezierControlComponent(juce::AffineTransform& zoomTransform_);
 
-        void setBezierControlPoint(std::weak_ptr<GradientMesh::BezierControlPoint> bezier_);
+        juce::Point<float> getControlPointPosition() const noexcept override
+        {
+            if (auto cp = bezier.lock())
+            {
+                return cp->position;
+            }
+
+            return {};
+        }
+        void setControlPointPosition(juce::Point<float> position) noexcept override
+        {
+            if (auto cp = bezier.lock())
+            {
+                cp->position = position;
+            }
+        }
         void paint(juce::Graphics& g) override;
         std::weak_ptr<GradientMesh::BezierControlPoint> bezier;
     };

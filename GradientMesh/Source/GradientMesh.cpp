@@ -72,7 +72,7 @@ void GradientMesh::addPatch(juce::Rectangle<float> bounds)
             auto cp0 = line.getPointAlongLineProportionally(0.25f).getPointOnCircumference(offset, angle + juce::MathConstants<float>::halfPi);
             auto cp1 = line.getPointAlongLineProportionally(0.75f).getPointOnCircumference(offset, angle - juce::MathConstants<float>::halfPi);
             auto b0 = std::make_shared<BezierControlPoint>(cp0, *this);
-            auto b1 = std::make_shared<BezierControlPoint>(cp0, *this);
+            auto b1 = std::make_shared<BezierControlPoint>(cp1, *this);
 
             bezierControlPoints.push_back(b0);
             bezierControlPoints.push_back(b1);
@@ -155,39 +155,45 @@ void GradientMesh::applyTransform(const AffineTransform& transform) noexcept
 
 void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
 {
+    auto convertVertex = [&](Vertex* vertex)
+    {
+        auto p = vertex->position.transformedBy(transform);
+        return D2D1_POINT_2F{ p.x, p.y };
+    };
+
+    auto convertBezier= [&](BezierControlPoint* bezier)
+        {
+            auto p = bezier->position.transformedBy(transform);
+            return D2D1_POINT_2F{ p.x, p.y };
+        };
+
     std::vector<D2D1_GRADIENT_MESH_PATCH> d2dPatches;
     for (auto const& patch : patches)
     {
         d2dPatches.emplace_back(D2D1_GRADIENT_MESH_PATCH{});
         auto& d2dPatch = d2dPatches.back();
 
-        auto convertPoint = [&](std::shared_ptr<Vertex> vertex)
-            {
-                auto p = vertex->position.transformedBy(transform);
-                return D2D1_POINT_2F{ p.x, p.y };
-            };
-
         const auto& patchHalfedges = patch->getHalfedges();
         auto halfedge = patchHalfedges[EdgePosition::top];
-        d2dPatch.point00 = convertPoint(halfedge->tail);
+        d2dPatch.point00 = convertVertex(halfedge->tail.get());
 
-        d2dPatch.point01 = convertPoint(halfedge->b0->position);
-        d2dPatch.point02 = convertPoint(halfedge->bezierControlPoints.second);
-        d2dPatch.point03 = convertPoint(halfedge->head);
+        d2dPatch.point01 = convertBezier(halfedge->b0.get());
+        d2dPatch.point02 = convertBezier(halfedge->b1.get());
+        d2dPatch.point03 = convertVertex(halfedge->head.get());
 
         halfedge = patchHalfedges[EdgePosition::right];
-        d2dPatch.point13 = convertPoint(halfedge->bezierControlPoints.first);
-        d2dPatch.point23 = convertPoint(halfedge->bezierControlPoints.second);
-        d2dPatch.point33 = convertPoint(halfedge->head);
+        d2dPatch.point13 = convertBezier(halfedge->b0.get());
+        d2dPatch.point23 = convertBezier(halfedge->b1.get());
+        d2dPatch.point33 = convertVertex(halfedge->head.get());
 
         halfedge = patchHalfedges[EdgePosition::bottom];
-        d2dPatch.point32 = convertPoint(halfedge->bezierControlPoints.first);
-        d2dPatch.point31 = convertPoint(halfedge->bezierControlPoints.second);
-        d2dPatch.point30 = convertPoint(halfedge->head);
+        d2dPatch.point32 = convertBezier(halfedge->b0.get());
+        d2dPatch.point31 = convertBezier(halfedge->b1.get());
+        d2dPatch.point30 = convertVertex(halfedge->head.get());
 
         halfedge = patchHalfedges[EdgePosition::left];
-        d2dPatch.point20 = convertPoint(halfedge->bezierControlPoints.first);
-        d2dPatch.point10 = convertPoint(halfedge->bezierControlPoints.second);
+        d2dPatch.point20 = convertBezier(halfedge->b0.get());
+        d2dPatch.point10 = convertBezier(halfedge->b1.get());
 
         const auto& colors = patch->getColors();
         d2dPatch.color00 = D2DUtilities::toCOLOR_F(colors[CornerPosition::topLeft]);
@@ -240,9 +246,7 @@ void GradientMesh::setVertexPosition(Vertex* vertex, juce::Point<float> position
     {
         for (auto const& halfedge : patch->getHalfedges())
         {
-            if (halfedge->tail.get() == vertex || halfedge->head.get() == vertex ||
-                halfedge->bezierControlPoints.first.get() == vertex ||
-                halfedge->bezierControlPoints.second.get() == vertex)
+            if (halfedge->tail.get() == vertex || halfedge->head.get() == vertex)
             {
                 patch->update();
             }
@@ -290,8 +294,8 @@ void GradientMesh::Patch::update()
 
         case EdgeType::quadratic:
         case EdgeType::cubic:
-            path.cubicTo(halfedge->bezierControlPoints.first->position,
-                halfedge->bezierControlPoints.second->position,
+            path.cubicTo(halfedge->b0->position,
+                halfedge->b1->position,
                 halfedge->head->position);
             break;
         }

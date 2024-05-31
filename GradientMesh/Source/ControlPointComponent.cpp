@@ -18,7 +18,7 @@ BezierControlPointComponent::BezierControlPointComponent(GridPosition gridPositi
 {
 }
 
-void BezierControlPointComponent::clicked(const ModifierKeys& modifiers)
+void BezierControlPointComponent::clicked(const ModifierKeys& /*modifiers*/)
 {
     if (! color.has_value())
     {
@@ -36,7 +36,7 @@ void BezierControlPointComponent::clicked(const ModifierKeys& modifiers)
         nullptr);
 }
 
-void BezierControlPointComponent::paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
+void BezierControlPointComponent::paintButton(Graphics& g, bool /*shouldDrawButtonAsHighlighted*/, bool /*shouldDrawButtonAsDown*/)
 {
 #if 0
     float radius = juce::jmin(getWidth() * 0.45f, getHeight() * 0.45f);

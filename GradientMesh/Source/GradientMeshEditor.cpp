@@ -17,7 +17,7 @@ GradientMeshEditor::GradientMeshEditor(juce::ApplicationCommandManager& commandM
     addAndMakeVisible(patchComponent.get());
     patchComponents.emplace_back(std::move(patchComponent));
 
-    auto onMoved = [this](GradientMesh::Vertex*)
+    auto onMoved = [this]()
         {
             if (auto p = selectedPatch.lock())
             {
@@ -31,7 +31,7 @@ GradientMeshEditor::GradientMeshEditor(juce::ApplicationCommandManager& commandM
     {
         auto vertex = patch->getCornerVertex(cornerPosition);
         auto controlPointComponent = std::make_unique<PatchCornerComponent>(cornerPosition, zoomTransform);
-        controlPointComponent->setControlPoint(vertex);
+        controlPointComponent->setControlPointPosition(vertex->position);
         controlPointComponent->onMoved = onMoved;
         addAndMakeVisible(controlPointComponent.get());
 
@@ -91,7 +91,7 @@ void GradientMeshEditor::resized()
     selectPatch(selectedPatch);
 }
 
-void GradientMeshEditor::mouseWheelMove(const juce::MouseEvent& mouseEvent, const juce::MouseWheelDetails& wheel)
+void GradientMeshEditor::mouseWheelMove(const juce::MouseEvent& /*mouseEvent*/, const juce::MouseWheelDetails& wheel)
 {
     wheel.deltaY > 0 ? zoom *= 1.1f : zoom *= 0.9f;
     zoom = juce::jlimit(0.1f, 10.0f, zoom);
@@ -118,17 +118,18 @@ void GradientMeshEditor::selectPatch(std::weak_ptr<GradientMesh::Patch> patch)
     if (auto p = selectedPatch.lock())
     {
         const auto& colors = p->getColors();
-        for (size_t position = GradientMesh::CornerPosition::topLeft; position <= GradientMesh::CornerPosition::bottomLeft; ++position)
+        for (size_t corner = GradientMesh::CornerPosition::topLeft; corner <= GradientMesh::CornerPosition::bottomLeft; ++corner)
         {
-            cornerControlComponents[position]->color = colors[position];
+            cornerControlComponents[corner]->vertex = p->getCornerVertex(corner);
+            cornerControlComponents[corner]->color = colors[corner];
         }
 
-        for (size_t position = GradientMesh::EdgePosition::top; position <= GradientMesh::EdgePosition::left; ++position)
+        for (size_t edgePosition = GradientMesh::EdgePosition::top; edgePosition <= GradientMesh::EdgePosition::left; ++edgePosition)
         {
-            auto halfedge = p->getHalfedges()[position];
-            auto& group = edgeControlGroups[position];
-            group->bezierControlPair.first->setControlPoint(halfedge->b0);
-            group->bezierControlPair.second->setControlPoint(halfedge->b1);
+            auto halfedge = p->getHalfedges()[edgePosition];
+            auto& group = edgeControlGroups[edgePosition];
+            group->bezierControlPair.first->bezier = halfedge->b0;
+            group->bezierControlPair.second->bezier = halfedge->b1;
         }
     }
 
@@ -201,22 +202,22 @@ bool GradientMeshEditor::perform(const InvocationInfo& info)
 
 void GradientMeshEditor::positionControls()
 {
-    auto setControlPointCompCenter = [&](ControlPointComponent* c)
-        {
-            if (auto v = c->controlPoint.lock())
-            {
-                auto pos = v->position.transformedBy(zoomTransform);
-                c->setCentrePosition(juce::Point<float>{ pos.x, pos.y }.roundToInt());
-            }
-        };
-
     zoomTransform = juce::AffineTransform::scale(zoom, zoom, getWidth() * 0.5f, getHeight() * 0.5f);
+
+    auto setCompCenter = [&](Component* component, juce::Point<float> position)
+        {
+            auto transformedPosition = position.transformedBy(zoomTransform);
+            component->setCentrePosition(transformedPosition.roundToInt());
+        };
 
     if (auto p = selectedPatch.lock())
     {
         for (auto& cornerComponent : cornerControlComponents)
         {
-            setControlPointCompCenter(cornerComponent.get());
+            if (auto v = cornerComponent->vertex.lock())
+            {
+                setCompCenter(cornerComponent.get(), v->position);
+            }
         }
 
         size_t edgePosition = GradientMesh::EdgePosition::top;
@@ -230,8 +231,8 @@ void GradientMeshEditor::positionControls()
             auto center = lineCenter.getPointOnCircumference(100.0f, angle - juce::MathConstants<float>::halfPi);
             edgeControlComponent.setCentrePosition(center.roundToInt());
 
-            setControlPointCompCenter(group->bezierControlPair.first.get());
-            setControlPointCompCenter(group->bezierControlPair.second.get());
+            setCompCenter(group->bezierControlPair.first.get(), halfedge->b0->position);
+            setCompCenter(group->bezierControlPair.second.get(), halfedge->b1->position);
         }
     }
 }
@@ -279,7 +280,7 @@ void GradientMeshEditor::PatchComponent::paint(juce::Graphics& g)
         if (auto p = patch.lock())
         {
             g.setColour(juce::Colours::white);
-            auto transform = juce::AffineTransform::translation(-getPosition().toFloat()).followedBy(owner.zoomTransform);
+            auto transform = juce::AffineTransform::translation(-getControlPointPosition().toFloat()).followedBy(owner.zoomTransform);
             g.strokePath(p->getPath(), juce::PathStrokeType{ 3.0f }, transform);
         }
     }
@@ -290,16 +291,6 @@ GradientMeshEditor::ControlPointComponent::ControlPointComponent(juce::AffineTra
 {
     setSize(120, 120);
     setCentrePosition(0, 0);
-}
-
-void GradientMeshEditor::ControlPointComponent::setControlPoint(std::weak_ptr<GradientMesh::Vertex> controlPoint_)
-{
-    controlPoint = controlPoint_;
-    if (auto cp = controlPoint_.lock())
-    {
-        updateTransform(cp->position);
-        setVisible(true);
-    }
 }
 
 void GradientMeshEditor::ControlPointComponent::updateTransform(juce::Point<float> position)
@@ -325,11 +316,8 @@ void GradientMeshEditor::ControlPointComponent::mouseDown(const MouseEvent& even
 {
     if (event.mods.isLeftButtonDown())
     {
-        if (auto cp = controlPoint.lock())
-        {
-            startPosition = cp->position;
-            dragging = true;
-        }
+        startPosition = getControlPointPosition();
+        dragging = true;
     }
 }
 
@@ -337,18 +325,15 @@ void GradientMeshEditor::ControlPointComponent::mouseDrag(const MouseEvent& even
 {
     if (dragging)
     {
-        if (auto cp = controlPoint.lock())
-        {
-            auto position = startPosition + (event.position - event.mouseDownPosition);
-            cp->position = position;
-            updateTransform(cp->position);
+        auto position = startPosition + (event.position - event.mouseDownPosition);
+        setControlPointPosition(position);
+        updateTransform(position);
 
-            moved();
-        }
+        moved();
     }
 }
 
-void GradientMeshEditor::ControlPointComponent::mouseUp(const MouseEvent& event)
+void GradientMeshEditor::ControlPointComponent::mouseUp(const MouseEvent&)
 {
     dragging = false;
 }
@@ -357,8 +342,7 @@ void GradientMeshEditor::ControlPointComponent::moved()
 {
     if (onMoved)
     {
-        if (auto cp = controlPoint.lock())
-            onMoved(cp.get());
+        onMoved();
     }
 }
 
@@ -387,7 +371,7 @@ GradientMeshEditor::AddPatchButton::AddPatchButton() :
 {
 }
 
-void GradientMeshEditor::AddPatchButton::paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
+void GradientMeshEditor::AddPatchButton::paintButton(Graphics& g, bool /*shouldDrawButtonAsHighlighted*/, bool /*shouldDrawButtonAsDown*/)
 {
     g.setColour(juce::Colours::white);
 
@@ -398,7 +382,7 @@ void GradientMeshEditor::AddPatchButton::paintButton(Graphics& g, bool shouldDra
     g.drawLine({ r.getX(), r.getCentreY(), r.getRight(), r.getCentreY() }, 2.0f);
 }
 
-void GradientMeshEditor::addConnectedPatch(const InvocationInfo& info)
+void GradientMeshEditor::addConnectedPatch(const InvocationInfo& /*info*/)
 {
 #if 0
     auto originalPatch = selectedPatch.lock();
@@ -559,10 +543,8 @@ void GradientMeshEditor::PatchCornerComponent::paint(juce::Graphics& g)
     ControlPointComponent::paint(g);
 }
 
-GradientMeshEditor::BezierControlComponent::BezierControlComponent(size_t edgePosition_, int bezierIndex_, juce::AffineTransform& zoomTransform_) :
-    ControlPointComponent(zoomTransform_),
-    edgePosition(edgePosition_),
-    bezierIndex(bezierIndex_)
+GradientMeshEditor::BezierControlComponent::BezierControlComponent(juce::AffineTransform& zoomTransform_) :
+    ControlPointComponent(zoomTransform_)
 {
 }
 
@@ -575,8 +557,8 @@ GradientMeshEditor::EdgeControlGroup::EdgeControlGroup(GradientMeshEditor& owner
     edgeControl(owner_, edgePosition_),
     bezierControlPair
     (
-        std::make_unique<BezierControlComponent>(edgePosition_, 0, zoomTransform_),
-        std::make_unique<BezierControlComponent>(edgePosition_, 1, zoomTransform_)
+        std::make_unique<BezierControlComponent>(zoomTransform_),
+        std::make_unique<BezierControlComponent>(zoomTransform_)
     )
 {
 }
