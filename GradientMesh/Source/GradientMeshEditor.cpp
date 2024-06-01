@@ -292,11 +292,11 @@ void GradientMeshEditor::PatchComponent::mouseUp(const MouseEvent& event)
 
 void GradientMeshEditor::PatchComponent::paint(juce::Graphics& g)
 {
-    //if (selected)
+    if (selected)
     {
         if (auto p = patch.lock())
         {
-            g.setColour(selected ? juce::Colours::white : juce::Colours::darkgrey);
+            g.setColour(juce::Colours::white);
             g.strokePath(p->getPath(), juce::PathStrokeType{ 3.0f }, owner.zoomTransform);
         }
     }
@@ -328,12 +328,11 @@ void GradientMeshEditor::ControlPointComponent::updateTransform(juce::Point<floa
     setTransform(juce::AffineTransform::translation(transformedPosition));
 }
 
-#if 0
 bool GradientMeshEditor::ControlPointComponent::hitTest(int x, int y)
 {
-    return getLocalBounds().getCentre().getDistanceFrom({ x, y }) < 15;
+    auto bounds = getLocalBounds().withSizeKeepingCentre(30, 30);
+    return bounds.contains(x, y);
 }
-#endif
 
 void GradientMeshEditor::ControlPointComponent::mouseEnter(const juce::MouseEvent&)
 {

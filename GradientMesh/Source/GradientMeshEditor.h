@@ -73,7 +73,7 @@ private:
 
         void updateTransform(juce::Point<float> position);
 
-        //bool hitTest(int x, int y) override;
+        bool hitTest(int x, int y) override;
         void mouseEnter(const juce::MouseEvent& event) override;
         void mouseExit(const MouseEvent& event) override;
         void mouseDown(const MouseEvent& event) override;
@@ -111,7 +111,7 @@ private:
         {
             if (auto cp = vertex.lock())
             {
-                cp->position = position;
+                cp->position = position.transformedBy(zoomTransform);
             }
         }
         void paint(juce::Graphics& g) override;
