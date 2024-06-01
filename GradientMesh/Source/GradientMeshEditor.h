@@ -44,6 +44,8 @@ private:
 
         GradientMeshEditor& owner;
         juce::Image meshImage;
+
+        int frameCount = 0;
     } displayComponent;
 
     struct PatchComponent : public juce::Component
@@ -71,7 +73,7 @@ private:
 
         void updateTransform(juce::Point<float> position);
 
-        bool hitTest(int x, int y) override;
+        //bool hitTest(int x, int y) override;
         void mouseEnter(const juce::MouseEvent& event) override;
         void mouseExit(const MouseEvent& event) override;
         void mouseDown(const MouseEvent& event) override;
@@ -191,6 +193,7 @@ private:
 
     std::array<std::unique_ptr<EdgeControlGroup>, 4> edgeControlGroups;
 
+#if 0
     juce::VBlankAttachment vblankAttachment{ this, [this]
         {
             double now = juce::Time::getMillisecondCounterHiRes();
@@ -203,6 +206,7 @@ private:
 
             repaint();
         } };
+#endif
 
     void positionControls();
 

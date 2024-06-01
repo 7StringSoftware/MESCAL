@@ -279,7 +279,7 @@ public:
 
     void addPatch(juce::Rectangle<float> bounds);
     void addPatch(std::shared_ptr<Patch> patch);
-    void addConnectedPatch(Patch* sourcePatch, EdgePlacement sourceEdgePosition);
+    std::shared_ptr<Patch> addConnectedPatch(Patch* sourcePatch, EdgePlacement sourceEdgePosition);
 
     void applyTransform(const AffineTransform& transform) noexcept;
     void draw(juce::Image image, juce::AffineTransform transform);

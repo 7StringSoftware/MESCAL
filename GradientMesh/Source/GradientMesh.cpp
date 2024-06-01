@@ -105,7 +105,7 @@ void GradientMesh::addPatch(std::shared_ptr<Patch> patch)
     patches.push_back(patch);
 }
 
-void GradientMesh::addConnectedPatch(Patch* sourcePatch, EdgePlacement sourceEdgePlacement)
+std::shared_ptr<GradientMesh::Patch> GradientMesh::addConnectedPatch(Patch* sourcePatch, EdgePlacement sourceEdgePlacement)
 {
     jassert(! sourcePatch->isConnected(sourceEdgePlacement));
 
@@ -129,14 +129,15 @@ void GradientMesh::addConnectedPatch(Patch* sourcePatch, EdgePlacement sourceEdg
     //
     auto direction = edgePlacementToDirection(destinationEdgePlacement);
     direction.moveClockwise();
+    destinationEdgePlacement.moveClockwise();
 
     if (tail->halfedges[direction.direction])
     {
-
+        patchHalfedges[destinationEdgePlacement.placement] = tail->halfedges[direction.direction];
+        tail = patchHalfedges[destinationEdgePlacement.placement]->head;
     }
     else
     {
-        destinationEdgePlacement.moveClockwise();
         auto sourceHalfedge = sourcePatch->getHalfedges()[destinationEdgePlacement.placement];
         auto vertex = addVertex(sourceHalfedge->head->position + translation);
         auto b0 = std::make_shared<BezierControlPoint>(sourceHalfedge->b0->position + translation, *this);
@@ -146,14 +147,15 @@ void GradientMesh::addConnectedPatch(Patch* sourcePatch, EdgePlacement sourceEdg
     }
 
     direction.moveClockwise();
+    destinationEdgePlacement.moveClockwise();
 
     if (tail->halfedges[direction.direction])
     {
-
+        patchHalfedges[destinationEdgePlacement.placement] = tail->halfedges[direction.direction];
+        tail = patchHalfedges[destinationEdgePlacement.placement]->head;
     }
     else
     {
-        destinationEdgePlacement.moveClockwise();
         auto sourceHalfedge = sourcePatch->getHalfedges()[destinationEdgePlacement.placement];
         auto vertex = addVertex(sourceHalfedge->head->position + translation);
         auto b0 = std::make_shared<BezierControlPoint>(sourceHalfedge->b0->position + translation, *this);
@@ -163,14 +165,15 @@ void GradientMesh::addConnectedPatch(Patch* sourcePatch, EdgePlacement sourceEdg
     }
 
     direction.moveClockwise();
+    destinationEdgePlacement.moveClockwise();
 
     if (tail->halfedges[direction.direction])
     {
-
+        patchHalfedges[destinationEdgePlacement.placement] = tail->halfedges[direction.direction];
+        tail = patchHalfedges[destinationEdgePlacement.placement]->head;
     }
     else
     {
-        destinationEdgePlacement.moveClockwise();
         auto sourceHalfedge = sourcePatch->getHalfedges()[destinationEdgePlacement.placement];
         auto b0 = std::make_shared<BezierControlPoint>(sourceHalfedge->b0->position + translation, *this);
         auto b1 = std::make_shared<BezierControlPoint>(sourceHalfedge->b1->position + translation, *this);
@@ -189,6 +192,8 @@ void GradientMesh::addConnectedPatch(Patch* sourcePatch, EdgePlacement sourceEdg
     patches.push_back(patch);
 
     checkForDuplicates();
+
+    return patch;
 }
 
 std::shared_ptr<GradientMesh::Vertex> GradientMesh::addVertex(juce::Point<float> point)
