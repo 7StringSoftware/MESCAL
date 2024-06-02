@@ -4,6 +4,10 @@
               id="NJ5XEl" jucerFormatVersion="1">
   <MAINGROUP id="fTgw8y" name="GradientMesh">
     <GROUP id="{07B94160-CF67-DC8B-7081-698B080E7B38}" name="Source">
+      <GROUP id="{D78BC46E-82DA-99F8-8906-D8CAC837949D}" name="Assets">
+        <FILE id="SmVNva" name="TrashcanButton-Transparent.svg" compile="0"
+              resource="1" file="Source/Assets/TrashcanButton-Transparent.svg"/>
+      </GROUP>
       <FILE id="MaVtmX" name="GradientMesh.cpp" compile="1" resource="0"
             file="Source/GradientMesh.cpp"/>
       <FILE id="fWDV7W" name="GradientMesh.h" compile="0" resource="0" file="Source/GradientMesh.h"/>

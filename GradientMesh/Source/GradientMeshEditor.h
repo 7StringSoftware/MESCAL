@@ -27,16 +27,25 @@ public:
 private:
     enum
     {
-        addConnectedPatchCommand = 0x100
+        addNorthConnectedPatchCommand = 0x100,
+        addEastConnectedPatchCommand,
+        addSouthConnectedPatchCommand,
+        addWestConnectedPatchCommand,
+        removePatchCommand
     };
 
     juce::ApplicationCommandManager& commandManager;
     float zoom = 1.0f;
-    juce::AffineTransform zoomTransform;
+    juce::AffineTransform patchToZoomedDisplayTransform;
     double lastMsec = juce::Time::getMillisecondCounterHiRes();
     double rotationAngle = 0.0;
     Document document;
     std::weak_ptr<GradientMesh::Patch> selectedPatch;
+
+    struct Drawables
+    {
+        std::unique_ptr<Drawable> trashCan = juce::Drawable::createFromImageData(BinaryData::TrashcanButtonTransparent_svg, BinaryData::TrashcanButtonTransparent_svgSize);
+    } drawables;
 
     struct DisplayComponent : public juce::Component
     {
@@ -86,8 +95,9 @@ private:
 
         virtual juce::Point<float> getControlPointPosition() const noexcept = 0;
         virtual void setControlPointPosition(juce::Point<float> position) noexcept = 0;
+        void updatePosition();
 
-        juce::AffineTransform& zoomTransform;
+        juce::AffineTransform& patchToZoomedDisplayTransform;
         juce::Colour color = juce::Colours::white;
         juce::Point<float> startPosition;
         bool highlighted = false;
@@ -112,7 +122,7 @@ private:
         {
             if (auto cp = vertex.lock())
             {
-                cp->position = position.transformedBy(zoomTransform);
+                cp->position = position;
             }
         }
         void paint(juce::Graphics& g) override;
@@ -168,7 +178,6 @@ private:
     struct EdgeControlComponent : public juce::Component
     {
         explicit EdgeControlComponent(GradientMeshEditor& owner_, GradientMesh::Direction direction_);
-        void setEdgeType(GradientMesh::EdgeType type);
         void resized() override;
         void paint(juce::Graphics& g) override;
 
@@ -181,7 +190,6 @@ private:
     };
 
     std::vector<std::unique_ptr<PatchComponent>> patchComponents;
-
     std::array<std::unique_ptr<PatchCornerComponent>, 4> cornerControlComponents;
 
     struct EdgeControlGroup
@@ -193,6 +201,34 @@ private:
     };
 
     std::array<std::unique_ptr<EdgeControlGroup>, 4> edgeControlGroups;
+
+    struct SVGButton : public juce::Button
+    {
+        SVGButton(StringRef name, const Drawable * const drawable_) :
+            Button(name),
+            drawable(drawable_)
+        {
+            setRepaintsOnMouseActivity(true);
+        }
+
+        void paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override
+        {
+            float scale = 1.0f;
+
+            if (shouldDrawButtonAsHighlighted)
+                scale = 1.2f;
+
+            if (shouldDrawButtonAsDown)
+                scale = 0.8f;
+
+            Rectangle<float> r = getLocalBounds().toFloat().withSizeKeepingCentre(getWidth() * 0.8f * scale, getHeight() * 0.8f * scale);
+            drawable->drawWithin(g, r, RectanglePlacement::centred, 1.);
+        }
+
+        const Drawable* const drawable;
+    };
+
+    SVGButton trashButton{ "Remove", drawables.trashCan.get() };
 
     juce::VBlankAttachment vblankAttachment{ this, [this]
         {
@@ -210,6 +246,7 @@ private:
     void positionControls();
 
     void addConnectedPatch(const InvocationInfo& info);
+    void removeSelectedPatch();
     void setEdgeType(GradientMesh::Direction direction, GradientMesh::EdgeType type);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GradientMeshEditor)

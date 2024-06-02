@@ -157,7 +157,7 @@ public:
         {
         }
 
-        std::shared_ptr<Halfedge> getHalfedge(Direction edgePlacement) const
+        auto getHalfedge(Direction edgePlacement) const
         {
             return halfedges[(size_t)edgePlacement];
         }
@@ -165,6 +165,7 @@ public:
         String toString(String indent) const
         {
             String text = indent + "Vertex ";
+#if 0
             text << position.toString() << "\n";
 
             for (auto direction : directions)
@@ -172,13 +173,18 @@ public:
                 text << indent << indent << directionNames[(int)direction] << " ";
                 text << (halfedges[(int)direction] ? halfedges[(int)direction]->toString() : "null") << "\n";
             }
+#endif
 
             return text;
         }
 
+        void removeHalfedge(std::shared_ptr<Halfedge> halfedge);
+
+        int getConnectionCount() const;
+
         size_t const index;
         juce::Point<float> position;
-        std::array<std::shared_ptr<Halfedge>, 4> halfedges;
+        std::array<std::weak_ptr<Halfedge>, 4> halfedges;
         GradientMesh& mesh;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Vertex)
@@ -205,28 +211,34 @@ public:
 
         void release()
         {
-            tail.reset();
-            b0.reset();
-            b1.reset();
-            head.reset();
-            twin.reset();
-            patch.reset();
         }
 
-        std::shared_ptr<Vertex> tail;
-        std::shared_ptr<BezierControlPoint> b0, b1;
-        std::shared_ptr<Vertex> head;
+        std::weak_ptr<Vertex> tail;
+        std::weak_ptr<BezierControlPoint> b0, b1;
+        std::weak_ptr<Vertex> head;
 
-        std::shared_ptr<Halfedge> twin;
+        std::weak_ptr<Halfedge> twin;
 
-        std::shared_ptr<Patch> patch;
+        std::weak_ptr<Patch> patch;
 
         EdgeType edgeType = EdgeType::cubic;
 
         String toString() const
         {
             String text = "Halfedge ";
-            text << tail->position.toString() << " " << head->position.toString() << " " << (int)edgeType;
+
+            if (auto v = tail.lock())
+                text << v->position.toString() << " ";
+            else
+                text << "null ";
+
+            if (auto v = head.lock())
+                text << v->position.toString() << " ";
+            else
+                text << "null ";
+
+            text << (int)edgeType;
+
             return text;
         }
 
@@ -240,41 +252,52 @@ public:
 
         void release()
         {
-            for (auto& halfedge : halfedges)
-                halfedge->release();
         }
 
         void update();
 
         auto getCornerVertex(CornerPlacement corner) const
         {
+            std::weak_ptr<Halfedge> halfedgeWeakPtr;
             switch (corner)
             {
             case CornerPlacement::topLeft:
-                return halfedges[(int)Direction::north]->tail;
+                halfedgeWeakPtr = halfedges[(int)Direction::north];
+                break;
 
             case CornerPlacement::topRight:
-                return halfedges[(int)Direction::east]->tail;
+                halfedgeWeakPtr = halfedges[(int)Direction::east];
+                break;
 
             case CornerPlacement::bottomRight:
-                return halfedges[(int)Direction::south]->tail;
+                halfedgeWeakPtr = halfedges[(int)Direction::south];
+                break;
 
             case CornerPlacement::bottomLeft:
-                return halfedges[(int)Direction::west]->tail;
+                halfedgeWeakPtr = halfedges[(int)Direction::west];
+                break;
 
             default:
                 break;
             }
 
-            return std::shared_ptr<Vertex>{};
+            if (auto halfedge = halfedgeWeakPtr.lock())
+            {
+                return halfedge->tail;
+            }
+
+            return std::weak_ptr<Vertex>{};
         }
 
-        const Path& getPath() const
+        const Path& getPath()
         {
+            if (path.isEmpty())
+                createPath();
+
             return path;
         }
 
-        const auto& getHalfedges() const
+        auto const& getHalfedges() const
         {
             return halfedges;
         }
@@ -291,20 +314,34 @@ public:
 
         bool isConnected(Direction direction) const
         {
-            auto halfedge = halfedges[(int)direction];
+            bool connected = true;
+            if (auto halfedge = halfedges[(int)direction].lock())
+            {
+                if (auto v = halfedge->tail.lock())
+                {
+                    connected &= v->getHalfedge(direction).lock() != nullptr;
+                }
 
-            return halfedge->tail->getHalfedge(direction) != nullptr && halfedge->head->getHalfedge(direction) != nullptr;
+                if (auto v = halfedge->head.lock())
+                {
+                    connected &= v->getHalfedge(direction).lock() != nullptr;
+                }
+            }
+
+            return connected;
         }
 
     private:
         Path path;
         bool modified = true;
 
-        std::array<std::shared_ptr<Halfedge>, 4> halfedges;
+        std::array<std::weak_ptr<Halfedge>, 4> halfedges;
         std::array<juce::Colour, 4> cornerColors
         {
             juce::Colours::red, juce::Colours::green, juce::Colours::blue, juce::Colours::yellow
         };
+
+        void createPath();
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Patch)
     };
@@ -314,6 +351,7 @@ public:
 
     void addPatch(juce::Rectangle<float> bounds);
     void addPatch(std::shared_ptr<Patch> patch);
+    void removePatch(Patch* patch);
     std::shared_ptr<Patch> addConnectedPatch(Patch* sourcePatch, Direction direction);
 
     void applyTransform(const AffineTransform& transform) noexcept;
@@ -341,6 +379,9 @@ private:
         std::shared_ptr<BezierControlPoint> b0,
         std::shared_ptr<BezierControlPoint> b1,
         Direction edgePlacement);
+    void removeHalfedge(std::shared_ptr<Halfedge> halfedge);
+    void removeVertex(std::shared_ptr<Vertex> vertex);
+    void removeBezier(std::shared_ptr<BezierControlPoint> bezier);
 
 #if JUCE_DEBUG
     void check();
