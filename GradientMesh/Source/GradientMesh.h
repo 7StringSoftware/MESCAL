@@ -86,7 +86,7 @@ public:
     {
         unknown = -1,
         straight,
-        quadratic,
+        approximateQuadratic,
         cubic
     };
 

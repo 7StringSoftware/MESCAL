@@ -540,6 +540,8 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
                     d2dPatch.point01 = d2dPatch.point00;
                     d2dPatch.point02 = d2dPatch.point03;
                 }
+
+                d2dPatch.topEdgeMode = halfedge->twin.lock()->patch.lock() ? D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ALIASED : D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ANTIALIASED;
             }
 
             if (auto halfedge = patchHalfedges[(int)Direction::east].lock())
@@ -553,6 +555,8 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
                     d2dPatch.point13 = d2dPatch.point03;
                     d2dPatch.point23 = d2dPatch.point33;
                 }
+
+                d2dPatch.rightEdgeMode = halfedge->twin.lock()->patch.lock() ? D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ALIASED : D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ANTIALIASED;
             }
 
             if (auto halfedge = patchHalfedges[(int)Direction::south].lock())
@@ -566,6 +570,8 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
                     d2dPatch.point32 = d2dPatch.point33;
                     d2dPatch.point31 = d2dPatch.point30;
                 }
+
+                d2dPatch.bottomEdgeMode = halfedge->twin.lock()->patch.lock() ? D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ALIASED : D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ANTIALIASED;
             }
 
             if (auto halfedge = patchHalfedges[(int)Direction::west].lock())
@@ -578,6 +584,8 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
                     d2dPatch.point20 = d2dPatch.point30;
                     d2dPatch.point10 = d2dPatch.point00;
                 }
+
+                d2dPatch.leftEdgeMode = halfedge->twin.lock()->patch.lock() ? D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ALIASED : D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ANTIALIASED;
             }
 
             const auto& colors = patch->getColors();
@@ -731,7 +739,7 @@ void GradientMesh::Patch::createPath()
                     path.lineTo(head->position);
                 break;
 
-            case EdgeType::quadratic:
+            case EdgeType::approximateQuadratic:
             case EdgeType::cubic:
             {
                 if (head && b0 && b1)

@@ -201,7 +201,11 @@ void GradientMeshEditor::selectPatch(std::weak_ptr<GradientMesh::Patch> patch)
             if (auto halfedge = p->getHalfedges()[(int)direction].lock())
             {
                 auto& group = edgeControlGroups[(int)direction];
+                group->bezierControlPair.first->halfedge = halfedge;
+                group->bezierControlPair.first->corner = halfedge->tail;
                 group->bezierControlPair.first->bezier = halfedge->b0;
+                group->bezierControlPair.second->halfedge = halfedge;
+                group->bezierControlPair.second->corner = halfedge->head;
                 group->bezierControlPair.second->bezier = halfedge->b1;
                 group->bezierControlPair.first->setVisible(true);
                 group->bezierControlPair.second->setVisible(true);
@@ -329,6 +333,9 @@ void GradientMeshEditor::positionControls()
             group->edgeControl.addPatchButton.setVisible(!p->isConnected(direction));
             group->bezierControlPair.first->updatePosition();
             group->bezierControlPair.second->updatePosition();
+
+            juce::Line<float> bezierLine{ group->bezierControlPair.first->getControlPointPosition(), group->bezierControlPair.second->getControlPointPosition() };
+            auto bezierCenter = bezierLine.getPointAlongLineProportionally(0.5f);
 
             group->edgeControl.setVisible(true);
             group->bezierControlPair.first->setVisible(halfedge->edgeType != GradientMesh::EdgeType::straight);
@@ -635,7 +642,7 @@ GradientMeshEditor::EdgeControlComponent::EdgeControlComponent(GradientMeshEdito
     quadraticButton.setClickingTogglesState(true);
     quadraticButton.onClick = [this]
         {
-            owner.setEdgeType(direction, GradientMesh::EdgeType::quadratic);
+            owner.setEdgeType(direction, GradientMesh::EdgeType::approximateQuadratic);
         };
     quadraticButton.setRadioGroupId(1);
 
@@ -719,6 +726,36 @@ GradientMeshEditor::BezierControlComponent::BezierControlComponent(juce::AffineT
 {
 }
 
+void GradientMeshEditor::BezierControlComponent::setControlPointPosition(juce::Point<float> position) noexcept
+{
+    if (auto cp = bezier.lock())
+    {
+        cp->position = position;
+
+        if (buddy)
+        {
+            auto halfedgeLock = halfedge.lock();
+            auto cornerLock = corner.lock();
+            auto buddyCornerLock = buddy->corner.lock();
+            auto buddyBezierLock = buddy->bezier.lock();
+            if (halfedgeLock && cornerLock && buddyCornerLock && buddyBezierLock)
+            {
+                if (halfedgeLock->edgeType == GradientMesh::EdgeType::approximateQuadratic)
+                {
+                    juce::Line<float> cornerToBezier{ cornerLock->position, position };
+                    juce::Line<float> cornerToCorner{ cornerLock->position, buddyCornerLock->position };
+
+                    auto theta = cornerToCorner.getAngle() - cornerToBezier.getAngle();
+                    auto cornerToCornerReverseAngle = cornerToCorner.getAngle() + juce::MathConstants<float>::pi;
+                    auto angle = cornerToCornerReverseAngle + theta;
+                    buddyBezierLock->position = buddyCornerLock->position.getPointOnCircumference(cornerToBezier.getLength(), angle);
+                    buddy->updatePosition();
+                }
+            }
+        }
+    }
+}
+
 void GradientMeshEditor::BezierControlComponent::paint(juce::Graphics& g)
 {
     ControlPointComponent::paint(g);
@@ -732,4 +769,11 @@ GradientMeshEditor::EdgeControlGroup::EdgeControlGroup(GradientMeshEditor& owner
         std::make_unique<BezierControlComponent>(zoomTransform_)
     )
 {
+    bezierControlPair.first->buddy = bezierControlPair.second.get();
+    bezierControlPair.second->buddy = bezierControlPair.first.get();
 }
+
+GradientMeshEditor::EdgeControlGroup::~EdgeControlGroup()
+{
+}
+

@@ -144,23 +144,19 @@ private:
 
             return {};
         }
-        void setControlPointPosition(juce::Point<float> position) noexcept override
-        {
-            if (auto cp = bezier.lock())
-            {
-                cp->position = position;
-            }
-        }
+        void setControlPointPosition(juce::Point<float> position) noexcept override;
         void paint(juce::Graphics& g) override;
+
+        std::weak_ptr<GradientMesh::Halfedge> halfedge;
+        std::weak_ptr<GradientMesh::Vertex> corner;
         std::weak_ptr<GradientMesh::BezierControlPoint> bezier;
+        juce::Component::SafePointer<BezierControlComponent> buddy;
     };
 
     struct AddPatchButton : public juce::Button
     {
         AddPatchButton();
         void paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
-
-        //GradientMesh::Edge edge;
     };
 
     struct PathButton : public juce::Button
@@ -195,6 +191,7 @@ private:
     struct EdgeControlGroup
     {
         explicit EdgeControlGroup(GradientMeshEditor& owner_, GradientMesh::Direction direction_, juce::AffineTransform& zoomTransform_);
+        ~EdgeControlGroup();
 
         EdgeControlComponent edgeControl;
         std::pair<std::unique_ptr<BezierControlComponent>, std::unique_ptr<BezierControlComponent>> bezierControlPair;
