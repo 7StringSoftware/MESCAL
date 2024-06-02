@@ -36,7 +36,7 @@ GradientMeshEditor::GradientMeshEditor(juce::ApplicationCommandManager& commandM
         controlPointComponent->onMoved = onMoved;
         addAndMakeVisible(controlPointComponent.get());
 
-        cornerControlComponents[corner.placement] = std::move(controlPointComponent);
+        cornerControlComponents[(int)corner] = std::move(controlPointComponent);
     }
 
     for (auto direction : GradientMesh::directions)
@@ -116,7 +116,7 @@ void GradientMeshEditor::paintOverChildren(juce::Graphics& g)
         colorIndex = (colorIndex + 1) % colors.size();
         auto size = 16.0f;
 
-        g.drawArrow(juce::Line<float>{ halfedge->tail->position.transformedBy(zoomTransform), halfedge->head->position.transformedBy(zoomTransform) }, 5.0f, 20.0f, 20.0f);
+        g.drawArrow(juce::Line<float>{ halfedge->tail->position.transformedBy(zoomTransform), halfedge->head->position.transformedBy(zoomTransform) }, 5.0f, size, size);
     }
 }
 
@@ -165,11 +165,10 @@ void GradientMeshEditor::selectPatch(std::weak_ptr<GradientMesh::Patch> patch)
     if (auto p = selectedPatch.lock())
     {
         const auto& colors = p->getColors();
-        for (auto const cornerIndex : GradientMesh::corners)
+        for (auto const corner : GradientMesh::corners)
         {
-            GradientMesh::CornerPlacement const corner{ cornerIndex };
-            cornerControlComponents[corner.placement]->vertex = p->getCornerVertex(corner);
-            cornerControlComponents[corner.placement]->color = colors[corner.placement];
+            cornerControlComponents[(int)corner]->vertex = p->getCornerVertex(corner);
+            cornerControlComponents[(int)corner]->color = colors[(int)corner];
         }
 
         for (auto const direction : GradientMesh::directions)

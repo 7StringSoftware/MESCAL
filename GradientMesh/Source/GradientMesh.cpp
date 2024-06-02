@@ -50,6 +50,25 @@ GradientMesh::GradientMesh() :
 
 GradientMesh::~GradientMesh()
 {
+    for (auto& patch : patches)
+    {
+        patch->release();
+    }
+
+    for (auto& halfedge : halfedges)
+    {
+        halfedge->release();
+    }
+
+    for (auto& bezier : bezierControlPoints)
+    {
+        bezier.reset();
+    }
+
+    for (auto& vertex : vertices)
+    {
+        vertex.reset();
+    }
 }
 
 void GradientMesh::addPatch(juce::Rectangle<float> bounds)
@@ -117,8 +136,11 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::addConnectedPatch(Patch* sour
     auto destinationStartHalfedge = sourcePatch->getHalfedges()[(int)sourceEdgePlacement]->twin;
     patchHalfedges[(int)destinationStartEdgePlacement] = destinationStartHalfedge;
 
-    auto sourceEdgeCorners = CornerPlacement::getEdgeCorners(sourceEdgePlacement);
-    auto destEdgeCorners = CornerPlacement::getEdgeCorners(destinationStartEdgePlacement);
+    auto sourceStartEdgeCorners = toCorners(sourceEdgePlacement);
+    auto destStartEdgeCorners = toCorners(destinationStartEdgePlacement);
+
+    colors[(int)destStartEdgeCorners.second] = sourcePatch->getColors()[(int)sourceStartEdgeCorners.first];
+    colors[(int)destStartEdgeCorners.first] = sourcePatch->getColors()[(int)sourceStartEdgeCorners.second];
 
     //
     // Figure out how far to translate the new patch
@@ -129,7 +151,6 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::addConnectedPatch(Patch* sour
     //
     // Find existing halfedges
     //
-    bool done = false;
     {
         //
         // Go clockwise starting from the existing halfedge head
@@ -145,11 +166,17 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::addConnectedPatch(Patch* sour
                 break;
             }
 
-            DBG("found existing patch clockwise");
+            if (auto existingPatch = halfedge->patch)
+            {
+                auto destPatchCorners = toCorners(destinationEdgePlacement);
+                auto sourcePatchCorners = toCorners(opposite(destinationEdgePlacement));
+                colors[(int)destPatchCorners.first] = existingPatch->getColors()[(int)sourcePatchCorners.first];
+                colors[(int)destPatchCorners.second] = existingPatch->getColors()[(int)sourcePatchCorners.second];
+            }
+
             patchHalfedges[(int)destinationEdgePlacement] = halfedge;
             vertex = halfedge->head;
             destinationEdgePlacement = clockwiseFrom(destinationEdgePlacement);
-            done = true;
         }
     }
 
@@ -168,12 +195,17 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::addConnectedPatch(Patch* sour
                 break;
             }
 
-            DBG("found existing patch ccw");
+            if (auto existingPatch = halfedge->patch)
+            {
+                auto destPatchCorners = toCorners(destinationEdgePlacement);
+                auto sourcePatchCorners = toCorners(opposite(destinationEdgePlacement));
+                colors[(int)destPatchCorners.first] = existingPatch->getColors()[(int)sourcePatchCorners.first];
+                colors[(int)destPatchCorners.second] = existingPatch->getColors()[(int)sourcePatchCorners.second];
+            }
 
             patchHalfedges[(int)destinationEdgePlacement] = halfedge->twin;
             vertex = halfedge->twin->tail;
             destinationEdgePlacement = counterclockwiseFrom(destinationEdgePlacement);
-            done = true;
         }
     }
 
@@ -213,8 +245,15 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::addConnectedPatch(Patch* sour
 
     auto patch = std::make_shared<Patch>(patchHalfedges);
 
-    patch->setColor(destEdgeCorners.second, colors[sourceEdgeCorners.first.placement]);
-    patch->setColor(destEdgeCorners.first, colors[sourceEdgeCorners.second.placement]);
+    for (auto& patchHalfedge : patchHalfedges)
+    {
+        patchHalfedge->patch = patch;
+    }
+
+    for (auto const& cornerPlacement : corners)
+    {
+        patch->setColor(cornerPlacement, colors[(int)cornerPlacement]);
+    }
 
     patch->update();
     patches.push_back(patch);
@@ -378,10 +417,10 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
         }
 
         const auto& colors = patch->getColors();
-        d2dPatch.color00 = D2DUtilities::toCOLOR_F(colors[CornerPlacement::topLeft]);
-        d2dPatch.color03 = D2DUtilities::toCOLOR_F(colors[CornerPlacement::topRight]);
-        d2dPatch.color33 = D2DUtilities::toCOLOR_F(colors[CornerPlacement::bottomRight]);
-        d2dPatch.color30 = D2DUtilities::toCOLOR_F(colors[CornerPlacement::bottomLeft]);
+        d2dPatch.color00 = D2DUtilities::toCOLOR_F(colors[(int)CornerPlacement::topLeft]);
+        d2dPatch.color03 = D2DUtilities::toCOLOR_F(colors[(int)CornerPlacement::topRight]);
+        d2dPatch.color33 = D2DUtilities::toCOLOR_F(colors[(int)CornerPlacement::bottomRight]);
+        d2dPatch.color30 = D2DUtilities::toCOLOR_F(colors[(int)CornerPlacement::bottomLeft]);
 
         d2dPatch.point11 = d2dPatch.point00;
         d2dPatch.point12 = d2dPatch.point03;
@@ -496,7 +535,6 @@ juce::String GradientMesh::toString() const
 {
     String text = "\nPatch";
 
-    int index = 0;
     DBG("# vertices: " << (int)vertices.size());
     for (auto const& vertex : vertices)
     {

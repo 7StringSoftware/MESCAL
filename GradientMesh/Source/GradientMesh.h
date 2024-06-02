@@ -98,38 +98,15 @@ public:
         west
     };
 
-    struct CornerPlacement
+    enum class CornerPlacement
     {
-        static constexpr size_t topLeft = 0;
-        static constexpr size_t topRight = 1;
-        static constexpr size_t bottomRight = 2;
-        static constexpr size_t bottomLeft = 3;
-
-        size_t placement = topLeft;
-
-        void moveClockwise()
-        {
-            placement = (placement + 1) % 4;
-        }
-
-        static std::pair<CornerPlacement, CornerPlacement> getEdgeCorners(Direction direction)
-        {
-            switch (direction)
-            {
-            default:
-            case Direction::north:
-                return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::topLeft }, { CornerPlacement::topRight } };
-            case Direction::east:
-                return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::topRight }, { CornerPlacement::bottomRight } };
-            case Direction::south:
-                return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::bottomRight }, { CornerPlacement::bottomLeft } };
-            case Direction::west:
-                return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::bottomLeft }, { CornerPlacement::topLeft } };
-            }
-        }
+        topLeft = 0,
+        topRight,
+        bottomRight,
+        bottomLeft
     };
 
-    static constexpr std::array<size_t, 4> corners{ CornerPlacement::topLeft, CornerPlacement::topRight, CornerPlacement::bottomRight, CornerPlacement::bottomLeft };
+    static constexpr std::array<CornerPlacement, 4> corners{ CornerPlacement::topLeft, CornerPlacement::topRight, CornerPlacement::bottomRight, CornerPlacement::bottomLeft };
 
     static Direction opposite(Direction direction)
     {
@@ -141,9 +118,30 @@ public:
         return Direction{ ((int)direction + 1) & 3 };
     }
 
+    static CornerPlacement clockwiseFrom(CornerPlacement corner)
+    {
+        return CornerPlacement{ ((int)corner + 1) & 3 };
+    }
+
     static Direction counterclockwiseFrom(Direction direction)
     {
         return Direction{ ((int)direction - 1) & 3 };
+    }
+
+    static std::pair<CornerPlacement, CornerPlacement> toCorners(Direction direction)
+    {
+        switch (direction)
+        {
+        default:
+        case Direction::north:
+            return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::topLeft }, { CornerPlacement::topRight } };
+        case Direction::east:
+            return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::topRight }, { CornerPlacement::bottomRight } };
+        case Direction::south:
+            return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::bottomRight }, { CornerPlacement::bottomLeft } };
+        case Direction::west:
+            return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::bottomLeft }, { CornerPlacement::topLeft } };
+        }
     }
 
     static constexpr std::array<Direction, 4> directions{ Direction::north, Direction::east, Direction::south, Direction::west };
@@ -182,6 +180,8 @@ public:
         juce::Point<float> position;
         std::array<std::shared_ptr<Halfedge>, 4> halfedges;
         GradientMesh& mesh;
+
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Vertex)
     };
 
     struct BezierControlPoint
@@ -194,15 +194,32 @@ public:
 
         juce::Point<float> position;
         GradientMesh& mesh;
+
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BezierControlPoint)
     };
 
+    struct Patch;
     struct Halfedge
     {
+        Halfedge() = default;
+
+        void release()
+        {
+            tail.reset();
+            b0.reset();
+            b1.reset();
+            head.reset();
+            twin.reset();
+            patch.reset();
+        }
+
         std::shared_ptr<Vertex> tail;
         std::shared_ptr<BezierControlPoint> b0, b1;
         std::shared_ptr<Vertex> head;
 
         std::shared_ptr<Halfedge> twin;
+
+        std::shared_ptr<Patch> patch;
 
         EdgeType edgeType = EdgeType::cubic;
 
@@ -212,6 +229,8 @@ public:
             text << tail->position.toString() << " " << head->position.toString() << " " << (int)edgeType;
             return text;
         }
+
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Halfedge)
     };
 
     struct Patch
@@ -219,11 +238,35 @@ public:
         Patch(std::array<std::shared_ptr<Halfedge>, 4>& halfedges_);
         ~Patch();
 
+        void release()
+        {
+            for (auto& halfedge : halfedges)
+                halfedge->release();
+        }
+
         void update();
 
         auto getCornerVertex(CornerPlacement corner) const
         {
-            return halfedges[corner.placement]->tail;
+            switch (corner)
+            {
+            case CornerPlacement::topLeft:
+                return halfedges[(int)Direction::north]->tail;
+
+            case CornerPlacement::topRight:
+                return halfedges[(int)Direction::east]->tail;
+
+            case CornerPlacement::bottomRight:
+                return halfedges[(int)Direction::south]->tail;
+
+            case CornerPlacement::bottomLeft:
+                return halfedges[(int)Direction::west]->tail;
+
+            default:
+                break;
+            }
+
+            return std::shared_ptr<Vertex>{};
         }
 
         const Path& getPath() const
@@ -243,7 +286,7 @@ public:
 
         void setColor(CornerPlacement corner, juce::Colour color)
         {
-            cornerColors[corner.placement] = color;
+            cornerColors[(int)corner] = color;
         }
 
         bool isConnected(Direction direction) const
@@ -262,6 +305,8 @@ public:
         {
             juce::Colours::red, juce::Colours::green, juce::Colours::blue, juce::Colours::yellow
         };
+
+        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Patch)
     };
 
     GradientMesh();
