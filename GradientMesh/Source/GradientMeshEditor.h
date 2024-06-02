@@ -12,6 +12,7 @@ public:
 
     juce::Rectangle<int> getPreferredSize();
     void paint(juce::Graphics&) override;
+    void paintOverChildren(juce::Graphics& g) override;
     void resized() override;
     void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override;
     void mouseMove(const MouseEvent& event) override;
@@ -166,13 +167,13 @@ private:
 
     struct EdgeControlComponent : public juce::Component
     {
-        explicit EdgeControlComponent(GradientMeshEditor& owner_, GradientMesh::EdgePlacement edge_);
+        explicit EdgeControlComponent(GradientMeshEditor& owner_, GradientMesh::Direction direction_);
         void setEdgeType(GradientMesh::EdgeType type);
         void resized() override;
         void paint(juce::Graphics& g) override;
 
         GradientMeshEditor& owner;
-        const GradientMesh::EdgePlacement edgePlacement;
+        const GradientMesh::Direction direction;
         PathButton addPatchButton;
         PathButton lineButton;
         PathButton quadraticButton;
@@ -185,7 +186,7 @@ private:
 
     struct EdgeControlGroup
     {
-        explicit EdgeControlGroup(GradientMeshEditor& owner_, GradientMesh::EdgePlacement edge_, juce::AffineTransform& zoomTransform_);
+        explicit EdgeControlGroup(GradientMeshEditor& owner_, GradientMesh::Direction direction_, juce::AffineTransform& zoomTransform_);
 
         EdgeControlComponent edgeControl;
         std::pair<std::unique_ptr<BezierControlComponent>, std::unique_ptr<BezierControlComponent>> bezierControlPair;
@@ -193,7 +194,6 @@ private:
 
     std::array<std::unique_ptr<EdgeControlGroup>, 4> edgeControlGroups;
 
-#if 0
     juce::VBlankAttachment vblankAttachment{ this, [this]
         {
             double now = juce::Time::getMillisecondCounterHiRes();
@@ -206,12 +206,11 @@ private:
 
             repaint();
         } };
-#endif
 
     void positionControls();
 
     void addConnectedPatch(const InvocationInfo& info);
-    void setEdgeType(GradientMesh::EdgePlacement edgePlacement, GradientMesh::EdgeType type);
+    void setEdgeType(GradientMesh::Direction direction, GradientMesh::EdgeType type);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GradientMeshEditor)
 };

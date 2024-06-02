@@ -64,7 +64,7 @@ void GradientMesh::addPatch(juce::Rectangle<float> bounds)
         bounds.getBottomLeft()
     };
 
-    auto addBezierPointsAndHalfedges = [&](std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head, HalfedgeDirection direction)
+    auto addBezierPointsAndHalfedges = [&](std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head, Direction direction)
         {
             juce::Line<float> line{ tail->position, head->position };
             auto angle = line.getAngle();
@@ -87,16 +87,16 @@ void GradientMesh::addPatch(juce::Rectangle<float> bounds)
     auto bottomRightVertex = addVertex(bounds.getBottomRight());
     auto bottomLeftVertex = addVertex(bounds.getBottomLeft());
 
-    patchHalfedges[EdgePlacement::top] = addBezierPointsAndHalfedges(topLeftVertex, topRightVertex, { HalfedgeDirection::east });
-    patchHalfedges[EdgePlacement::right] = addBezierPointsAndHalfedges(topRightVertex, bottomRightVertex, { HalfedgeDirection::south });
-    patchHalfedges[EdgePlacement::bottom] = addBezierPointsAndHalfedges(bottomRightVertex, bottomLeftVertex, { HalfedgeDirection::west });
-    patchHalfedges[EdgePlacement::left] = addBezierPointsAndHalfedges(bottomLeftVertex, topLeftVertex, { HalfedgeDirection::north });
+    patchHalfedges[(int)Direction::north] = addBezierPointsAndHalfedges(topLeftVertex, topRightVertex, { Direction::north });
+    patchHalfedges[(int)Direction::east] = addBezierPointsAndHalfedges(topRightVertex, bottomRightVertex, { Direction::east });
+    patchHalfedges[(int)Direction::south] = addBezierPointsAndHalfedges(bottomRightVertex, bottomLeftVertex, { Direction::south });
+    patchHalfedges[(int)Direction::west] = addBezierPointsAndHalfedges(bottomLeftVertex, topLeftVertex, { Direction::west });
 
     auto patch = std::make_shared<Patch>(patchHalfedges);
     patch->update();
     patches.push_back(patch);
 
-    checkForDuplicates();
+    check();
 }
 
 void GradientMesh::addPatch(std::shared_ptr<Patch> patch)
@@ -105,99 +105,121 @@ void GradientMesh::addPatch(std::shared_ptr<Patch> patch)
     patches.push_back(patch);
 }
 
-std::shared_ptr<GradientMesh::Patch> GradientMesh::addConnectedPatch(Patch* sourcePatch, EdgePlacement sourceEdgePlacement)
+
+std::shared_ptr<GradientMesh::Patch> GradientMesh::addConnectedPatch(Patch* sourcePatch, Direction sourceEdgePlacement)
 {
     jassert(! sourcePatch->isConnected(sourceEdgePlacement));
 
     std::array<std::shared_ptr<Halfedge>, 4> patchHalfedges;
-    std::array<juce::Colour, 4> colors;
+    std::array<juce::Colour, 4> colors = sourcePatch->getColors();
 
-    auto destinationEdgePlacement = sourceEdgePlacement.opposite();
-    auto destinationStartHalfedge = sourcePatch->getHalfedges()[sourceEdgePlacement.placement]->twin;
-    patchHalfedges[destinationEdgePlacement.placement] = destinationStartHalfedge;
-    auto tail = destinationStartHalfedge->head;
+    auto destinationStartEdgePlacement = opposite(sourceEdgePlacement);
+    auto destinationStartHalfedge = sourcePatch->getHalfedges()[(int)sourceEdgePlacement]->twin;
+    patchHalfedges[(int)destinationStartEdgePlacement] = destinationStartHalfedge;
+
+    auto sourceEdgeCorners = CornerPlacement::getEdgeCorners(sourceEdgePlacement);
+    auto destEdgeCorners = CornerPlacement::getEdgeCorners(destinationStartEdgePlacement);
 
     //
     // Figure out how far to translate the new patch
     //
-    auto translationEdgePlacement = sourceEdgePlacement;
-    translationEdgePlacement.moveCounterclockwise();
-    auto translationHalfedge = sourcePatch->getHalfedges()[translationEdgePlacement.placement];
+    auto translationHalfedge = sourcePatch->getHalfedges()[(int)counterclockwiseFrom(sourceEdgePlacement)];
     auto translation = translationHalfedge->head->position - translationHalfedge->tail->position;
 
     //
-    // Either add new halfedges or use existing ones
+    // Find existing halfedges
     //
-    auto const& sourceColors = sourcePatch->getColors();
-    auto sourceEdgeCorners = CornerPlacement::getEdgeCorners(sourceEdgePlacement);
-    auto destEdgeCorners = CornerPlacement::getEdgeCorners(sourceEdgePlacement.opposite());
-
-    auto direction = edgePlacementToDirection(destinationEdgePlacement);
-    direction.moveClockwise();
-    destinationEdgePlacement.moveClockwise();
-
-    if (auto sourceHalfedge = tail->halfedges[direction.direction])
+    bool done = false;
     {
-        auto destHalfedge = sourceHalfedge->twin;
-        patchHalfedges[destinationEdgePlacement.placement] = destHalfedge;
-        tail = destHalfedge->head;
-    }
-    else
-    {
-        sourceHalfedge = sourcePatch->getHalfedges()[destinationEdgePlacement.placement];
-        auto vertex = addVertex(sourceHalfedge->head->position + translation);
-        auto b0 = std::make_shared<BezierControlPoint>(sourceHalfedge->b0->position + translation, *this);
-        auto b1 = std::make_shared<BezierControlPoint>(sourceHalfedge->b1->position + translation, *this);
-        patchHalfedges[destinationEdgePlacement.placement] = addHalfedge(tail, vertex, b0, b1, direction);
-        tail = vertex;
-    }
+        //
+        // Go clockwise starting from the existing halfedge head
+        //
+        auto vertex = destinationStartHalfedge->head;
+        auto destinationEdgePlacement = clockwiseFrom(destinationStartEdgePlacement);
+        while (destinationEdgePlacement != destinationStartEdgePlacement)
+        {
+            auto vertexEdgeDirection = clockwiseFrom(destinationEdgePlacement);
+            auto halfedge = vertex->getHalfedge(vertexEdgeDirection);
+            if (!halfedge)
+            {
+                break;
+            }
 
-    direction.moveClockwise();
-    destinationEdgePlacement.moveClockwise();
-
-    if (auto sourceHalfedge = tail->halfedges[direction.direction])
-    {
-        auto destHalfedge = sourceHalfedge->twin;
-        patchHalfedges[destinationEdgePlacement.placement] = destHalfedge;
-        tail = destHalfedge->head;
-    }
-    else
-    {
-        sourceHalfedge = sourcePatch->getHalfedges()[destinationEdgePlacement.placement];
-        auto vertex = addVertex(sourceHalfedge->head->position + translation);
-        auto b0 = std::make_shared<BezierControlPoint>(sourceHalfedge->b0->position + translation, *this);
-        auto b1 = std::make_shared<BezierControlPoint>(sourceHalfedge->b1->position + translation, *this);
-        patchHalfedges[destinationEdgePlacement.placement] = addHalfedge(tail, vertex, b0, b1, direction);
-        tail = vertex;
+            DBG("found existing patch clockwise");
+            patchHalfedges[(int)destinationEdgePlacement] = halfedge;
+            vertex = halfedge->head;
+            destinationEdgePlacement = clockwiseFrom(destinationEdgePlacement);
+            done = true;
+        }
     }
 
-    direction.moveClockwise();
-    destinationEdgePlacement.moveClockwise();
+    {
+        //
+        // Counterclockwise from the existing halfedge tail
+        //
+        auto vertex = destinationStartHalfedge->tail;
+        auto destinationEdgePlacement = counterclockwiseFrom(destinationStartEdgePlacement);
+        while (destinationEdgePlacement != destinationStartEdgePlacement)
+        {
+            auto vertexEdgeDirection = counterclockwiseFrom(destinationEdgePlacement);
+            auto halfedge = vertex->getHalfedge(vertexEdgeDirection);
+            if (!halfedge)
+            {
+                break;
+            }
 
-    if (auto sourceHalfedge = tail->halfedges[direction.direction])
-    {
-        auto destHalfedge = sourceHalfedge->twin;
-        patchHalfedges[destinationEdgePlacement.placement] = destHalfedge;
-        tail = destHalfedge->head;
+            DBG("found existing patch ccw");
+
+            patchHalfedges[(int)destinationEdgePlacement] = halfedge->twin;
+            vertex = halfedge->twin->tail;
+            destinationEdgePlacement = counterclockwiseFrom(destinationEdgePlacement);
+            done = true;
+        }
     }
-    else
+
     {
-        sourceHalfedge = sourcePatch->getHalfedges()[destinationEdgePlacement.placement];
-        auto b0 = std::make_shared<BezierControlPoint>(sourceHalfedge->b0->position + translation, *this);
-        auto b1 = std::make_shared<BezierControlPoint>(sourceHalfedge->b1->position + translation, *this);
-        patchHalfedges[destinationEdgePlacement.placement] = addHalfedge(tail, destinationStartHalfedge->tail, b0, b1, direction);
+        auto tail = destinationStartHalfedge->head;
+        auto edgePlacement = clockwiseFrom(destinationStartEdgePlacement);
+        while (edgePlacement != destinationStartEdgePlacement)
+        {
+            if (auto destHalfedge = patchHalfedges[(int)edgePlacement])
+            {
+                DBG("already have halfedge for " << directionNames[(int)edgePlacement] << " " << destHalfedge->toString());
+            }
+            else
+            {
+                auto nextEdgePlacement = clockwiseFrom(edgePlacement);
+                auto sourceHalfedge = sourcePatch->getHalfedges()[(int)edgePlacement];
+                auto b0 = std::make_shared<BezierControlPoint>(sourceHalfedge->b0->position + translation, *this);
+                auto b1 = std::make_shared<BezierControlPoint>(sourceHalfedge->b1->position + translation, *this);
+
+                if (auto nextHalfedge = patchHalfedges[(int)nextEdgePlacement])
+                {
+                    patchHalfedges[(int)edgePlacement] = addHalfedge(tail, nextHalfedge->tail, b0, b1, edgePlacement);
+                }
+                else
+                {
+                    auto vertex = addVertex(sourceHalfedge->head->position + translation);
+                    patchHalfedges[(int)edgePlacement] = addHalfedge(tail, vertex, b0, b1, edgePlacement);
+                }
+            }
+
+            check();
+
+            tail = patchHalfedges[(int)edgePlacement]->head;
+            edgePlacement = clockwiseFrom(edgePlacement);
+        }
     }
 
     auto patch = std::make_shared<Patch>(patchHalfedges);
 
-
-    patch->setColor(destEdgeCorners.second, sourceColors[sourceEdgeCorners.first.placement]);
-    patch->setColor(destEdgeCorners.first, sourceColors[sourceEdgeCorners.second.placement]);
+    patch->setColor(destEdgeCorners.second, colors[sourceEdgeCorners.first.placement]);
+    patch->setColor(destEdgeCorners.first, colors[sourceEdgeCorners.second.placement]);
 
     patch->update();
     patches.push_back(patch);
 
-    checkForDuplicates();
+    check();
 
     return patch;
 }
@@ -208,11 +230,11 @@ std::shared_ptr<GradientMesh::Vertex> GradientMesh::addVertex(juce::Point<float>
     return vertices.back();
 }
 
-std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_ptr<Vertex> tail, 
-    std::shared_ptr<Vertex> head, 
-    std::shared_ptr<BezierControlPoint> b0, 
+std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_ptr<Vertex> tail,
+    std::shared_ptr<Vertex> head,
+    std::shared_ptr<BezierControlPoint> b0,
     std::shared_ptr<BezierControlPoint> b1,
-    HalfedgeDirection direction)
+    Direction edgePlacement)
 {
     juce::Line<float> line{ tail->position, head->position };
 
@@ -221,13 +243,6 @@ std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_pt
     halfedge->head = head;
     halfedge->b0 = b0;
     halfedge->b1 = b1;
-
-    auto oppositeDirection = direction.opposite();
-    jassert(! tail->halfedges[direction.direction]);
-    jassert(! head->halfedges[oppositeDirection.direction]);
-
-    tail->halfedges[direction.direction] = halfedge;
-    head->halfedges[oppositeDirection.direction] = halfedge;
 
     auto twin = std::make_shared<Halfedge>();
     twin->head = halfedge->tail;
@@ -238,13 +253,19 @@ std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_pt
     halfedge->twin = twin;
     twin->twin = halfedge;
 
+    jassert(!tail->getHalfedge(clockwiseFrom(edgePlacement)));
+    jassert(!head->getHalfedge(counterclockwiseFrom(edgePlacement)));
+
+    tail->halfedges[(int)clockwiseFrom(edgePlacement)] = halfedge;
+    head->halfedges[(int)counterclockwiseFrom(edgePlacement)] = halfedge->twin;
+
     halfedges.push_back(halfedge);
     halfedges.push_back(twin);
 
     return halfedge;
 }
 
-void GradientMesh::checkForDuplicates()
+void GradientMesh::check()
 {
     for (auto i = 0; i < vertices.size(); ++i)
     {
@@ -253,6 +274,7 @@ void GradientMesh::checkForDuplicates()
             if (vertices[i]->position == vertices[j]->position)
             {
                 DBG("Duplicate vertex found at " << i << " and " << j);
+                jassertfalse;
             }
         }
     }
@@ -265,6 +287,7 @@ void GradientMesh::checkForDuplicates()
                 halfedges[i]->head->position == halfedges[j]->head->position)
             {
                 DBG("Duplicate halfedge found at " << i << " and " << j);
+                jassertfalse;
             }
         }
     }
@@ -309,7 +332,7 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
         auto& d2dPatch = d2dPatches.back();
 
         const auto& patchHalfedges = patch->getHalfedges();
-        auto halfedge = patchHalfedges[EdgePlacement::top];
+        auto halfedge = patchHalfedges[(int)Direction::north];
         d2dPatch.point00 = convertVertex(halfedge->tail.get());
 
         d2dPatch.point01 = convertBezier(halfedge->b0.get());
@@ -322,7 +345,7 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
             d2dPatch.point02 = d2dPatch.point03;
         }
 
-        halfedge = patchHalfedges[EdgePlacement::right];
+        halfedge = patchHalfedges[(int)Direction::east];
         d2dPatch.point13 = convertBezier(halfedge->b0.get());
         d2dPatch.point23 = convertBezier(halfedge->b1.get());
         d2dPatch.point33 = convertVertex(halfedge->head.get());
@@ -333,7 +356,7 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
             d2dPatch.point23 = d2dPatch.point33;
         }
 
-        halfedge = patchHalfedges[EdgePlacement::bottom];
+        halfedge = patchHalfedges[(int)Direction::south];
         d2dPatch.point32 = convertBezier(halfedge->b0.get());
         d2dPatch.point31 = convertBezier(halfedge->b1.get());
         d2dPatch.point30 = convertVertex(halfedge->head.get());
@@ -344,7 +367,7 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
             d2dPatch.point31 = d2dPatch.point30;
         }
 
-        halfedge = patchHalfedges[EdgePlacement::left];
+        halfedge = patchHalfedges[(int)Direction::west];
         d2dPatch.point20 = convertBezier(halfedge->b0.get());
         d2dPatch.point10 = convertBezier(halfedge->b1.get());
 
@@ -447,7 +470,7 @@ GradientMesh::Patch::~Patch()
 void GradientMesh::Patch::update()
 {
     path.clear();
-    path.startNewSubPath(halfedges[EdgePlacement::top]->tail->position);
+    path.startNewSubPath(halfedges[(int)Direction::north]->tail->position);
 
     for (auto const& halfedge : halfedges)
     {
@@ -474,9 +497,10 @@ juce::String GradientMesh::toString() const
     String text = "\nPatch";
 
     int index = 0;
+    DBG("# vertices: " << (int)vertices.size());
     for (auto const& vertex : vertices)
     {
-        DBG("   " << index++ << "  " << vertex->position.toString());
+        DBG("      Vertex " << vertex->toString("         "));
     }
 
     return text;

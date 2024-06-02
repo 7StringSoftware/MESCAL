@@ -82,32 +82,21 @@ public:
 
     struct Patch;
 
-    struct EdgePlacement
+    enum class EdgeType
     {
-        static constexpr size_t top = 0;
-        static constexpr size_t right = 1;
-        static constexpr size_t bottom = 2;
-        static constexpr size_t left = 3;
-
-        size_t placement = top;
-
-        EdgePlacement opposite() const
-        {
-            return EdgePlacement{ (placement + 2) % 4 };
-        }
-
-        void moveClockwise()
-        {
-            placement = (placement + 1) % 4;
-        }
-
-        void moveCounterclockwise()
-        {
-            placement = (placement - 1) % 4;
-        }
+        unknown = -1,
+        straight,
+        quadratic,
+        cubic
     };
 
-    static constexpr std::array<size_t, 4> edges{ EdgePlacement::top, EdgePlacement::right, EdgePlacement::bottom, EdgePlacement::left };
+    enum class Direction
+    {
+        north = 0,
+        east,
+        south,
+        west
+    };
 
     struct CornerPlacement
     {
@@ -123,18 +112,18 @@ public:
             placement = (placement + 1) % 4;
         }
 
-        static std::pair<CornerPlacement, CornerPlacement> getEdgeCorners(EdgePlacement edgePlacement)
+        static std::pair<CornerPlacement, CornerPlacement> getEdgeCorners(Direction direction)
         {
-            switch (edgePlacement.placement)
+            switch (direction)
             {
             default:
-            case EdgePlacement::top:
+            case Direction::north:
                 return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::topLeft }, { CornerPlacement::topRight } };
-            case EdgePlacement::right:
+            case Direction::east:
                 return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::topRight }, { CornerPlacement::bottomRight } };
-            case EdgePlacement::bottom:
+            case Direction::south:
                 return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::bottomRight }, { CornerPlacement::bottomLeft } };
-            case EdgePlacement::left:
+            case Direction::west:
                 return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::bottomLeft }, { CornerPlacement::topLeft } };
             }
         }
@@ -142,46 +131,23 @@ public:
 
     static constexpr std::array<size_t, 4> corners{ CornerPlacement::topLeft, CornerPlacement::topRight, CornerPlacement::bottomRight, CornerPlacement::bottomLeft };
 
-    enum class EdgeType
+    static Direction opposite(Direction direction)
     {
-        unknown = -1,
-        straight,
-        quadratic,
-        cubic
-    };
-
-    struct HalfedgeDirection
-    {
-        static constexpr size_t north = 0;
-        static constexpr size_t east = 1;
-        static constexpr size_t south = 2;
-        static constexpr size_t west = 3;
-
-        size_t direction = north;
-
-        HalfedgeDirection opposite() const noexcept
-        {
-            return { (direction + 2) % 4 };
-        }
-
-        void moveClockwise()
-        {
-            direction = (direction + 1) % 4;
-        }
-
-        void moveCounterclockwise()
-        {
-            direction = (direction - 1) % 4;
-        }
-    };
-
-    static constexpr std::array<size_t, 4> directions{ HalfedgeDirection::north, HalfedgeDirection::east, HalfedgeDirection::south, HalfedgeDirection::west };
-
-    static HalfedgeDirection edgePlacementToDirection(EdgePlacement edgePlacement)
-    {
-        auto index = (edgePlacement.placement + 1) % 4;
-        return { GradientMesh::directions[index] };
+        return Direction{ ((int)direction + 2) & 3 };
     }
+
+    static Direction clockwiseFrom(Direction direction)
+    {
+        return Direction{ ((int)direction + 1) & 3 };
+    }
+
+    static Direction counterclockwiseFrom(Direction direction)
+    {
+        return Direction{ ((int)direction - 1) & 3 };
+    }
+
+    static constexpr std::array<Direction, 4> directions{ Direction::north, Direction::east, Direction::south, Direction::west };
+    static constexpr std::array<const char*, 4> directionNames{ "north", "east", "south", "west" };
 
     struct Halfedge;
     struct Vertex
@@ -191,6 +157,25 @@ public:
             mesh(mesh_),
             index(index_)
         {
+        }
+
+        std::shared_ptr<Halfedge> getHalfedge(Direction edgePlacement) const
+        {
+            return halfedges[(size_t)edgePlacement];
+        }
+
+        String toString(String indent) const
+        {
+            String text = indent + "Vertex ";
+            text << position.toString() << "\n";
+
+            for (auto direction : directions)
+            {
+                text << indent << indent << directionNames[(int)direction] << " ";
+                text << (halfedges[(int)direction] ? halfedges[(int)direction]->toString() : "null") << "\n";
+            }
+
+            return text;
         }
 
         size_t const index;
@@ -220,6 +205,13 @@ public:
         std::shared_ptr<Halfedge> twin;
 
         EdgeType edgeType = EdgeType::cubic;
+
+        String toString() const
+        {
+            String text = "Halfedge ";
+            text << tail->position.toString() << " " << head->position.toString() << " " << (int)edgeType;
+            return text;
+        }
     };
 
     struct Patch
@@ -254,13 +246,11 @@ public:
             cornerColors[corner.placement] = color;
         }
 
-        bool isConnected(EdgePlacement edgePlacement) const
+        bool isConnected(Direction direction) const
         {
-            std::array<HalfedgeDirection, 4> constexpr edgeDirections{ HalfedgeDirection::north, HalfedgeDirection::east, HalfedgeDirection::south, HalfedgeDirection::west };
-            auto halfedge = halfedges[edgePlacement.placement];
-            auto direction = edgeDirections[edgePlacement.placement];
+            auto halfedge = halfedges[(int)direction];
 
-            return halfedge->tail->halfedges[direction.direction] != nullptr && halfedge->head->halfedges[direction.direction] != nullptr;
+            return halfedge->tail->getHalfedge(direction) != nullptr && halfedge->head->getHalfedge(direction) != nullptr;
         }
 
     private:
@@ -279,7 +269,7 @@ public:
 
     void addPatch(juce::Rectangle<float> bounds);
     void addPatch(std::shared_ptr<Patch> patch);
-    std::shared_ptr<Patch> addConnectedPatch(Patch* sourcePatch, EdgePlacement sourceEdgePosition);
+    std::shared_ptr<Patch> addConnectedPatch(Patch* sourcePatch, Direction direction);
 
     void applyTransform(const AffineTransform& transform) noexcept;
     void draw(juce::Image image, juce::AffineTransform transform);
@@ -289,6 +279,9 @@ public:
 
     juce::Rectangle<float> getBounds() const noexcept;
     auto const& getPatches() const { return patches; }
+
+    auto const& getVertices() const { return vertices; }
+    auto const& getHalfedges() const { return halfedges; }
 
     String toString() const;
 
@@ -302,10 +295,10 @@ private:
     std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head,
         std::shared_ptr<BezierControlPoint> b0,
         std::shared_ptr<BezierControlPoint> b1,
-        HalfedgeDirection direction);
+        Direction edgePlacement);
 
 #if JUCE_DEBUG
-    void checkForDuplicates();
+    void check();
 #endif
 
     struct Pimpl;
