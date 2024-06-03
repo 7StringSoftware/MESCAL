@@ -518,6 +518,39 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
             throw std::runtime_error("Invalid bezier control point");
         };
 
+    auto convertHalfedge = [&](std::weak_ptr<Halfedge> halfedge,
+        D2D1_POINT_2F& d2dBezeir0,
+        D2D1_POINT_2F& d2dBezeir1,
+        D2D1_POINT_2F& head,
+        D2D1_PATCH_EDGE_MODE& d2dEdgeMode
+        )
+        {
+            if (auto h = halfedge.lock())
+            {
+                head = convertVertex(h->head);
+                d2dEdgeMode = h->twin.lock()->patch.lock() ? D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ALIASED : D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ANTIALIASED;
+
+                if (h->edgeType == EdgeType::straight)
+                {
+                    if (auto tail = h->tail.lock())
+                    {
+                        juce::Line<float> line{ tail->position.x, tail->position.y, head.x, head.y };
+                        auto mid = line.getPointAlongLineProportionally(0.5f);
+                        d2dBezeir0 = { mid.x, mid.y };
+                        d2dBezeir1 = { mid.x, mid.y };
+                    }
+                    return;
+                }
+
+                d2dBezeir0 = convertBezier(h->b0);
+                d2dBezeir1 = convertBezier(h->b1);
+
+                return;
+            }
+
+            throw std::runtime_error("Invalid halfedge");
+        };
+
     std::vector<D2D1_GRADIENT_MESH_PATCH> d2dPatches;
     for (auto const& patch : patches)
     {
@@ -530,63 +563,12 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
             if (auto halfedge = patchHalfedges[(int)Direction::north].lock())
             {
                 d2dPatch.point00 = convertVertex(halfedge->tail);
-
-                d2dPatch.point01 = convertBezier(halfedge->b0);
-                d2dPatch.point02 = convertBezier(halfedge->b1);
-                d2dPatch.point03 = convertVertex(halfedge->head);
-
-                if (halfedge->edgeType == EdgeType::straight)
-                {
-                    d2dPatch.point01 = d2dPatch.point00;
-                    d2dPatch.point02 = d2dPatch.point03;
-                }
-
-                d2dPatch.topEdgeMode = halfedge->twin.lock()->patch.lock() ? D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ALIASED : D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ANTIALIASED;
             }
 
-            if (auto halfedge = patchHalfedges[(int)Direction::east].lock())
-            {
-                d2dPatch.point13 = convertBezier(halfedge->b0);
-                d2dPatch.point23 = convertBezier(halfedge->b1);
-                d2dPatch.point33 = convertVertex(halfedge->head);
-
-                if (halfedge->edgeType == EdgeType::straight)
-                {
-                    d2dPatch.point13 = d2dPatch.point03;
-                    d2dPatch.point23 = d2dPatch.point33;
-                }
-
-                d2dPatch.rightEdgeMode = halfedge->twin.lock()->patch.lock() ? D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ALIASED : D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ANTIALIASED;
-            }
-
-            if (auto halfedge = patchHalfedges[(int)Direction::south].lock())
-            {
-                d2dPatch.point32 = convertBezier(halfedge->b0);
-                d2dPatch.point31 = convertBezier(halfedge->b1);
-                d2dPatch.point30 = convertVertex(halfedge->head);
-
-                if (halfedge->edgeType == EdgeType::straight)
-                {
-                    d2dPatch.point32 = d2dPatch.point33;
-                    d2dPatch.point31 = d2dPatch.point30;
-                }
-
-                d2dPatch.bottomEdgeMode = halfedge->twin.lock()->patch.lock() ? D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ALIASED : D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ANTIALIASED;
-            }
-
-            if (auto halfedge = patchHalfedges[(int)Direction::west].lock())
-            {
-                d2dPatch.point20 = convertBezier(halfedge->b0);
-                d2dPatch.point10 = convertBezier(halfedge->b1);
-
-                if (halfedge->edgeType == EdgeType::straight)
-                {
-                    d2dPatch.point20 = d2dPatch.point30;
-                    d2dPatch.point10 = d2dPatch.point00;
-                }
-
-                d2dPatch.leftEdgeMode = halfedge->twin.lock()->patch.lock() ? D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ALIASED : D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ANTIALIASED;
-            }
+            convertHalfedge(patchHalfedges[(int)Direction::north], d2dPatch.point01, d2dPatch.point02, d2dPatch.point03, d2dPatch.topEdgeMode);
+            convertHalfedge(patchHalfedges[(int)Direction::east], d2dPatch.point13, d2dPatch.point23, d2dPatch.point33, d2dPatch.rightEdgeMode);
+            convertHalfedge(patchHalfedges[(int)Direction::south], d2dPatch.point32, d2dPatch.point31, d2dPatch.point30, d2dPatch.bottomEdgeMode);
+            convertHalfedge(patchHalfedges[(int)Direction::west], d2dPatch.point20, d2dPatch.point10, d2dPatch.point00, d2dPatch.leftEdgeMode);
 
             const auto& colors = patch->getColors();
             d2dPatch.color00 = D2DUtilities::toCOLOR_F(colors[(int)CornerPlacement::topLeft]);

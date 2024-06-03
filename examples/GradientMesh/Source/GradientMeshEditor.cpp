@@ -742,7 +742,11 @@ void GradientMeshEditor::PatchCornerComponent::mouseUp(const juce::MouseEvent& e
 
     if (!event.mouseWasDraggedSinceMouseDown())
     {
-        auto colourSelector = std::make_unique<juce::ColourSelector>(juce::ColourSelector::showSliders | juce::ColourSelector::showColourspace);
+        auto colourSelector = std::make_unique<juce::ColourSelector>(juce::ColourSelector::showSliders |
+            juce::ColourSelector::showColourAtTop |
+            juce::ColourSelector::editableColour |
+            juce::ColourSelector::showColourspace |
+            juce::ColourSelector::showAlphaChannel);
         auto position = getBounds().getCentre();
         int offset = 200;
         switch (corner)
