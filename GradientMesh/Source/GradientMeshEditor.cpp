@@ -709,6 +709,8 @@ void GradientMeshEditor::PathButton::paintButton(Graphics& g, bool shouldDrawBut
         color = juce::Colours::aqua;
     }
 
+    g.setColour(juce::Colours::black);
+    g.strokePath(path, juce::PathStrokeType{ strokeWidth + 2.0f }, transform);
     g.setColour(color);
     g.strokePath(path, juce::PathStrokeType{ strokeWidth }, transform);
 }
