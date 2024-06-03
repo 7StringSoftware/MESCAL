@@ -7,7 +7,7 @@
 #include <JuceHeader.h>
 #include <juce_graphics/native/juce_DirectX_windows.h>
 #include <juce_graphics/native/juce_Direct2DImage_windows.h>
-#include "GradientMesh.h"
+#include "mescal_GradientMesh_windows.h"
 
 struct GradientMesh::Pimpl
 {
@@ -476,7 +476,7 @@ void GradientMesh::check()
 #endif
 }
 
-void GradientMesh::applyTransform(const AffineTransform& transform) noexcept
+void GradientMesh::applyTransform(const juce::AffineTransform& transform) noexcept
 {
     for (auto& vertex : vertices)
     {
@@ -758,7 +758,7 @@ void GradientMesh::Patch::createPath()
 
 juce::String GradientMesh::toString() const
 {
-    String text = "\nPatch";
+    juce::String text = "\nPatch";
 
     DBG("# vertices: " << (int)vertices.size());
     for (auto const& vertex : vertices)

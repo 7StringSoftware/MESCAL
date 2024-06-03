@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Base.h"
-#include "GradientMesh.h"
 
 class Document : juce::FileBasedDocument
 {

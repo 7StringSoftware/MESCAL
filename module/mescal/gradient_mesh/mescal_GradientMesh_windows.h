@@ -162,9 +162,9 @@ public:
             return halfedges[(size_t)edgePlacement];
         }
 
-        String toString(String indent) const
+        juce::String toString(juce::String indent) const
         {
-            String text = indent + "Vertex ";
+            juce::String text = indent + "Vertex ";
 #if 0
             text << position.toString() << "\n";
 
@@ -223,9 +223,9 @@ public:
 
         EdgeType edgeType = EdgeType::cubic;
 
-        String toString() const
+        juce::String toString() const
         {
-            String text = "Halfedge ";
+            juce::String text = "Halfedge ";
 
             if (auto v = tail.lock())
                 text << v->position.toString() << " ";
@@ -289,7 +289,7 @@ public:
             return std::weak_ptr<Vertex>{};
         }
 
-        const Path& getPath()
+        const juce::Path& getPath()
         {
             if (path.isEmpty())
                 createPath();
@@ -332,7 +332,7 @@ public:
         }
 
     private:
-        Path path;
+        juce::Path path;
         bool modified = true;
 
         std::array<std::weak_ptr<Halfedge>, 4> halfedges;
@@ -354,7 +354,7 @@ public:
     void removePatch(Patch* patch);
     std::shared_ptr<Patch> addConnectedPatch(Patch* sourcePatch, Direction direction);
 
-    void applyTransform(const AffineTransform& transform) noexcept;
+    void applyTransform(const juce::AffineTransform& transform) noexcept;
     void draw(juce::Image image, juce::AffineTransform transform);
 
     void setVertexPosition(Vertex* vertex, juce::Point<float> position);
@@ -366,7 +366,7 @@ public:
     auto const& getVertices() const { return vertices; }
     auto const& getHalfedges() const { return halfedges; }
 
-    String toString() const;
+    juce::String toString() const;
 
 private:
     std::vector<std::shared_ptr<Vertex>> vertices;

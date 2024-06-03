@@ -8,9 +8,6 @@
         <FILE id="SmVNva" name="TrashcanButton-Transparent.svg" compile="0"
               resource="1" file="Source/Assets/TrashcanButton-Transparent.svg"/>
       </GROUP>
-      <FILE id="MaVtmX" name="GradientMesh.cpp" compile="1" resource="0"
-            file="Source/GradientMesh.cpp"/>
-      <FILE id="fWDV7W" name="GradientMesh.h" compile="0" resource="0" file="Source/GradientMesh.h"/>
       <FILE id="aXNKtb" name="Base.h" compile="0" resource="0" file="Source/Base.h"/>
       <FILE id="jEsi8N" name="Commander.cpp" compile="1" resource="0" file="Source/Commander.cpp"/>
       <FILE id="tv7bbM" name="Commander.h" compile="0" resource="0" file="Source/Commander.h"/>
@@ -40,6 +37,7 @@
     <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="mescal" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
   </MODULES>
   <EXPORTFORMATS>
     <VS2022 targetFolder="Builds/VisualStudio2022">
@@ -54,6 +52,7 @@
         <MODULEPATH id="juce_graphics" path=""/>
         <MODULEPATH id="juce_gui_basics" path=""/>
         <MODULEPATH id="juce_gui_extra" path="../../../JUCE-dev/modules"/>
+        <MODULEPATH id="mescal" path="../../module"/>
       </MODULEPATHS>
     </VS2022>
   </EXPORTFORMATS>
