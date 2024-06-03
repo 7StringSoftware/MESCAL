@@ -220,6 +220,21 @@ void GradientMeshEditor::selectPatch(std::weak_ptr<GradientMesh::Patch> patch)
                 group->bezierControlPair.first->setVisible(true);
                 group->bezierControlPair.second->setVisible(true);
                 group->edgeControl.setVisible(true);
+
+                switch (halfedge->edgeType)
+                {
+                    case GradientMesh::EdgeType::straight:
+                        group->edgeControl.lineButton.setToggleState(true, juce::dontSendNotification);
+                        break;
+
+                    case GradientMesh::EdgeType::approximateQuadratic:
+                        group->edgeControl.quadraticButton.setToggleState(true, juce::dontSendNotification);
+                        break;
+
+                    case GradientMesh::EdgeType::cubic:
+                        group->edgeControl.cubicButton.setToggleState(true, juce::dontSendNotification);
+                        break;
+                }
             }
         }
 
