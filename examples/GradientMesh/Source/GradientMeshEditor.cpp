@@ -88,7 +88,7 @@ void GradientMeshEditor::paint(juce::Graphics& g)
     g.fillAll(juce::Colours::black);
 }
 
-void GradientMeshEditor::paintOverChildren(juce::Graphics& g)
+void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
 {
 #if 0
     std::array<juce::Colour, 20> const colors
@@ -701,11 +701,6 @@ void GradientMeshEditor::EdgeControlComponent::resized()
     cubicButton.setBounds(r);
 }
 
-void GradientMeshEditor::EdgeControlComponent::paint(juce::Graphics& g)
-{
-    //g.fillAll(juce::Colours::darkgrey);
-}
-
 void GradientMeshEditor::PathButton::paintButton(Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
 {
     auto color = juce::Colours::white;
@@ -778,7 +773,7 @@ void GradientMeshEditor::PatchCornerComponent::mouseUp(const juce::MouseEvent& e
     }
 }
 
-void GradientMeshEditor::PatchCornerComponent::changeListenerCallback(ChangeBroadcaster* source)
+void GradientMeshEditor::PatchCornerComponent::changeListenerCallback(ChangeBroadcaster*)
 {
     if (colourSelectorSafePointer)
     {

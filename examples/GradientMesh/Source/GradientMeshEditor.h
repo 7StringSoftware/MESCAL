@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Base.h"
-#include "ControlPointComponent.h"
 #include "Document.h"
 
 class GradientMeshEditor : public juce::Component, public juce::ApplicationCommandTarget
@@ -181,7 +180,6 @@ private:
     {
         explicit EdgeControlComponent(GradientMeshEditor& owner_, GradientMesh::Direction direction_);
         void resized() override;
-        void paint(juce::Graphics& g) override;
 
         GradientMeshEditor& owner;
         const GradientMesh::Direction direction;
