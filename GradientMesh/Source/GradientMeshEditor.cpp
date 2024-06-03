@@ -35,6 +35,16 @@ GradientMeshEditor::GradientMeshEditor(juce::ApplicationCommandManager& commandM
         if (auto v = vertex.lock())
             controlPointComponent->setControlPointPosition(v->position);
         controlPointComponent->onMoved = onMoved;
+
+        controlPointComponent->onColorChanged = [this](GradientMesh::CornerPlacement corner, juce::Colour color)
+        {
+            if (auto p = selectedPatch.lock())
+            {
+                p->setColor(corner, color);
+                repaint();
+            }
+        };
+
         addAndMakeVisible(controlPointComponent.get());
 
         cornerControlComponents[(int)corner] = std::move(controlPointComponent);
@@ -80,7 +90,7 @@ void GradientMeshEditor::paint(juce::Graphics& g)
 
 void GradientMeshEditor::paintOverChildren(juce::Graphics& g)
 {
-#if 1
+#if 0
     std::array<juce::Colour, 20> const colors
     {
         juce::Colours::yellow, juce::Colours::green, juce::Colours::blue, juce::Colours::red,
@@ -707,12 +717,61 @@ GradientMeshEditor::PatchCornerComponent::PatchCornerComponent(GradientMesh::Cor
     ControlPointComponent(zoomTransform_),
     corner(corner_)
 {
-
 }
 
 void GradientMeshEditor::PatchCornerComponent::paint(juce::Graphics& g)
 {
     ControlPointComponent::paint(g);
+}
+
+void GradientMeshEditor::PatchCornerComponent::mouseUp(const juce::MouseEvent& event)
+{
+    ControlPointComponent::mouseUp(event);
+
+    if (!event.mouseWasDraggedSinceMouseDown())
+    {
+        auto colourSelector = std::make_unique<juce::ColourSelector>(juce::ColourSelector::showSliders | juce::ColourSelector::showColourspace);
+        auto position = getBounds().getCentre();
+        int offset = 200;
+        switch (corner)
+        {
+        case GradientMesh::CornerPlacement::topLeft:
+            position += { -offset, -offset };
+            break;
+
+        case GradientMesh::CornerPlacement::topRight:
+            position += { offset, -offset };
+            break;
+
+        case GradientMesh::CornerPlacement::bottomLeft:
+            position += { -offset, offset };
+            break;
+
+        case GradientMesh::CornerPlacement::bottomRight:
+            position += { offset, offset };
+            break;
+        }
+
+        colourSelector->setCurrentColour(color);
+        colourSelector->addChangeListener(this);
+        colourSelector->setSize(400, 400);
+        colourSelectorSafePointer = colourSelector.get();
+
+        juce::CallOutBox::launchAsynchronously(std::move(colourSelector), juce::Rectangle<int>{ 10, 10 }.withCentre(event.getScreenPosition()), nullptr);
+    }
+}
+
+void GradientMeshEditor::PatchCornerComponent::changeListenerCallback(ChangeBroadcaster* source)
+{
+    if (colourSelectorSafePointer)
+    {
+        color = colourSelectorSafePointer->getCurrentColour();
+        if (onColorChanged)
+        {
+            onColorChanged(corner, color);
+        }
+        getParentComponent()->repaint();
+    }
 }
 
 void GradientMeshEditor::ControlPointComponent::updatePosition()

@@ -102,10 +102,11 @@ private:
         juce::Point<float> startPosition;
         bool highlighted = false;
         bool dragging = true;
-        std::function<void() > onMoved;
+        std::function<void()> onMoved;
+        std::function<void(GradientMesh::CornerPlacement corner, juce::Colour color)> onColorChanged;
     };
 
-    struct PatchCornerComponent : public ControlPointComponent
+    struct PatchCornerComponent : public ControlPointComponent, juce::ChangeListener
     {
         PatchCornerComponent(GradientMesh::CornerPlacement corner_, juce::AffineTransform& zoomTransform_);
 
@@ -126,9 +127,14 @@ private:
             }
         }
         void paint(juce::Graphics& g) override;
+        void mouseUp(const MouseEvent& event) override;
 
         const GradientMesh::CornerPlacement corner;
         std::weak_ptr<GradientMesh::Vertex> vertex;
+        juce::Component::SafePointer<ColourSelector> colourSelectorSafePointer;
+
+        void changeListenerCallback(ChangeBroadcaster* source) override;
+
     };
 
     struct BezierControlComponent : public ControlPointComponent
