@@ -13,7 +13,10 @@
 Document::Document() :
     juce::FileBasedDocument(".mescal.gradientmesh", "*.mescal.gradientmesh", "Open a gradient mesh file", "Save gradient mesh")
 {
-    gradientMesh.addPatch({ 100.0f, 100.0f });
+    juce::Path path;
+    path.addEllipse({ 100.0f, 100.0f, 500.0f, 500.0f });
+    //path.addRectangle(100.0f, 100.0f, 500.0f, 500.0f);
+    gradientMesh = GradientMesh::pathToGrid(path, {}, 250.0f);
 }
 
 Document::~Document()

@@ -8,6 +8,8 @@
 #include <juce_graphics/native/juce_DirectX_windows.h>
 #include <juce_graphics/native/juce_Direct2DImage_windows.h>
 #include "mescal_GradientMesh_windows.h"
+#define USINGZ 1
+#include "../Clipper2Lib/include/clipper.h"
 
 struct GradientMesh::Pimpl
 {
@@ -36,6 +38,105 @@ struct GradientMesh::Pimpl
                 }
             }
         }
+    }
+
+    static void pathToGeometrySink(const Path& path, ID2D1GeometrySink* sink, const AffineTransform& transform, D2D1_FIGURE_BEGIN figureMode)
+    {
+        // Every call to BeginFigure must have a matching call to EndFigure. But - the Path does not necessarily
+        // have matching startNewSubPath and closePath markers. The figureStarted flag indicates if an extra call
+        // to BeginFigure or EndFigure is needed during the iteration loop or when exiting this function.
+        Path::Iterator it(path);
+        bool figureStarted = false;
+
+        while (it.next())
+        {
+            switch (it.elementType)
+            {
+            case Path::Iterator::cubicTo:
+            {
+                if (!figureStarted)
+                    break;
+
+                transform.transformPoint(it.x1, it.y1);
+                transform.transformPoint(it.x2, it.y2);
+                transform.transformPoint(it.x3, it.y3);
+
+                sink->AddBezier({ { it.x1, it.y1 }, { it.x2, it.y2 }, { it.x3, it.y3 } });
+                break;
+            }
+
+            case Path::Iterator::lineTo:
+            {
+                if (!figureStarted)
+                    break;
+
+                transform.transformPoint(it.x1, it.y1);
+                sink->AddLine({ it.x1, it.y1 });
+                break;
+            }
+
+            case Path::Iterator::quadraticTo:
+            {
+                if (!figureStarted)
+                    break;
+
+                transform.transformPoint(it.x1, it.y1);
+                transform.transformPoint(it.x2, it.y2);
+                sink->AddQuadraticBezier({ { it.x1, it.y1 }, { it.x2, it.y2 } });
+                break;
+            }
+
+            case Path::Iterator::closePath:
+            {
+                if (figureStarted)
+                {
+                    sink->EndFigure(D2D1_FIGURE_END_CLOSED);
+                    figureStarted = false;
+                }
+                break;
+            }
+
+            case Path::Iterator::startNewSubPath:
+            {
+                if (figureStarted)
+                    sink->EndFigure(D2D1_FIGURE_END_OPEN);
+
+                transform.transformPoint(it.x1, it.y1);
+                sink->BeginFigure({ it.x1, it.y1 }, figureMode);
+
+                figureStarted = true;
+                break;
+            }
+            }
+        }
+
+        if (figureStarted)
+        {
+            sink->EndFigure(D2D1_FIGURE_END_OPEN);
+        }
+    }
+
+    static winrt::com_ptr<ID2D1Geometry> pathToGeometry(juce::Path const& path, juce::AffineTransform const& transform)
+    {
+        winrt::com_ptr<ID2D1PathGeometry1> geometry;
+        juce::SharedResourcePointer<juce::DirectX> directX;
+
+        if (auto hr = directX->getD2DFactory()->CreatePathGeometry(geometry.put()); FAILED(hr))
+        {
+            return {};
+        }
+
+        winrt::com_ptr<ID2D1GeometrySink> sink;
+        if (auto hr = geometry->Open(sink.put()); FAILED(hr))
+        {
+            return {};
+        }
+
+        pathToGeometrySink(path, sink.get(), transform, D2D1_FIGURE_BEGIN_FILLED);
+
+        sink->Close();
+
+        return geometry;
     }
 
     GradientMesh& owner;
@@ -749,6 +850,199 @@ juce::String GradientMesh::toString() const
     }
 
     return text;
+}
+
+std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineTransform const& transform, float tolerance)
+{
+    auto mesh = std::make_unique<GradientMesh>();
+
+#if 0
+    auto geometry = Pimpl::pathToGeometry(path, transform);
+    if (!geometry)
+    {
+        return {};
+    }
+
+    struct TessellationSink : public juce::ComBaseClassHelper<ID2D1TessellationSink>
+    {
+        STDOVERRIDEMETHODIMP_(void) AddTriangles(_In_reads_(trianglesCount) CONST D2D1_TRIANGLE* triangles, UINT32 trianglesCount) override
+        {
+            for (UINT32 i = 0; i < trianglesCount; ++i)
+            {
+                DBG(triangles[i].point1.x << ", " << triangles[i].point1.y << " -> " << triangles[i].point2.x << ", " << triangles[i].point2.y << " -> " << triangles[i].point3.x << ", " << triangles[i].point3.y);
+                this->triangleArray.push_back(triangles[i]);
+            }
+        }
+
+        STDOVERRIDEMETHODIMP Close() override { return S_OK; }
+
+        std::vector<D2D1_TRIANGLE> triangleArray;
+    } sink;
+
+    geometry->Tessellate(D2DUtilities::transformToMatrix(transform), tolerance, &sink);
+#endif
+
+    juce::PathFlatteningIterator it{ path, transform, tolerance };
+    juce::SortedSet<float> xValues, yValues;
+    std::vector<juce::Point<float>> perimeterPoints;
+    while (it.next())
+    {
+        auto perimeterIndex = perimeterPoints.size();
+        perimeterPoints.emplace_back(it.x1, it.y1);
+        xValues.add(it.x1);
+        yValues.add(it.y1);
+    }
+
+    DBG("\n");
+
+    for (auto y : yValues)
+    {
+        DBG("y:" << y);
+    }
+
+    Clipper2Lib::PathD subjectPath;
+
+    for (auto it = perimeterPoints.begin(); it != perimeterPoints.end(); ++it)
+    {
+        auto const& point = *it;
+        int64_t z = int64_t(it - perimeterPoints.begin()) << 48;
+        z |= 0x8000000000000000LL;
+        subjectPath.emplace_back(point.x, point.y, z);
+    }
+
+    Clipper2Lib::PathsD subjectPaths{ subjectPath };
+    Clipper2Lib::PathsD gridPaths;
+
+    struct Grid
+    {
+        const size_t numColumns = 0;
+        const size_t numRows = 0;
+
+        void set(size_t x, size_t y, std::shared_ptr<GradientMesh::Vertex> vertex)
+        {
+            vertices[x + y * numColumns] = vertex;
+        }
+
+        auto& get(size_t x, size_t y)
+        {
+            return vertices[x + y * numColumns];
+        }
+
+        struct Intersection
+        {
+            size_t perimeterIndex = (size_t)-1;
+        };
+
+        std::vector<std::shared_ptr<GradientMesh::Vertex>> vertices{ numColumns * numRows };
+    } grid{ (size_t)xValues.size(), (size_t)yValues.size() };
+
+
+    for (auto itx = xValues.begin(); itx != xValues.end() - 1; ++itx)
+    {
+        for (auto ity = yValues.begin(); ity != yValues.end() - 1; ++ity)
+        {
+            int64_t gridColumn = itx - xValues.begin();
+            int64_t gridRow = ity - yValues.begin();
+
+            auto encode = [&](int64_t column, int64_t row)
+                {
+                    return (column << 24) | row;
+                };
+
+            auto decodeColumn = [](int64_t z)
+                {
+                    return (z >> 24) & 0xFFFFFF;
+                };
+
+            auto decodeRow = [](int64_t z)
+                {
+                    return z & 0xFFFFFF;
+                };
+
+            auto decodePerimeterIndex = [](int64_t z)
+                {
+                    return (z >> 48) && 0xffffff;
+                };
+
+            gridPaths.clear();
+            gridPaths.emplace_back(Clipper2Lib::PathD
+                {
+                    { *(itx + 1), *(ity + 1), encode(gridColumn + 1, gridRow + 1) },
+                    { *itx, *(ity + 1), encode(gridColumn, gridRow + 1)},
+                    { *itx, *ity, encode(gridColumn, gridRow)},
+                    { *(itx + 1), *ity, encode(gridColumn + 1, gridRow)}
+                });
+            auto intersectionPaths = Clipper2Lib::Intersect(subjectPaths, gridPaths, Clipper2Lib::FillRule::Positive);
+
+            if (intersectionPaths.size())
+            {
+                for (auto const& intersectionPath : intersectionPaths)
+                {
+                    for (auto const& point : intersectionPath)
+                    {
+                        auto z = point.z;
+                        if (z & 0x8000000000000000LL)
+                        {
+                            for (auto const& gridPathPoint : gridPaths.front())
+                            {
+                                if (approximatelyEqual(gridPathPoint.x, point.x) && approximatelyEqual(gridPathPoint.y, point.y))
+                                {
+                                    z = gridPathPoint.z;
+                                    break;
+                                }
+                            }
+                        }
+
+                        auto column = decodeColumn(point.z);
+                        auto row = decodeRow(point.z);
+
+                        if (grid.get(column, row))
+                            continue;
+
+                        auto vertex = mesh->addVertex({ (float)point.x, (float)point.y });
+                        grid.set(column, row, vertex);
+                    }
+                }
+            }
+        }
+    }
+
+    for (auto const& perimeterPoint : perimeterPoints)
+    {
+        mesh->addVertex(perimeterPoint);
+    }
+
+    for (size_t x = 0; x < grid.numColumns; ++x)
+    {
+        for (size_t y = 0; y < grid.numRows - 1; ++y)
+        {
+            auto vertex = grid.get(x, y);
+            if (vertex)
+            {
+                if (auto vertexBelow = grid.get(x, y + 1))
+                {
+                    mesh->addHalfedge(vertex, vertexBelow, nullptr, nullptr, Direction::south);
+                }
+            }
+        }
+    }
+
+    for (size_t x = 0; x < grid.numColumns - 1; ++x)
+    {
+        for (size_t y = 0; y < grid.numRows; ++y)
+        {
+            auto vertex = grid.get(x, y);
+            if (vertex)
+            {
+                if (auto vertexRight = grid.get(x + 1, y))
+                {
+                    mesh->addHalfedge(vertex, vertexRight, nullptr, nullptr, Direction::east);
+                }
+            }
+        }
+    }
+
+    return mesh;
 }
 
 int GradientMesh::Vertex::getConnectionCount() const

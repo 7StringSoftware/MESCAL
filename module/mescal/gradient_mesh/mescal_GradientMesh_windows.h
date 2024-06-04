@@ -368,6 +368,8 @@ public:
 
     juce::String toString() const;
 
+    static std::unique_ptr<GradientMesh> pathToGrid(juce::Path const& path, juce::AffineTransform const& transform, float tolerance);
+
 private:
     std::vector<std::shared_ptr<Vertex>> vertices;
     std::vector<std::shared_ptr<BezierControlPoint>> bezierControlPoints;

@@ -31,3 +31,8 @@
 #include "mescal.h"
 
 #include "gradient_mesh/mescal_GradientMesh_windows.cpp"
+
+#define USINGZ 1
+#include "Clipper2Lib/src/clipper.engine.cpp"
+#include "Clipper2Lib/src/clipper.offset.cpp"
+#include "Clipper2Lib/src/clipper.rectclip.cpp"

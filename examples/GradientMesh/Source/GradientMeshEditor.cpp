@@ -11,8 +11,15 @@ GradientMeshEditor::GradientMeshEditor(juce::ApplicationCommandManager& commandM
 
     addAndMakeVisible(displayComponent);
 
-    auto patch = document.gradientMesh.getPatches().front();
+    std::shared_ptr < GradientMesh::Patch> patch;
+    if (document.gradientMesh)
+    {
+        auto& patches = document.gradientMesh->getPatches();
+        if (patches.size() != 0)
+            patch = patches.front();
+    }
 
+#if 0
     auto patchComponent = std::make_unique<PatchComponent>(*this, patch);
     addAndMakeVisible(patchComponent.get());
     patchComponents.emplace_back(std::move(patchComponent));
@@ -27,7 +34,7 @@ GradientMeshEditor::GradientMeshEditor(juce::ApplicationCommandManager& commandM
             repaint();
         };
 
-    for (auto const cornerIndex : GradientMesh::corners)
+for (auto const cornerIndex : GradientMesh::corners)
     {
         GradientMesh::CornerPlacement const corner{ cornerIndex };
         auto vertex = patch->getCornerVertex(corner);
@@ -70,6 +77,7 @@ GradientMeshEditor::GradientMeshEditor(juce::ApplicationCommandManager& commandM
     trashButton.setSize(40, 40);
     trashButton.setCommandToTrigger(&commandManager, removePatchCommand, true);
     addAndMakeVisible(trashButton);
+#endif
 
     selectPatch(patch);
 }
@@ -90,7 +98,6 @@ void GradientMeshEditor::paint(juce::Graphics& g)
 
 void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
 {
-#if 0
     std::array<juce::Colour, 20> const colors
     {
         juce::Colours::yellow, juce::Colours::green, juce::Colours::blue, juce::Colours::red,
@@ -103,10 +110,11 @@ void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
     auto mousePos = getMouseXYRelative().toFloat().transformedBy(patchToZoomedDisplayTransform.inverted());
 
     size_t colorIndex = 0;
-    for (auto& vertex : document.gradientMesh.getVertices())
+    float minMouseDistance = 10000.0f;
+    for (auto& vertex : document.gradientMesh->getVertices())
     {
         auto distance = vertex->position.getDistanceFrom(mousePos);
-        if (distance > 100.0f)
+        if (distance > minMouseDistance)
             continue;
 
         g.setColour(colors[colorIndex].withAlpha(0.75f));
@@ -129,7 +137,7 @@ void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
     }
 
     colorIndex = 10;
-    for (auto const& halfedge : document.gradientMesh.getHalfedges())
+    for (auto const& halfedge : document.gradientMesh->getHalfedges())
     {
         if (!halfedge)
             continue;
@@ -141,7 +149,7 @@ void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
 
         auto distance1 = tail->position.getDistanceFrom(mousePos);
         auto distance2 = head->position.getDistanceFrom(mousePos);
-        if (distance1 > 100.0f && distance2 > 100.0f)
+        if (distance1 > minMouseDistance && distance2 > minMouseDistance)
             continue;
 
         g.setColour(colors[colorIndex].withAlpha(0.75f));
@@ -150,7 +158,6 @@ void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
 
         g.drawArrow(juce::Line<float>{ tail->position.transformedBy(patchToZoomedDisplayTransform), head->position.transformedBy(patchToZoomedDisplayTransform) }, 5.0f, size, size);
     }
-#endif
 }
 
 void GradientMeshEditor::resized()
@@ -163,10 +170,10 @@ void GradientMeshEditor::resized()
     }
 
     auto bounds = juce::Rectangle<float>{ getWidth() * 0.75f, getHeight() * 0.75f }.withCentre({ getWidth() * 0.5f, getHeight() * 0.5f });
-    auto meshBounds = document.gradientMesh.getBounds();
+    auto meshBounds = document.gradientMesh->getBounds();
     juce::RectanglePlacement placement{ juce::RectanglePlacement::centred };
     auto transform = placement.getTransformToFit(meshBounds, bounds);
-    document.gradientMesh.applyTransform(transform);
+    document.gradientMesh->applyTransform(transform);
 
     selectPatch(selectedPatch);
 }
@@ -244,14 +251,20 @@ void GradientMeshEditor::selectPatch(std::weak_ptr<GradientMesh::Patch> patch)
     {
         for (auto& cornerComponent : cornerControlComponents)
         {
-            cornerComponent->setVisible(false);
+            if (cornerComponent)
+                cornerComponent->setVisible(false);
         }
 
         for (auto& group : edgeControlGroups)
         {
-            group->bezierControlPair.first->setVisible(false);
-            group->bezierControlPair.second->setVisible(false);
-            group->edgeControl.setVisible(false);
+            if (group)
+            {
+                if (group->bezierControlPair.first)
+                    group->bezierControlPair.first->setVisible(false);
+                if (group->bezierControlPair.second)
+                    group->bezierControlPair.second->setVisible(false);
+                group->edgeControl.setVisible(false);
+            }
         }
 
         trashButton.setVisible(false);
@@ -394,14 +407,18 @@ void GradientMeshEditor::positionControls()
 
     for (auto& cornerComponent : cornerControlComponents)
     {
-        cornerComponent->toFront(false);
+        if (cornerComponent)
+            cornerComponent->toFront(false);
     }
 
     for (auto& group : edgeControlGroups)
     {
-        group->edgeControl.toFront(false);
-        group->bezierControlPair.first->toFront(false);
-        group->bezierControlPair.second->toFront(false);
+        if (group)
+        {
+            group->edgeControl.toFront(false);
+            group->bezierControlPair.first->toFront(false);
+            group->bezierControlPair.second->toFront(false);
+        }
     }
 
     trashButton.toFront(false);
@@ -569,7 +586,7 @@ void GradientMeshEditor::addConnectedPatch(const InvocationInfo& info)
     {
         if (&group->edgeControl.addPatchButton == info.originatingComponent)
         {
-            auto newPatch = document.gradientMesh.addConnectedPatch(originalPatch.get(), direction);
+            auto newPatch = document.gradientMesh->addConnectedPatch(originalPatch.get(), direction);
 
             auto patchComponent = std::make_unique<PatchComponent>(*this, newPatch);
             addAndMakeVisible(patchComponent.get());
@@ -602,7 +619,7 @@ void GradientMeshEditor::removeSelectedPatch()
             }
         }
 
-        document.gradientMesh.removePatch(p.get());
+        document.gradientMesh->removePatch(p.get());
         selectPatch(std::weak_ptr<GradientMesh::Patch>{});
         positionControls();
         repaint();
@@ -615,7 +632,7 @@ void GradientMeshEditor::setEdgeType(GradientMesh::Direction direction, Gradient
     {
         if (auto halfedge = patch->getHalfedges()[(int)direction].lock())
         {
-            document.gradientMesh.setEdgeType(halfedge.get(), type);
+            document.gradientMesh->setEdgeType(halfedge.get(), type);
             patch->update();
             repaint();
             positionControls();
@@ -636,7 +653,7 @@ void GradientMeshEditor::DisplayComponent::paint(juce::Graphics& g)
         meshImage = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
     }
 
-    owner.document.gradientMesh.draw(meshImage, owner.patchToZoomedDisplayTransform);
+    owner.document.gradientMesh->draw(meshImage, owner.patchToZoomedDisplayTransform);
     g.drawImageAt(meshImage, 0, 0);
 
     g.setColour(juce::Colours::white);

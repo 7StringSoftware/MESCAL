@@ -14,5 +14,5 @@ public:
     void setLastDocumentOpened(const juce::File& file) override;
     juce::String getDocumentTitle() override;
 
-    GradientMesh gradientMesh;
+    std::unique_ptr<GradientMesh> gradientMesh;
 };
