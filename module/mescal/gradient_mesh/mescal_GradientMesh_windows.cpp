@@ -905,7 +905,7 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineT
     for (auto it = perimeterPoints.begin(); it != perimeterPoints.end(); ++it)
     {
         auto const& point = *it;
-        int64_t z = int64_t(it - perimeterPoints.begin()) << 48;
+        int64_t z = int64_t(it - perimeterPoints.begin()) << 32;
         z |= 0x8000000000000000LL;
         subjectPath.emplace_back(point.x, point.y, z);
     }
@@ -920,6 +920,7 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineT
 
         void set(size_t x, size_t y, std::shared_ptr<GradientMesh::Vertex> vertex)
         {
+            jassert(x || y);
             vertices[x + y * numColumns] = vertex;
         }
 
@@ -936,7 +937,9 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineT
         std::vector<std::shared_ptr<GradientMesh::Vertex>> vertices{ numColumns * numRows };
     } grid{ (size_t)xValues.size(), (size_t)yValues.size() };
 
-
+    //
+    // Iterate through the grid and clip the grid cells to the path
+    //
     for (auto itx = xValues.begin(); itx != xValues.end() - 1; ++itx)
     {
         for (auto ity = yValues.begin(); ity != yValues.end() - 1; ++ity)
@@ -946,22 +949,22 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineT
 
             auto encode = [&](int64_t column, int64_t row)
                 {
-                    return (column << 24) | row;
+                    return 0x4000000000000000LL | (column << 16) | row;
                 };
 
             auto decodeColumn = [](int64_t z)
                 {
-                    return (z >> 24) & 0xFFFFFF;
+                    return (z >> 16) & 0xFFFF;
                 };
 
             auto decodeRow = [](int64_t z)
                 {
-                    return z & 0xFFFFFF;
+                    return z & 0xFFFF;
                 };
 
             auto decodePerimeterIndex = [](int64_t z)
                 {
-                    return (z >> 48) && 0xffffff;
+                    return (z >> 32) & 0xffffff;
                 };
 
             gridPaths.clear();
@@ -974,6 +977,16 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineT
                 });
             auto intersectionPaths = Clipper2Lib::Intersect(subjectPaths, gridPaths, Clipper2Lib::FillRule::Positive);
 
+            {
+                String line = "   gridPath ";
+                for (auto const& point : gridPaths.front())
+                {
+                    line << point.x << ", " << point.y << " z: " << point.z << " ";
+                }
+
+                DBG(line);
+            }
+
             if (intersectionPaths.size())
             {
                 for (auto const& intersectionPath : intersectionPaths)
@@ -981,26 +994,42 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineT
                     for (auto const& point : intersectionPath)
                     {
                         auto z = point.z;
-                        if (z & 0x8000000000000000LL)
+
+                        if (z & 0x8000000000000000LL || z == 0)
                         {
-                            for (auto const& gridPathPoint : gridPaths.front())
+                            //
+                            // This is a perimeter point
+                            //
+                            bool match = false;
+                            for (auto const& gridPath : gridPaths)
                             {
-                                if (approximatelyEqual(gridPathPoint.x, point.x) && approximatelyEqual(gridPathPoint.y, point.y))
+                                for (auto const& gridPathPoint : gridPath)
                                 {
-                                    z = gridPathPoint.z;
-                                    break;
+                                    if (approximatelyEqual(gridPathPoint.x, point.x) && approximatelyEqual(gridPathPoint.y, point.y))
+                                    {
+                                        match = true;
+                                        z = gridPathPoint.z;
+                                        break;
+                                    }
                                 }
                             }
+                            jassert(match);
                         }
 
-                        auto column = decodeColumn(point.z);
-                        auto row = decodeRow(point.z);
+                        if (z & 0x4000000000000000LL)
+                        {
+                            auto column = decodeColumn(z);
+                            auto row = decodeRow(z);
 
-                        if (grid.get(column, row))
+                            jassert(column || row);
+
+                            if (grid.get(column, row))
+                                continue;
+
+                            auto vertex = mesh->addVertex({ (float)point.x, (float)point.y });
+                            grid.set(column, row, vertex);
                             continue;
-
-                        auto vertex = mesh->addVertex({ (float)point.x, (float)point.y });
-                        grid.set(column, row, vertex);
+                        }
                     }
                 }
             }
@@ -1010,6 +1039,17 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineT
     for (auto const& perimeterPoint : perimeterPoints)
     {
         mesh->addVertex(perimeterPoint);
+    }
+
+    for (size_t y = 0; y < grid.numRows; ++y)
+    {
+        String line;
+
+        for (size_t x = 0; x < grid.numColumns; ++x)
+        {
+            line << (grid.get(x, y) ? "X" : ".");
+        }
+        DBG(line);
     }
 
     for (size_t x = 0; x < grid.numColumns; ++x)
