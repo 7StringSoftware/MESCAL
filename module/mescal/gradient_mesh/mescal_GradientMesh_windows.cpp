@@ -259,11 +259,12 @@ void GradientMesh::removePatch(Patch* patch)
 
 void GradientMesh::Vertex::removeHalfedge(std::shared_ptr<Halfedge> halfedge)
 {
-    for (auto& storedHalfedge : halfedges)
+    for (auto it = halfedges.begin(); it != halfedges.end(); ++it)
     {
-        if (storedHalfedge.lock().get() == halfedge.get())
+        if (it->lock().get() == halfedge.get())
         {
-            halfedges.erase(storedHalfedge);
+            halfedges.erase(it);
+            break;
         }
     }
 }
@@ -626,7 +627,6 @@ void GradientMesh::applyTransform(const juce::AffineTransform& transform) noexce
 
 void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
 {
-#if 0
     auto convertVertex = [&](std::weak_ptr<Vertex> vertex)
         {
             if (auto v = vertex.lock())
@@ -637,6 +637,18 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
 
             throw std::runtime_error("Invalid vertex");
         };
+
+    auto convertColor = [&](std::weak_ptr<Vertex> vertex)
+        {
+            if (auto v = vertex.lock())
+            {
+                return D2DUtilities::toCOLOR_F(v->color);
+            }
+
+            throw std::runtime_error("Invalid vertex");
+        };
+
+#if 0
 
     auto convertBezier = [&](std::weak_ptr<BezierControlPoint> bezier)
         {
@@ -681,31 +693,71 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
 
             throw std::runtime_error("Invalid halfedge");
         };
+#endif
 
     std::vector<D2D1_GRADIENT_MESH_PATCH> d2dPatches;
     for (auto const& patch : patches)
     {
         d2dPatches.emplace_back(D2D1_GRADIENT_MESH_PATCH{});
         auto& d2dPatch = d2dPatches.back();
+        std::array<D2D1_POINT_2F*, 4> d2dPatchCorners
+        {
+            &d2dPatch.point30, &d2dPatch.point00, &d2dPatch.point03, &d2dPatch.point33
+        };
+        std::array<D2D1_COLOR_F*, 4> d2dPatchColors
+        {
+            &d2dPatch.color30, &d2dPatch.color00, &d2dPatch.color03, &d2dPatch.color33
+        };
 
         try
         {
             const auto& patchHalfedges = patch->getHalfedges();
-            if (auto halfedge = patchHalfedges[(int)Direction::north].lock())
-            {
-                d2dPatch.point00 = convertVertex(halfedge->tail);
-            }
 
-            convertHalfedge(patchHalfedges[(int)Direction::north], d2dPatch.point01, d2dPatch.point02, d2dPatch.point03, d2dPatch.topEdgeMode);
-            convertHalfedge(patchHalfedges[(int)Direction::east], d2dPatch.point13, d2dPatch.point23, d2dPatch.point33, d2dPatch.rightEdgeMode);
-            convertHalfedge(patchHalfedges[(int)Direction::south], d2dPatch.point32, d2dPatch.point31, d2dPatch.point30, d2dPatch.bottomEdgeMode);
-            convertHalfedge(patchHalfedges[(int)Direction::west], d2dPatch.point20, d2dPatch.point10, d2dPatch.point00, d2dPatch.leftEdgeMode);
+            auto halfedge = patchHalfedges.front();
+            auto halfedgeLock = halfedge.lock();
+            if (!halfedgeLock)
+                continue;
 
-            const auto& colors = patch->getColors();
-            d2dPatch.color00 = D2DUtilities::toCOLOR_F(colors[(int)CornerPlacement::topLeft]);
-            d2dPatch.color03 = D2DUtilities::toCOLOR_F(colors[(int)CornerPlacement::topRight]);
-            d2dPatch.color33 = D2DUtilities::toCOLOR_F(colors[(int)CornerPlacement::bottomRight]);
-            d2dPatch.color30 = D2DUtilities::toCOLOR_F(colors[(int)CornerPlacement::bottomLeft]);
+            auto normalizedAngle = std::abs(halfedgeLock->angle) / juce::MathConstants<float>::twoPi;
+            auto cardinalDirection = (int)(normalizedAngle * 4.0f);
+            cardinalDirection &= 3;
+            if (halfedgeLock->angle < 0.0f)
+                cardinalDirection = 4 - cardinalDirection;
+
+            *(d2dPatchCorners[cardinalDirection]) = convertVertex(halfedgeLock->tail);
+            *(d2dPatchColors[cardinalDirection]) = convertColor(halfedgeLock->tail);
+
+            cardinalDirection = (cardinalDirection - 1) & 3;
+            *(d2dPatchCorners[cardinalDirection]) = convertVertex(halfedgeLock->head);
+            *(d2dPatchColors[cardinalDirection]) = convertColor(halfedgeLock->head);
+
+            halfedge = patchHalfedges[2];
+            halfedgeLock = halfedge.lock();
+            if (!halfedgeLock)
+                continue;
+
+            cardinalDirection = (cardinalDirection - 1) & 3;
+            *(d2dPatchCorners[cardinalDirection]) = convertVertex(halfedgeLock->tail);
+            *(d2dPatchColors[cardinalDirection]) = convertColor(halfedgeLock->tail);
+
+            cardinalDirection = (cardinalDirection - 1) & 3;
+            *(d2dPatchCorners[cardinalDirection]) = convertVertex(halfedgeLock->head);
+            *(d2dPatchColors[cardinalDirection]) = convertColor(halfedgeLock->head);
+
+            d2dPatch.point01 = d2dPatch.point00;
+            d2dPatch.point02 = d2dPatch.point03;
+            d2dPatch.point13 = d2dPatch.point03;
+            d2dPatch.point23 = d2dPatch.point33;
+            d2dPatch.point32 = d2dPatch.point33;
+            d2dPatch.point31 = d2dPatch.point30;
+            d2dPatch.point20 = d2dPatch.point30;
+            d2dPatch.point10 = d2dPatch.point00;
+
+            //             const auto& colors = patch->getColors();
+            //             d2dPatch.color00 = D2DUtilities::toCOLOR_F(colors[(int)CornerPlacement::topLeft]);
+            //             d2dPatch.color03 = D2DUtilities::toCOLOR_F(colors[(int)CornerPlacement::topRight]);
+            //             d2dPatch.color33 = D2DUtilities::toCOLOR_F(colors[(int)CornerPlacement::bottomRight]);
+            //             d2dPatch.color30 = D2DUtilities::toCOLOR_F(colors[(int)CornerPlacement::bottomLeft]);
 
             d2dPatch.point11 = d2dPatch.point00;
             d2dPatch.point12 = d2dPatch.point03;
@@ -747,7 +799,6 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
             }
         }
     }
-#endif
 }
 
 void GradientMesh::setVertexPosition(Vertex* vertex, juce::Point<float> position)
@@ -920,29 +971,6 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineT
     Clipper2Lib::PathsD subjectPaths{ subjectPath };
     Clipper2Lib::PathsD gridPaths;
 
-    struct Grid
-    {
-        const size_t numColumns = 0;
-        const size_t numRows = 0;
-
-        void set(size_t x, size_t y, std::shared_ptr<GradientMesh::Vertex> vertex)
-        {
-            vertices[x + y * numColumns] = vertex;
-        }
-
-        auto& get(size_t x, size_t y)
-        {
-            return vertices[x + y * numColumns];
-        }
-
-        struct Intersection
-        {
-            size_t perimeterIndex = (size_t)-1;
-        };
-
-        std::vector<std::shared_ptr<GradientMesh::Vertex>> vertices{ numColumns * numRows };
-    } grid{ (size_t)xValues.size(), (size_t)yValues.size() };
-
     //
     // Iterate through the grid and clip the grid cells to the path
     //
@@ -1014,6 +1042,10 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineT
                     for (auto const& vertex : patchVertices)
                     {
                         auto halfedge = mesh->addHalfedge(lastVertex, vertex);
+
+                        lastVertex->halfedges.push_back(halfedge);
+                        vertex->halfedges.push_back(halfedge->twin);
+
                         patchHalfedges.push_back(halfedge);
                         lastVertex = vertex;
                     }
@@ -1024,10 +1056,25 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineT
             }
         }
 
-
         mesh->check();
     }
 
+    //
+    // Assign colors
+    //
+    auto pathBounds = path.getBounds();
+    float xScale = 1.0f / pathBounds.getWidth();
+    float yScale = 1.0f / pathBounds.getHeight();
+    auto center = pathBounds.getCentre();
+    auto radius = juce::jmax(pathBounds.getWidth(), pathBounds.getHeight()) * 0.5f;
+    auto radiusInverse = 1.0f / radius;
+    juce::Colour startColour = juce::Colours::blue;
+    juce::Colour endColour = juce::Colours::white;
+    for (auto& vertex : mesh->vertices)
+    {
+        auto angle = center.getAngleToPoint(vertex->position);
+        vertex->color = startColour.interpolatedWith(endColour, 0.75f + 0.25f * std::sin(angle));
+    }
 
     return mesh;
 }

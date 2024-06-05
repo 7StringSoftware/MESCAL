@@ -98,6 +98,7 @@ void GradientMeshEditor::paint(juce::Graphics& g)
 
 void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
 {
+#if 1
     std::array<juce::Colour, 20> const colors
     {
         juce::Colours::yellow, juce::Colours::green, juce::Colours::blue, juce::Colours::red,
@@ -113,8 +114,8 @@ void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
 
     for (auto const& patch : document.gradientMesh->getPatches())
     {
-        g.setColour(colors[colorIndex].withAlpha(0.75f));
         colorIndex = (colorIndex + 1) % colors.size();
+        bool over = false;
 
         juce::Path path;
         auto const& halfedges = patch->getHalfedges();
@@ -141,12 +142,33 @@ void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
 
                 path.closeSubPath();
 
+                over = path.contains(mousePos);
+                g.setColour(colors[colorIndex].withAlpha(over ? 1.0f : 0.5f));
                 g.fillPath(path);
             }
         }
-    }
 
-#if 1
+        if (!over)
+            continue;
+
+        g.setColour(juce::Colours::white);
+
+        for (auto const& halfedgeWeakPtr : patch->getHalfedges())
+        {
+            auto halfedge = halfedgeWeakPtr.lock();
+            if (!halfedge)
+                continue;
+
+            auto tail = halfedge->tail.lock();
+            auto head = halfedge->head.lock();
+
+            if (tail && head)
+                g.drawArrow(juce::Line<float>{ tail->position.transformedBy(patchToZoomedDisplayTransform), head->position.transformedBy(patchToZoomedDisplayTransform) }, 5.0f, 20.0f, 20.0f);
+        }
+    }
+#endif
+
+#if 0
     colorIndex = 0;
     float vertexDisplayMinDistance = 10000.0f, edgeDisplayMinDistance = 20.0f;
     for (auto& vertex : document.gradientMesh->getVertices())
@@ -702,7 +724,7 @@ void GradientMeshEditor::DisplayComponent::paint(juce::Graphics& g)
     }
 
     owner.document.gradientMesh->draw(meshImage, owner.patchToZoomedDisplayTransform);
-    g.drawImageAt(meshImage, 0, 0);
+    g.drawImageAt(meshImage, 700, 0);
 
     g.setColour(juce::Colours::white);
     g.drawText(String{ frameCount++ }, getLocalBounds(), juce::Justification::topRight);

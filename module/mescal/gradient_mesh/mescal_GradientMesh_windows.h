@@ -177,21 +177,10 @@ public:
 
         int getConnectionCount() const;
 
-        static bool compareHalfedgeAngles(const std::weak_ptr<Halfedge>& a, const std::weak_ptr<Halfedge>& b)
-        {
-            auto aLock = a.lock();
-            auto bLock = b.lock();
-            if (aLock && bLock)
-            {
-                return aLock->angle < bLock->angle;
-            }
-
-            return false;
-        }
-
         size_t const index;
         juce::Point<float> position;
-        std::set<std::weak_ptr<Halfedge>, bool(*)(const std::weak_ptr<Halfedge>&, const std::weak_ptr<Halfedge>&)> halfedges{ compareHalfedgeAngles };
+        std::vector<std::weak_ptr<Halfedge>> halfedges;
+        juce::Colour color;
         GradientMesh& mesh;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Vertex)
