@@ -11,6 +11,17 @@
 #define USINGZ 1
 #include "../Clipper2Lib/include/clipper.h"
 
+static GradientMesh::Direction angleToDirection(float angle)
+{
+    std::array<int, 9> map{ 0, 1, 2, 3, 0, 1, 2, 3, 0 };
+    auto normalizedAngle = juce::roundToInt(4.0f * angle / juce::MathConstants<float>::twoPi);
+    jassert(-4 <= normalizedAngle && normalizedAngle <= 4);
+    auto direction = map[normalizedAngle + 4];
+    jassert(0 <= direction && direction < 4);
+
+    return (GradientMesh::Direction)direction;
+}
+
 struct GradientMesh::Pimpl
 {
     Pimpl(GradientMesh& owner_) : owner(owner_)
@@ -547,6 +558,25 @@ std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_pt
     return halfedge;
 }
 
+std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head)
+{
+    auto halfedge = std::make_shared<Halfedge>();
+    halfedge->tail = tail;
+    halfedge->head = head;
+
+    auto twin = std::make_shared<Halfedge>();
+    twin->head = halfedge->tail;
+    twin->tail = halfedge->head;
+
+    halfedge->twin = twin;
+    twin->twin = halfedge;
+
+    halfedges.push_back(halfedge);
+    halfedges.push_back(twin);
+
+    return halfedge;
+}
+
 void GradientMesh::check()
 {
 #if 0
@@ -856,60 +886,34 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineT
 {
     auto mesh = std::make_unique<GradientMesh>();
 
-#if 0
-    auto geometry = Pimpl::pathToGeometry(path, transform);
-    if (!geometry)
+    struct PerimeterVertex
     {
-        return {};
-    }
+        std::shared_ptr<Vertex> vertex;
+        int column = -1, row = -1;
+    };
 
-    struct TessellationSink : public juce::ComBaseClassHelper<ID2D1TessellationSink>
-    {
-        STDOVERRIDEMETHODIMP_(void) AddTriangles(_In_reads_(trianglesCount) CONST D2D1_TRIANGLE* triangles, UINT32 trianglesCount) override
-        {
-            for (UINT32 i = 0; i < trianglesCount; ++i)
-            {
-                DBG(triangles[i].point1.x << ", " << triangles[i].point1.y << " -> " << triangles[i].point2.x << ", " << triangles[i].point2.y << " -> " << triangles[i].point3.x << ", " << triangles[i].point3.y);
-                this->triangleArray.push_back(triangles[i]);
-            }
-        }
-
-        STDOVERRIDEMETHODIMP Close() override { return S_OK; }
-
-        std::vector<D2D1_TRIANGLE> triangleArray;
-    } sink;
-
-    geometry->Tessellate(D2DUtilities::transformToMatrix(transform), tolerance, &sink);
-#endif
+    //
+    // Convert perimeter points to Clipper2 path with metadata
+    //
+    Clipper2Lib::PathD subjectPath;
+    static constexpr int64_t perimeterPointBit = 0x8000000000000000LL;
+    static constexpr int64_t rowColumnEncodeBit = 0x4000000000000000LL;
 
     juce::PathFlatteningIterator it{ path, transform, tolerance };
     juce::SortedSet<float> xValues, yValues;
-    std::vector<juce::Point<float>> perimeterPoints;
     while (it.next())
     {
-        auto perimeterIndex = perimeterPoints.size();
-        perimeterPoints.emplace_back(it.x1, it.y1);
+        int64_t z = int64_t(subjectPath.size()) << 32;
+        z |= perimeterPointBit;
+        subjectPath.emplace_back(it.x1, it.y1, z);
+
         xValues.add(it.x1);
         yValues.add(it.y1);
     }
 
-    DBG("\n");
-
-    for (auto y : yValues)
-    {
-        DBG("y:" << y);
-    }
-
-    Clipper2Lib::PathD subjectPath;
-
-    for (auto it = perimeterPoints.begin(); it != perimeterPoints.end(); ++it)
-    {
-        auto const& point = *it;
-        int64_t z = int64_t(it - perimeterPoints.begin()) << 32;
-        z |= 0x8000000000000000LL;
-        subjectPath.emplace_back(point.x, point.y, z);
-    }
-
+    //
+    // Clip the clipper2 path to grid cells
+    //
     Clipper2Lib::PathsD subjectPaths{ subjectPath };
     Clipper2Lib::PathsD gridPaths;
 
@@ -920,7 +924,6 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineT
 
         void set(size_t x, size_t y, std::shared_ptr<GradientMesh::Vertex> vertex)
         {
-            jassert(x || y);
             vertices[x + y * numColumns] = vertex;
         }
 
@@ -949,7 +952,7 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineT
 
             auto encode = [&](int64_t column, int64_t row)
                 {
-                    return 0x4000000000000000LL | (column << 16) | row;
+                    return rowColumnEncodeBit | (column << 16) | row;
                 };
 
             auto decodeColumn = [](int64_t z)
@@ -977,110 +980,75 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineT
                 });
             auto intersectionPaths = Clipper2Lib::Intersect(subjectPaths, gridPaths, Clipper2Lib::FillRule::Positive);
 
+            for (auto const& intersectionPath : intersectionPaths)
             {
-                String line = "   gridPath ";
-                for (auto const& point : gridPaths.front())
+                std::vector<std::shared_ptr<Vertex>> patchVertices;
+
+                for (auto const& intersectionPoint : intersectionPath)
                 {
-                    line << point.x << ", " << point.y << " z: " << point.z << " ";
+                    auto const& vertices = mesh->getVertices();
+
+                    auto findIterator = std::find_if(vertices.begin(), vertices.end(), [&](std::shared_ptr<Vertex> const& vertex)
+                        {
+                            return approximatelyEqual(vertex->position.x, (float)intersectionPoint.x) &&
+                                approximatelyEqual(vertex->position.y, (float)intersectionPoint.y);
+                        });
+
+                    if (findIterator != vertices.end())
+                    {
+                        patchVertices.push_back(*findIterator);
+                        continue;
+                    }
+
+                    auto vertex = mesh->addVertex({ (float)intersectionPoint.x, (float)intersectionPoint.y });
+                    patchVertices.push_back(vertex);
                 }
 
-                DBG(line);
-            }
-
-            if (intersectionPaths.size())
-            {
-                for (auto const& intersectionPath : intersectionPaths)
+                if (patchVertices.size() > 1)
                 {
-                    for (auto const& point : intersectionPath)
-                    {
-                        auto z = point.z;
+                    jassert(patchVertices.size() > 2);
 
-                        if (z & 0x8000000000000000LL || z == 0)
+                    auto lastVertex = patchVertices.front();
+                    for (auto vit = patchVertices.begin() + 1; vit != patchVertices.end(); ++vit)
+                    {
+                        auto vertex = *vit;
+                        juce::Line<float> line{ lastVertex->position, vertex->position };
+                        auto angle = line.getAngle();
+                        auto direction = angleToDirection(angle);
+
+                        if (lastVertex->getHalfedge(direction).lock())
                         {
-                            //
-                            // This is a perimeter point
-                            //
-                            bool match = false;
-                            for (auto const& gridPath : gridPaths)
-                            {
-                                for (auto const& gridPathPoint : gridPath)
-                                {
-                                    if (approximatelyEqual(gridPathPoint.x, point.x) && approximatelyEqual(gridPathPoint.y, point.y))
-                                    {
-                                        match = true;
-                                        z = gridPathPoint.z;
-                                        break;
-                                    }
-                                }
-                            }
-                            jassert(match);
+                            lastVertex = vertex;
+                            continue;
                         }
 
-                        if (z & 0x4000000000000000LL)
+                        auto halfedge = mesh->addHalfedge(lastVertex, vertex);
+                        lastVertex->halfedges[(int)direction] = halfedge;
+                        vertex->halfedges[(int)opposite(direction)] = halfedge->twin.lock();
+
+                        lastVertex = vertex;
+                    }
+
+                    {
+                        lastVertex = patchVertices.back();
+                        auto vertex = patchVertices.front();
+                        auto direction = angleToDirection(juce::Line<float>{ lastVertex->position, vertex->position }.getAngle());
+
+                        if (!lastVertex->getHalfedge(direction).lock())
                         {
-                            auto column = decodeColumn(z);
-                            auto row = decodeRow(z);
-
-                            jassert(column || row);
-
-                            if (grid.get(column, row))
-                                continue;
-
-                            auto vertex = mesh->addVertex({ (float)point.x, (float)point.y });
-                            grid.set(column, row, vertex);
-                            continue;
+                            auto halfedge = mesh->addHalfedge(lastVertex, vertex);
+                            lastVertex->halfedges[(int)direction] = halfedge;
+                            vertex->halfedges[(int)opposite(direction)] = halfedge->twin.lock();
                         }
                     }
                 }
             }
         }
+
+
+        mesh->check();
     }
 
-    for (auto const& perimeterPoint : perimeterPoints)
-    {
-        mesh->addVertex(perimeterPoint);
-    }
-
-    for (size_t y = 0; y < grid.numRows; ++y)
-    {
-        String line;
-
-        for (size_t x = 0; x < grid.numColumns; ++x)
-        {
-            line << (grid.get(x, y) ? "X" : ".");
-        }
-        DBG(line);
-    }
-
-    for (size_t x = 0; x < grid.numColumns; ++x)
-    {
-        for (size_t y = 0; y < grid.numRows - 1; ++y)
-        {
-            auto vertex = grid.get(x, y);
-            if (vertex)
-            {
-                if (auto vertexBelow = grid.get(x, y + 1))
-                {
-                    mesh->addHalfedge(vertex, vertexBelow, nullptr, nullptr, Direction::south);
-                }
-            }
-        }
-    }
-
-    for (size_t x = 0; x < grid.numColumns - 1; ++x)
-    {
-        for (size_t y = 0; y < grid.numRows; ++y)
-        {
-            auto vertex = grid.get(x, y);
-            if (vertex)
-            {
-                if (auto vertexRight = grid.get(x + 1, y))
-                {
-                    mesh->addHalfedge(vertex, vertexRight, nullptr, nullptr, Direction::east);
-                }
-            }
-        }
-    }
 
     return mesh;
 }

@@ -370,6 +370,8 @@ public:
 
     static std::unique_ptr<GradientMesh> pathToGrid(juce::Path const& path, juce::AffineTransform const& transform, float tolerance);
 
+    std::vector<std::shared_ptr<Vertex>> perimeterVertices;
+
 private:
     std::vector<std::shared_ptr<Vertex>> vertices;
     std::vector<std::shared_ptr<BezierControlPoint>> bezierControlPoints;
@@ -381,6 +383,7 @@ private:
         std::shared_ptr<BezierControlPoint> b0,
         std::shared_ptr<BezierControlPoint> b1,
         Direction edgePlacement);
+    std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head);
     void removeHalfedge(std::shared_ptr<Halfedge> halfedge);
     void removeVertex(std::shared_ptr<Vertex> vertex);
     void removeBezier(std::shared_ptr<BezierControlPoint> bezier);

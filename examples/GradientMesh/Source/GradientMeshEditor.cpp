@@ -109,12 +109,13 @@ void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
 
     auto mousePos = getMouseXYRelative().toFloat().transformedBy(patchToZoomedDisplayTransform.inverted());
 
-    size_t colorIndex = 0;
-    float minMouseDistance = 10000.0f;
+   #if 1
+ size_t colorIndex = 0;
+ float vertexDisplayMinDistance = 10000.0f, edgeDisplayMinDistance = 20000.0f;
     for (auto& vertex : document.gradientMesh->getVertices())
     {
         auto distance = vertex->position.getDistanceFrom(mousePos);
-        if (distance > minMouseDistance)
+        if (distance > vertexDisplayMinDistance)
             continue;
 
         g.setColour(colors[colorIndex].withAlpha(0.75f));
@@ -122,6 +123,7 @@ void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
         auto size = 16.0f;
         g.fillEllipse(juce::Rectangle<float>{ size, size }.withCentre(vertex->position.transformedBy(patchToZoomedDisplayTransform)));
 
+#if 0
         for (auto const& halfedgeWeakPtr : vertex->halfedges)
         {
             auto halfedge = halfedgeWeakPtr.lock();
@@ -134,6 +136,7 @@ void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
             if (tail && head)
                 g.drawArrow(juce::Line<float>{ tail->position.transformedBy(patchToZoomedDisplayTransform), head->position.transformedBy(patchToZoomedDisplayTransform) }, 5.0f, 20.0f, 20.0f);
         }
+#endif
     }
 
     colorIndex = 10;
@@ -147,9 +150,8 @@ void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
         if (!tail || !head)
             continue;
 
-        auto distance1 = tail->position.getDistanceFrom(mousePos);
-        auto distance2 = head->position.getDistanceFrom(mousePos);
-        if (distance1 > minMouseDistance && distance2 > minMouseDistance)
+        auto distance = tail->position.getDistanceFrom(mousePos);
+        if (distance > edgeDisplayMinDistance)
             continue;
 
         g.setColour(colors[colorIndex].withAlpha(0.75f));
@@ -157,6 +159,16 @@ void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
         auto size = 16.0f;
 
         g.drawArrow(juce::Line<float>{ tail->position.transformedBy(patchToZoomedDisplayTransform), head->position.transformedBy(patchToZoomedDisplayTransform) }, 5.0f, size, size);
+    }
+#endif
+
+    for (auto const& v : document.gradientMesh->perimeterVertices)
+    {
+        g.setColour(juce::Colours::white);
+        if (v)
+        {
+            g.fillEllipse(juce::Rectangle<float>{ 16.0f, 16.0f }.withCentre(v->position.transformedBy(patchToZoomedDisplayTransform)));
+        }
     }
 }
 
