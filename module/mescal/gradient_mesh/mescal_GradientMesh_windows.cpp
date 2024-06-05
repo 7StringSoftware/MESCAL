@@ -11,17 +11,6 @@
 #define USINGZ 1
 #include "../Clipper2Lib/include/clipper.h"
 
-static GradientMesh::Direction angleToDirection(float angle)
-{
-    std::array<int, 9> map{ 0, 1, 2, 3, 0, 1, 2, 3, 0 };
-    auto normalizedAngle = juce::roundToInt(4.0f * angle / juce::MathConstants<float>::twoPi);
-    jassert(-4 <= normalizedAngle && normalizedAngle <= 4);
-    auto direction = map[normalizedAngle + 4];
-    jassert(0 <= direction && direction < 4);
-
-    return (GradientMesh::Direction)direction;
-}
-
 struct GradientMesh::Pimpl
 {
     Pimpl(GradientMesh& owner_) : owner(owner_)
@@ -185,6 +174,7 @@ GradientMesh::~GradientMesh()
 
 void GradientMesh::addPatch(juce::Rectangle<float> bounds)
 {
+#if 0
     std::array<std::shared_ptr<Halfedge>, 4> patchHalfedges;
 
     std::array<juce::Point<float>, 4> const boundsCorners
@@ -234,6 +224,7 @@ void GradientMesh::addPatch(juce::Rectangle<float> bounds)
     patches.push_back(patch);
 
     check();
+#endif
 }
 
 void GradientMesh::addPatch(std::shared_ptr<Patch> patch)
@@ -272,7 +263,7 @@ void GradientMesh::Vertex::removeHalfedge(std::shared_ptr<Halfedge> halfedge)
     {
         if (storedHalfedge.lock().get() == halfedge.get())
         {
-            storedHalfedge = {};
+            halfedges.erase(storedHalfedge);
         }
     }
 }
@@ -330,8 +321,9 @@ void GradientMesh::removeBezier(std::shared_ptr<BezierControlPoint> bezier)
     }
 }
 
-std::shared_ptr<GradientMesh::Patch> GradientMesh::addConnectedPatch(Patch* sourcePatch, Direction sourceEdgePlacement)
+std::shared_ptr<GradientMesh::Patch> GradientMesh::addConnectedPatch(Patch* sourcePatch, EdgePlacement sourceConnectedEdge)
 {
+#if 0
     jassert(!sourcePatch->isConnected(sourceEdgePlacement));
 
     std::array<std::shared_ptr<Halfedge>, 4> patchHalfedges;
@@ -513,8 +505,10 @@ std::shared_ptr<GradientMesh::Patch> GradientMesh::addConnectedPatch(Patch* sour
     patches.push_back(patch);
 
     check();
+#endif
 
-    return patch;
+    //return patch;
+    return {};
 }
 
 std::shared_ptr<GradientMesh::Vertex> GradientMesh::addVertex(juce::Point<float> point)
@@ -523,6 +517,7 @@ std::shared_ptr<GradientMesh::Vertex> GradientMesh::addVertex(juce::Point<float>
     return vertices.back();
 }
 
+#if 0
 std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_ptr<Vertex> tail,
     std::shared_ptr<Vertex> head,
     std::shared_ptr<BezierControlPoint> b0,
@@ -557,6 +552,7 @@ std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_pt
 
     return halfedge;
 }
+#endif
 
 std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head)
 {
@@ -570,6 +566,9 @@ std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_pt
 
     halfedge->twin = twin;
     twin->twin = halfedge;
+
+    halfedge->angle = tail->position.getAngleToPoint(head->position);
+    twin->angle = halfedge->angle + juce::MathConstants<float>::pi;
 
     halfedges.push_back(halfedge);
     halfedges.push_back(twin);
@@ -627,6 +626,7 @@ void GradientMesh::applyTransform(const juce::AffineTransform& transform) noexce
 
 void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
 {
+#if 0
     auto convertVertex = [&](std::weak_ptr<Vertex> vertex)
         {
             if (auto v = vertex.lock())
@@ -747,6 +747,7 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
             }
         }
     }
+#endif
 }
 
 void GradientMesh::setVertexPosition(Vertex* vertex, juce::Point<float> position)
@@ -789,11 +790,11 @@ juce::Rectangle<float> GradientMesh::getBounds() const noexcept
     return bounds;
 }
 
-GradientMesh::Patch::Patch(std::array<std::shared_ptr<Halfedge>, 4>& halfedges_)
+GradientMesh::Patch::Patch(const std::vector<std::shared_ptr<Halfedge>>& halfedges_)
 {
-    for (size_t index = 0; index < 4; ++index)
+    for (auto const& halfedge : halfedges_)
     {
-        halfedges[index] = halfedges_[index];
+        halfedges.push_back(halfedge);
     }
 }
 
@@ -823,6 +824,7 @@ void GradientMesh::Patch::update()
 
 void GradientMesh::Patch::createPath()
 {
+#if 0
     path.clear();
 
     {
@@ -867,6 +869,7 @@ void GradientMesh::Patch::createPath()
     }
 
     path.closeSubPath();
+#endif
 }
 
 juce::String GradientMesh::toString() const
@@ -1004,43 +1007,19 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineT
                     patchVertices.push_back(vertex);
                 }
 
-                if (patchVertices.size() > 1)
+                if (patchVertices.size())
                 {
-                    jassert(patchVertices.size() > 2);
-
-                    auto lastVertex = patchVertices.front();
-                    for (auto vit = patchVertices.begin() + 1; vit != patchVertices.end(); ++vit)
+                    std::vector<std::shared_ptr<Halfedge>> patchHalfedges;
+                    auto lastVertex = patchVertices.back();
+                    for (auto const& vertex : patchVertices)
                     {
-                        auto vertex = *vit;
-                        juce::Line<float> line{ lastVertex->position, vertex->position };
-                        auto angle = line.getAngle();
-                        auto direction = angleToDirection(angle);
-
-                        if (lastVertex->getHalfedge(direction).lock())
-                        {
-                            lastVertex = vertex;
-                            continue;
-                        }
-
                         auto halfedge = mesh->addHalfedge(lastVertex, vertex);
-                        lastVertex->halfedges[(int)direction] = halfedge;
-                        vertex->halfedges[(int)opposite(direction)] = halfedge->twin.lock();
-
+                        patchHalfedges.push_back(halfedge);
                         lastVertex = vertex;
                     }
 
-                    {
-                        lastVertex = patchVertices.back();
-                        auto vertex = patchVertices.front();
-                        auto direction = angleToDirection(juce::Line<float>{ lastVertex->position, vertex->position }.getAngle());
-
-                        if (!lastVertex->getHalfedge(direction).lock())
-                        {
-                            auto halfedge = mesh->addHalfedge(lastVertex, vertex);
-                            lastVertex->halfedges[(int)direction] = halfedge;
-                            vertex->halfedges[(int)opposite(direction)] = halfedge->twin.lock();
-                        }
-                    }
+                    auto patch = std::make_shared<Patch>(patchHalfedges);
+                    mesh->addPatch(patch);
                 }
             }
         }

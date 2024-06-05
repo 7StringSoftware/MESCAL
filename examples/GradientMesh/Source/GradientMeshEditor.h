@@ -178,11 +178,11 @@ private:
 
     struct EdgeControlComponent : public juce::Component
     {
-        explicit EdgeControlComponent(GradientMeshEditor& owner_, GradientMesh::Direction direction_);
+        explicit EdgeControlComponent(GradientMeshEditor& owner_, GradientMesh::EdgePlacement edgePlacement_);
         void resized() override;
 
         GradientMeshEditor& owner;
-        const GradientMesh::Direction direction;
+        const GradientMesh::EdgePlacement edgePlacement;
         PathButton addPatchButton;
         PathButton lineButton;
         PathButton quadraticButton;
@@ -194,7 +194,7 @@ private:
 
     struct EdgeControlGroup
     {
-        explicit EdgeControlGroup(GradientMeshEditor& owner_, GradientMesh::Direction direction_, juce::AffineTransform& zoomTransform_);
+        explicit EdgeControlGroup(GradientMeshEditor& owner_, GradientMesh::EdgePlacement edgePlacement_, juce::AffineTransform& zoomTransform_);
         ~EdgeControlGroup();
 
         EdgeControlComponent edgeControl;
@@ -248,7 +248,7 @@ private:
 
     void addConnectedPatch(const InvocationInfo& info);
     void removeSelectedPatch();
-    void setEdgeType(GradientMesh::Direction direction, GradientMesh::EdgeType type);
+    void setEdgeType(GradientMesh::EdgePlacement edgePlacement, GradientMesh::EdgeType type);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GradientMeshEditor)
 };

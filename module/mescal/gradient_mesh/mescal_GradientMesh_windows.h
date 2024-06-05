@@ -90,7 +90,7 @@ public:
         cubic
     };
 
-    enum class Direction
+    enum class EdgePlacement
     {
         north = 0,
         east,
@@ -108,14 +108,14 @@ public:
 
     static constexpr std::array<CornerPlacement, 4> corners{ CornerPlacement::topLeft, CornerPlacement::topRight, CornerPlacement::bottomRight, CornerPlacement::bottomLeft };
 
-    static Direction opposite(Direction direction)
+    static EdgePlacement opposite(EdgePlacement ep)
     {
-        return Direction{ ((int)direction + 2) & 3 };
+        return EdgePlacement{ ((int)ep + 2) & 3 };
     }
 
-    static Direction clockwiseFrom(Direction direction)
+    static EdgePlacement clockwiseFrom(EdgePlacement ep)
     {
-        return Direction{ ((int)direction + 1) & 3 };
+        return EdgePlacement{ ((int)ep + 1) & 3 };
     }
 
     static CornerPlacement clockwiseFrom(CornerPlacement corner)
@@ -123,28 +123,28 @@ public:
         return CornerPlacement{ ((int)corner + 1) & 3 };
     }
 
-    static Direction counterclockwiseFrom(Direction direction)
+    static EdgePlacement counterclockwiseFrom(EdgePlacement ep)
     {
-        return Direction{ ((int)direction - 1) & 3 };
+        return EdgePlacement{ ((int)ep - 1) & 3 };
     }
 
-    static std::pair<CornerPlacement, CornerPlacement> toCorners(Direction direction)
+    static std::pair<CornerPlacement, CornerPlacement> toCorners(EdgePlacement ep)
     {
-        switch (direction)
+        switch (ep)
         {
         default:
-        case Direction::north:
+        case EdgePlacement::north:
             return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::topLeft }, { CornerPlacement::topRight } };
-        case Direction::east:
+        case EdgePlacement::east:
             return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::topRight }, { CornerPlacement::bottomRight } };
-        case Direction::south:
+        case EdgePlacement::south:
             return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::bottomRight }, { CornerPlacement::bottomLeft } };
-        case Direction::west:
+        case EdgePlacement::west:
             return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::bottomLeft }, { CornerPlacement::topLeft } };
         }
     }
 
-    static constexpr std::array<Direction, 4> directions{ Direction::north, Direction::east, Direction::south, Direction::west };
+    static constexpr std::array<EdgePlacement, 4> edgePlacements{ EdgePlacement::north, EdgePlacement::east, EdgePlacement::south, EdgePlacement::west };
     static constexpr std::array<const char*, 4> directionNames{ "north", "east", "south", "west" };
 
     struct Halfedge;
@@ -155,11 +155,6 @@ public:
             mesh(mesh_),
             index(index_)
         {
-        }
-
-        auto getHalfedge(Direction edgePlacement) const
-        {
-            return halfedges[(size_t)edgePlacement];
         }
 
         juce::String toString(juce::String indent) const
@@ -182,9 +177,21 @@ public:
 
         int getConnectionCount() const;
 
+        static bool compareHalfedgeAngles(const std::weak_ptr<Halfedge>& a, const std::weak_ptr<Halfedge>& b)
+        {
+            auto aLock = a.lock();
+            auto bLock = b.lock();
+            if (aLock && bLock)
+            {
+                return aLock->angle < bLock->angle;
+            }
+
+            return false;
+        }
+
         size_t const index;
         juce::Point<float> position;
-        std::array<std::weak_ptr<Halfedge>, 4> halfedges;
+        std::set<std::weak_ptr<Halfedge>, bool(*)(const std::weak_ptr<Halfedge>&, const std::weak_ptr<Halfedge>&)> halfedges{ compareHalfedgeAngles };
         GradientMesh& mesh;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Vertex)
@@ -216,6 +223,7 @@ public:
         std::weak_ptr<Vertex> tail;
         std::weak_ptr<BezierControlPoint> b0, b1;
         std::weak_ptr<Vertex> head;
+        float angle = 0.0f;
 
         std::weak_ptr<Halfedge> twin;
 
@@ -247,7 +255,7 @@ public:
 
     struct Patch
     {
-        Patch(std::array<std::shared_ptr<Halfedge>, 4>& halfedges_);
+        Patch(const std::vector<std::shared_ptr<Halfedge>>& halfedges_);
         ~Patch();
 
         void release()
@@ -258,6 +266,7 @@ public:
 
         auto getCornerVertex(CornerPlacement corner) const
         {
+#if 0
             std::weak_ptr<Halfedge> halfedgeWeakPtr;
             switch (corner)
             {
@@ -285,6 +294,7 @@ public:
             {
                 return halfedge->tail;
             }
+#endif
 
             return std::weak_ptr<Vertex>{};
         }
@@ -312,8 +322,9 @@ public:
             cornerColors[(int)corner] = color;
         }
 
-        bool isConnected(Direction direction) const
+        bool isConnected(EdgePlacement edgePlacement) const
         {
+#if 0
             bool connected = true;
             if (auto halfedge = halfedges[(int)direction].lock())
             {
@@ -327,15 +338,16 @@ public:
                     connected &= v->getHalfedge(direction).lock() != nullptr;
                 }
             }
+#endif
 
-            return connected;
+            return false;
         }
 
     private:
         juce::Path path;
         bool modified = true;
 
-        std::array<std::weak_ptr<Halfedge>, 4> halfedges;
+        std::vector<std::weak_ptr<Halfedge>> halfedges;
         std::array<juce::Colour, 4> cornerColors
         {
             juce::Colours::red, juce::Colours::green, juce::Colours::blue, juce::Colours::yellow
@@ -352,7 +364,7 @@ public:
     void addPatch(juce::Rectangle<float> bounds);
     void addPatch(std::shared_ptr<Patch> patch);
     void removePatch(Patch* patch);
-    std::shared_ptr<Patch> addConnectedPatch(Patch* sourcePatch, Direction direction);
+    std::shared_ptr<Patch> addConnectedPatch(Patch* sourcePatch, EdgePlacement sourceConnectedEdge);
 
     void applyTransform(const juce::AffineTransform& transform) noexcept;
     void draw(juce::Image image, juce::AffineTransform transform);
@@ -370,8 +382,6 @@ public:
 
     static std::unique_ptr<GradientMesh> pathToGrid(juce::Path const& path, juce::AffineTransform const& transform, float tolerance);
 
-    std::vector<std::shared_ptr<Vertex>> perimeterVertices;
-
 private:
     std::vector<std::shared_ptr<Vertex>> vertices;
     std::vector<std::shared_ptr<BezierControlPoint>> bezierControlPoints;
@@ -379,10 +389,12 @@ private:
     std::vector<std::shared_ptr<Patch>> patches;
 
     std::shared_ptr<Vertex> addVertex(juce::Point<float> tail);
+#if 0
     std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head,
         std::shared_ptr<BezierControlPoint> b0,
         std::shared_ptr<BezierControlPoint> b1,
         Direction edgePlacement);
+#endif
     std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head);
     void removeHalfedge(std::shared_ptr<Halfedge> halfedge);
     void removeVertex(std::shared_ptr<Vertex> vertex);
