@@ -936,7 +936,32 @@ juce::String GradientMesh::toString() const
     return text;
 }
 
-std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineTransform const& transform, float tolerance)
+static void addGridPoints(juce::SortedSet<float>& set, float nominalSpacing)
+{
+    for (int index = set.size() - 1; index >= 0; --index)
+    {
+        float value = set[index];
+        auto delta = set[index + 1] - value;
+        if (delta > nominalSpacing * 2.0f)
+        {
+            auto count = (int)std::floor(delta / nominalSpacing);
+            auto step = delta / count;
+            value += step;
+            while (count > 0)
+            {
+                set.add(value);
+                value += step;
+                --count;
+            }
+        }
+    }
+}
+
+std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, 
+    AffineTransform const& transform, 
+    float tolerance,
+    float nominalPatchWidth,
+    float nominalPatchHeight)
 {
     auto mesh = std::make_unique<GradientMesh>();
 
@@ -963,6 +988,16 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineT
 
         xValues.add(it.x1);
         yValues.add(it.y1);
+    }
+
+    if (nominalPatchWidth > 0.0f)
+    {
+        addGridPoints(xValues, nominalPatchWidth);
+    }
+
+    if (nominalPatchHeight > 0.0f)
+    {
+        addGridPoints(yValues, nominalPatchHeight);
     }
 
     //
@@ -1073,7 +1108,8 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, AffineT
     for (auto& vertex : mesh->vertices)
     {
         auto angle = center.getAngleToPoint(vertex->position);
-        vertex->color = startColour.interpolatedWith(endColour, 0.75f + 0.25f * std::sin(angle));
+        auto distance = center.getDistanceFrom(vertex->position);
+        vertex->color = juce::Colour{ 0.75f + 0.25f * std::sin(angle), juce::jlimit(0.0f, 1.0f, distance / radius), 1.0f, 1.0f };
     }
 
     return mesh;

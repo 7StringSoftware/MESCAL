@@ -18,7 +18,7 @@ Document::Document() :
     //path.addRectangle(100.0f, 100.0f, 500.0f, 250.0f);
     path.addRoundedRectangle(Rectangle<float>{ 100.0f, 100.0f, 500.0f, 500.0f }, 100.0f);
 
-    gradientMesh = GradientMesh::pathToGrid(path, {}, 1.0f);
+    gradientMesh = GradientMesh::pathToGrid(path, {}, 1.0f, 10.0f, 10.0f);
 }
 
 Document::~Document()

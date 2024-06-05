@@ -369,7 +369,11 @@ public:
 
     juce::String toString() const;
 
-    static std::unique_ptr<GradientMesh> pathToGrid(juce::Path const& path, juce::AffineTransform const& transform, float tolerance);
+    static std::unique_ptr<GradientMesh> pathToGrid(juce::Path const& path, 
+        juce::AffineTransform const& transform, 
+        float tolerance,
+        float nominalPatchWidth,
+        float nominalPatchHeight);
 
 private:
     std::vector<std::shared_ptr<Vertex>> vertices;

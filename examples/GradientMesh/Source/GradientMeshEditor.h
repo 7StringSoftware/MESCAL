@@ -234,9 +234,9 @@ private:
     juce::VBlankAttachment vblankAttachment{ this, [this]
         {
             double now = juce::Time::getMillisecondCounterHiRes();
-            //double delta = now - lastMsec;
+            double delta = now - lastMsec;
             lastMsec = now;
-            //rotationAngle = delta * 0.001 * 0.1 * juce::MathConstants<float>::twoPi;
+            rotationAngle = delta * 0.1 * 0.1 * juce::MathConstants<float>::twoPi;
 
             while (rotationAngle > juce::MathConstants<double>::twoPi)
                 rotationAngle -= juce::MathConstants<double>::twoPi;
