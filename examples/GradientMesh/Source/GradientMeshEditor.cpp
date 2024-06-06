@@ -98,7 +98,7 @@ void GradientMeshEditor::paint(juce::Graphics& g)
 
 void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
 {
-#if 1
+#if 0
     std::array<juce::Colour, 20> const colors
     {
         juce::Colours::yellow, juce::Colours::green, juce::Colours::blue, juce::Colours::red,
@@ -724,7 +724,7 @@ void GradientMeshEditor::DisplayComponent::paint(juce::Graphics& g)
     }
 
     owner.document.gradientMesh->draw(meshImage, owner.patchToZoomedDisplayTransform);
-    g.drawImageAt(meshImage, 700, 0);
+    g.drawImageAt(meshImage, 0, 0);
 
     g.setColour(juce::Colours::white);
     g.drawText(String{ frameCount++ }, getLocalBounds(), juce::Justification::topRight);

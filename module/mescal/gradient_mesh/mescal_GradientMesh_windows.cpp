@@ -957,19 +957,9 @@ static void addGridPoints(juce::SortedSet<float>& set, float nominalSpacing)
     }
 }
 
-std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, 
-    AffineTransform const& transform, 
-    float tolerance,
-    float nominalPatchWidth,
-    float nominalPatchHeight)
+std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, PathOptions const& options)
 {
     auto mesh = std::make_unique<GradientMesh>();
-
-    struct PerimeterVertex
-    {
-        std::shared_ptr<Vertex> vertex;
-        int column = -1, row = -1;
-    };
 
     //
     // Convert perimeter points to Clipper2 path with metadata
@@ -978,7 +968,7 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path,
     static constexpr int64_t perimeterPointBit = 0x8000000000000000LL;
     static constexpr int64_t rowColumnEncodeBit = 0x4000000000000000LL;
 
-    juce::PathFlatteningIterator it{ path, transform, tolerance };
+    juce::PathFlatteningIterator it{ path, options.transform, options.tolerance };
     juce::SortedSet<float> xValues, yValues;
     while (it.next())
     {
@@ -990,14 +980,14 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path,
         yValues.add(it.y1);
     }
 
-    if (nominalPatchWidth > 0.0f)
+    if (options.nominalPatchWidth > 0.0f)
     {
-        addGridPoints(xValues, nominalPatchWidth);
+        addGridPoints(xValues, options.nominalPatchWidth);
     }
 
-    if (nominalPatchHeight > 0.0f)
+    if (options.nominalPatchHeight > 0.0f)
     {
-        addGridPoints(yValues, nominalPatchHeight);
+        addGridPoints(yValues, options.nominalPatchHeight);
     }
 
     //
@@ -1107,9 +1097,16 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path,
     juce::Colour endColour = juce::Colours::white;
     for (auto& vertex : mesh->vertices)
     {
-        auto angle = center.getAngleToPoint(vertex->position);
-        auto distance = center.getDistanceFrom(vertex->position);
-        vertex->color = juce::Colour{ 0.75f + 0.25f * std::sin(angle), juce::jlimit(0.0f, 1.0f, distance / radius), 1.0f, 1.0f };
+        if (options.findVertexColor)
+        {
+            vertex->color = options.findVertexColor(vertex);
+        }
+        else
+        {
+            auto angle = center.getAngleToPoint(vertex->position);
+            auto distance = center.getDistanceFrom(vertex->position);
+            vertex->color = juce::Colour{ 0.75f + 0.25f * std::sin(angle), juce::jlimit(0.0f, 1.0f, distance / radius), 1.0f, 1.0f };
+        }
     }
 
     return mesh;

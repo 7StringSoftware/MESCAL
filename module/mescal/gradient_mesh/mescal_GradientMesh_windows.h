@@ -369,11 +369,15 @@ public:
 
     juce::String toString() const;
 
-    static std::unique_ptr<GradientMesh> pathToGrid(juce::Path const& path, 
-        juce::AffineTransform const& transform, 
-        float tolerance,
-        float nominalPatchWidth,
-        float nominalPatchHeight);
+    struct PathOptions
+    {
+        juce::AffineTransform transform;
+        float tolerance = 1.0f;
+        float nominalPatchWidth = 10.0f;
+        float nominalPatchHeight = 10.0f;
+        std::function<juce::Colour(std::shared_ptr<Vertex>)> findVertexColor = nullptr;
+    };
+    static std::unique_ptr<GradientMesh> pathToGrid(juce::Path const& path, PathOptions const& options);
 
 private:
     std::vector<std::shared_ptr<Vertex>> vertices;
