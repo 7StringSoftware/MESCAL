@@ -378,6 +378,7 @@ public:
         std::function<juce::Colour(std::shared_ptr<Vertex>)> findVertexColor = nullptr;
     };
     static std::unique_ptr<GradientMesh> pathToGrid(juce::Path const& path, PathOptions const& options);
+    static std::unique_ptr<GradientMesh> pathToGridAlt(juce::Path const& path, PathOptions const& options);
 
 private:
     std::vector<std::shared_ptr<Vertex>> vertices;
@@ -386,13 +387,10 @@ private:
     std::vector<std::shared_ptr<Patch>> patches;
 
     std::shared_ptr<Vertex> addVertex(juce::Point<float> tail);
-#if 0
     std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head,
-        std::shared_ptr<BezierControlPoint> b0,
-        std::shared_ptr<BezierControlPoint> b1,
-        Direction edgePlacement);
-#endif
-    std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head);
+        std::shared_ptr<BezierControlPoint> b0 = {},
+        std::shared_ptr<BezierControlPoint> b1 = {});
+    std::shared_ptr<BezierControlPoint> addBezierControlPoint(juce::Point<float> position);
     void removeHalfedge(std::shared_ptr<Halfedge> halfedge);
     void removeVertex(std::shared_ptr<Vertex> vertex);
     void removeBezier(std::shared_ptr<BezierControlPoint> bezier);

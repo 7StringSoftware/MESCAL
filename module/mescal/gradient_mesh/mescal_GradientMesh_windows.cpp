@@ -1,15 +1,3 @@
-#include <windows.h>
-#include <winrt/Windows.Foundation.h>
-#include <d2d1_3helper.h>
-#include <d3d11_3.h>
-#include <d2d1_3.h>
-#define JUCE_CORE_INCLUDE_COM_SMART_PTR 1
-#include <JuceHeader.h>
-#include <juce_graphics/native/juce_DirectX_windows.h>
-#include <juce_graphics/native/juce_Direct2DImage_windows.h>
-#include "mescal_GradientMesh_windows.h"
-#define USINGZ 1
-#include "../Clipper2Lib/include/clipper.h"
 
 struct GradientMesh::Pimpl
 {
@@ -555,15 +543,22 @@ std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_pt
 }
 #endif
 
-std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head)
+std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_ptr<Vertex> tail,
+    std::shared_ptr<Vertex> head,
+    std::shared_ptr<BezierControlPoint> b0,
+    std::shared_ptr<BezierControlPoint> b1)
 {
     auto halfedge = std::make_shared<Halfedge>();
     halfedge->tail = tail;
     halfedge->head = head;
+    halfedge->b0 = b0;
+    halfedge->b1 = b1;
 
     auto twin = std::make_shared<Halfedge>();
     twin->head = halfedge->tail;
     twin->tail = halfedge->head;
+    twin->b0 = b1;
+    twin->b1 = b0;
 
     halfedge->twin = twin;
     twin->twin = halfedge;
@@ -575,6 +570,12 @@ std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_pt
     halfedges.push_back(twin);
 
     return halfedge;
+}
+
+std::shared_ptr<GradientMesh::BezierControlPoint> GradientMesh::addBezierControlPoint(juce::Point<float> position)
+{
+    bezierControlPoints.emplace_back(std::make_shared<BezierControlPoint>(position, *this));
+    return bezierControlPoints.back();
 }
 
 void GradientMesh::check()
@@ -1106,6 +1107,202 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, PathOpt
             auto angle = center.getAngleToPoint(vertex->position);
             auto distance = center.getDistanceFrom(vertex->position);
             vertex->color = juce::Colour{ 0.75f + 0.25f * std::sin(angle), juce::jlimit(0.0f, 1.0f, distance / radius), 1.0f, 1.0f };
+        }
+    }
+
+    return mesh;
+}
+
+std::unique_ptr<GradientMesh> GradientMesh::pathToGridAlt(juce::Path const& path, PathOptions const& options)
+{
+    auto mesh = std::make_unique<GradientMesh>();
+
+    struct PerimeterEdge
+    {
+        juce::Point<float> tail, head;
+        std::optional<juce::Point<float>> b0, b1;
+        juce::Path::Iterator::PathElementType type = juce::Path::Iterator::lineTo;
+    };
+
+    struct Perimeter
+    {
+        Perimeter(juce::Path const& path, PathOptions const& options)
+        {
+            juce::Path::Iterator it{ path };
+            juce::Point<float> lastPoint, subpathStart;
+
+            auto nextPerimeterEdge = [&]() -> std::optional<PerimeterEdge>
+                {
+                    DBG("it " << it.elementType << " " << it.x1 << " " << it.y1 << " " << it.x2 << " " << it.y2 << " " << it.x3 << " " << it.y3);
+                    switch (it.elementType)
+                    {
+                    case Path::Iterator::startNewSubPath:
+                    {
+                        subpathStart = { it.x1, it.y1 };
+                        lastPoint = { it.x1, it.y1 };
+                        return {};
+                    }
+
+                    case Path::Iterator::lineTo:
+                    {
+                        PerimeterEdge edge;
+                        edge.tail = lastPoint;
+                        edge.head = { it.x1, it.y1 };
+                        edge.type = it.elementType;
+
+                        lastPoint = edge.head;
+
+                        return edge;
+                    }
+
+                    case Path::Iterator::quadraticTo:
+                    {
+                        PerimeterEdge edge;
+                        edge.tail = lastPoint;
+                        edge.b0 = { it.x1, it.y1 };
+                        edge.head = { it.x2, it.y2 };
+                        edge.type = it.elementType;
+
+                        lastPoint = edge.head;
+
+                        return edge;
+                    }
+
+                    case Path::Iterator::cubicTo:
+                    {
+                        PerimeterEdge edge;
+                        edge.tail = lastPoint;
+                        edge.b0 = { it.x1, it.y1 };
+                        edge.b1 = { it.x2, it.y2 };
+                        edge.head = { it.x3, it.y3 };
+                        edge.type = it.elementType;
+
+                        lastPoint = edge.head;
+
+                        return edge;
+                    }
+
+                    case Path::Iterator::closePath:
+                    {
+                        PerimeterEdge edge;
+                        edge.tail = lastPoint;
+                        edge.head = subpathStart;
+                        edge.type = juce::Path::Iterator::closePath;
+
+                        lastPoint = edge.head;
+
+                        return edge;
+                    }
+
+                    default:
+                    {
+                        break;
+                    }
+                    }
+
+                    return {};
+                };
+
+            while (it.next())
+            {
+                auto edge = nextPerimeterEdge();
+                if (!edge)
+                    continue;
+
+                float xDelta = std::abs(edge->head.x - edge->tail.x);
+                float yDelta = std::abs(edge->head.y - edge->tail.y);
+
+                switch (edge->type)
+                {
+                default:
+                case Path::Iterator::lineTo:
+                {
+                    juce::Line<float> line{ edge->tail, edge->head };
+
+                    int numInterpolatedPoints = (int)std::floor(line.getLength() / juce::jmin(options.nominalPatchWidth, options.nominalPatchHeight)) - 1;
+
+                    lastPoint = edge->tail;
+
+                    for (int i = 0; i < numInterpolatedPoints; ++i)
+                    {
+                        auto point = line.getPointAlongLineProportionally((i + 1) / (float)(numInterpolatedPoints + 1));
+                        edges.push_back(PerimeterEdge{ lastPoint, point });
+                        lastPoint = point;
+                    }
+
+                    break;
+                }
+
+                case Path::Iterator::cubicTo:
+                {
+                    bezier::Bezier<3> edgeCurve
+                    {
+                        {
+                            { edge->tail.x, edge->tail.y },
+                            { edge->b0.value().x, edge->b0.value().y },
+                            { edge->b1.value().x, edge->b1.value().y },
+                            { edge->head.x, edge->head.y }
+                        }
+                    };
+
+                    auto toPoint = [&](bezier::Point& bp)
+                        {
+                            return juce::Point<float>{ (float)bp.x, (float)bp.y };
+                        };
+
+                    juce::Line<float> line{ edge->tail, edge->head };
+
+                    int numInterpolatedPoints = (int)std::floor(line.getLength() / juce::jmin(options.nominalPatchWidth, options.nominalPatchHeight)) - 1;
+
+                    for (int i = 0; i < numInterpolatedPoints; ++i)
+                    {
+                        auto splitSegment = edgeCurve.split(double(i + 1) / (double)(numInterpolatedPoints + 1));
+
+                        PerimeterEdge splitEdge;
+                        splitEdge.tail = toPoint(splitSegment.left[0]);
+                        auto splitPoint = splitSegment.left.valueAt(1.0);
+                        splitEdge.head = toPoint(splitPoint);
+                        auto edgeB0 = splitSegment.left[1];
+                        auto edgeB1 = splitSegment.left[2];
+                        splitEdge.b0.emplace(toPoint(edgeB0));
+                        splitEdge.b1.emplace(toPoint(edgeB1));
+                        edges.push_back(splitEdge);
+
+                        edgeCurve = splitSegment.right;
+                        lastPoint = splitEdge.head;
+                    }
+                    break;
+                }
+                }
+
+                edges.push_back(*edge);
+            }
+        }
+
+        std::vector<PerimeterEdge> edges;
+        juce::SortedSet<float> xValues, yValues;
+        Clipper2Lib::PathD subjectPath;
+    } perimeter{ path, options };
+
+    if (perimeter.edges.size() > 0)
+    {
+        auto lastVertex = mesh->addVertex(perimeter.edges.front().tail);
+        for (auto const& edge : perimeter.edges)
+        {
+            auto vertex = mesh->addVertex(edge.head);
+
+            std::shared_ptr<BezierControlPoint> b0, b1;
+            if (edge.b0)
+            {
+               b0 = mesh->addBezierControlPoint(edge.b0.value());
+            }
+            if (edge.b1)
+            {
+                b1 = mesh->addBezierControlPoint(edge.b1.value());
+            }
+            mesh->addHalfedge(lastVertex, vertex, b0, b1);
+
+            lastVertex = vertex;
         }
     }
 

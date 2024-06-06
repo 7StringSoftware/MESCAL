@@ -98,7 +98,6 @@ void GradientMeshEditor::paint(juce::Graphics& g)
 
 void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
 {
-#if 0
     std::array<juce::Colour, 20> const colors
     {
         juce::Colours::yellow, juce::Colours::green, juce::Colours::blue, juce::Colours::red,
@@ -112,6 +111,7 @@ void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
 
     size_t colorIndex = 0;
 
+#if 0
     for (auto const& patch : document.gradientMesh->getPatches())
     {
         colorIndex = (colorIndex + 1) % colors.size();
@@ -168,7 +168,7 @@ void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
     }
 #endif
 
-#if 0
+#if 1
     colorIndex = 0;
     float vertexDisplayMinDistance = 10000.0f, edgeDisplayMinDistance = 20.0f;
     for (auto& vertex : document.gradientMesh->getVertices())
@@ -216,6 +216,17 @@ void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
         g.setColour(colors[colorIndex].withAlpha(0.75f));
         colorIndex = (colorIndex + 1) % colors.size();
         auto size = 16.0f;
+
+        auto b0 = halfedge->b0.lock();
+        auto b1 = halfedge->b1.lock();
+
+        if (b0 && b1)
+        {
+            Path p;
+            p.startNewSubPath(tail->position);
+            p.cubicTo(b0->position, b1->position, head->position);
+            g.strokePath(p, PathStrokeType{ 5.0f }, patchToZoomedDisplayTransform);
+        }
 
         g.drawArrow(juce::Line<float>{ tail->position.transformedBy(patchToZoomedDisplayTransform), head->position.transformedBy(patchToZoomedDisplayTransform) }, 5.0f, size, size);
     }

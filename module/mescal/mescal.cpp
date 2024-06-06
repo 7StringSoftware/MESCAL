@@ -28,6 +28,18 @@
 #define JUCE_CORE_INCLUDE_COM_SMART_PTR 1
 #include <JuceHeader.h>
 
+#include <windows.h>
+#include <winrt/Windows.Foundation.h>
+#include <d2d1_3helper.h>
+#include <d3d11_3.h>
+#include <d2d1_3.h>
+#define JUCE_CORE_INCLUDE_COM_SMART_PTR 1
+#include <JuceHeader.h>
+#include <juce_graphics/native/juce_DirectX_windows.h>
+#include <juce_graphics/native/juce_Direct2DImage_windows.h>
+#define USINGZ 1
+#include "Clipper2Lib/include/clipper.h"
+#include "bezier/bezier.h"
 #include "mescal.h"
 
 #include "gradient_mesh/mescal_GradientMesh_windows.cpp"
