@@ -534,7 +534,8 @@ void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
                 {
                     if (auto tail = h->tail.lock())
                     {
-                        juce::Line<float> line{ tail->position.x, tail->position.y, head.x, head.y };
+                        auto tailPosition = tail->position.transformedBy(transform);
+                        juce::Line<float> line{ tailPosition.x, tailPosition.y, head.x, head.y };
                         auto mid = line.getPointAlongLineProportionally(0.5f);
                         d2dBezeir0 = { mid.x, mid.y };
                         d2dBezeir1 = { mid.x, mid.y };
