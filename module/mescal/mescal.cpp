@@ -31,7 +31,6 @@
 #include <juce_graphics/native/juce_Direct2DImage_windows.h>
 
 #include "mescal.h"
-#include "gradient_mesh/mescal_JSON.h"
 
 namespace mescal
 {

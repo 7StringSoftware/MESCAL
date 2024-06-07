@@ -744,6 +744,13 @@ juce::String GradientMesh::toString() const
 
 juce::String GradientMesh::toJSON() const noexcept
 {
+    Identifiers const ids;
+
+    JSONArray patchesArray;
+    for (auto const& patch : patches)
+    {
+        patchesArray.add<JSONObject>(patch->toJSON());
+    }
 
 }
 

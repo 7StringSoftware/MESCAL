@@ -389,6 +389,23 @@ private:
     void check();
 #endif
 
+    struct Identifiers
+    {
+        const juce::Identifier patches{ "Patches" };
+        const juce::Identifier patch{ "Patch" };
+        const juce::Identifier vertices{ "Vertices" };
+        const juce::Identifier vertex{ "Vertex" };
+        const juce::Identifier position{ "Position" };
+        const juce::Identifier halfedges{ "Halfedges" };
+        const juce::Identifier halfedge{ "Halfedge" };
+        const juce::Identifier tail{ "Tail" };
+        const juce::Identifier head{ "Head" };
+        const juce::Identifier bezierControlPoints{ "BezierControlPoints" };
+        const juce::Identifier bezierControlPoint{ "BezierControlPoint" };
+        const juce::Identifier x{ "X" };
+        const juce::Identifier y{ "Y" };
+    };
+
     struct Pimpl;
     std::unique_ptr<Pimpl> pimpl;
 };
