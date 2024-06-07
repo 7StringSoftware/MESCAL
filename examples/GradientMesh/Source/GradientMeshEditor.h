@@ -231,6 +231,7 @@ private:
 
     SVGButton trashButton{ "Remove", drawables.trashCan.get() };
 
+#if 0
     juce::VBlankAttachment vblankAttachment{ this, [this]
         {
             double now = juce::Time::getMillisecondCounterHiRes();
@@ -243,6 +244,7 @@ private:
 
             repaint();
         } };
+#endif
 
     void positionControls();
 

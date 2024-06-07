@@ -255,6 +255,16 @@ public:
 
         auto getCornerVertex(CornerPlacement corner) const
         {
+            if ((size_t)corner >= halfedges.size())
+            {
+                return std::weak_ptr<Vertex>{};
+            }
+
+            std::weak_ptr<Halfedge> halfedgeWeakPtr = halfedges[(int)corner];
+            if (auto halfedge = halfedgeWeakPtr.lock())
+            {
+               return halfedge->tail;
+            }
 #if 0
             std::weak_ptr<Halfedge> halfedgeWeakPtr;
             switch (corner)
@@ -308,7 +318,13 @@ public:
 
         void setColor(CornerPlacement corner, juce::Colour color)
         {
-            cornerColors[(int)corner] = color;
+            if (auto halfedge = halfedges[(int)corner].lock())
+            {
+                if (auto v = halfedge->tail.lock())
+                {
+                    v->color = color;
+                }
+            }
         }
 
         bool isConnected(EdgePlacement edgePlacement) const

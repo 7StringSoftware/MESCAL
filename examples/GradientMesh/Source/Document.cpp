@@ -42,13 +42,19 @@ Document::Document() :
     auto radius = juce::jmin(path.getBounds().getWidth(), path.getBounds().getHeight()) * 0.5f;
 
     GradientMesh::PathOptions options;
-    options.nominalPatchHeight = 100.0f;
-    options.nominalPatchWidth = 100.0f;
+    options.nominalPatchHeight = 250.0f;
+    options.nominalPatchWidth = 20.0f;
+    options.tolerance = 1.0f;
     options.findVertexColor = [&](std::shared_ptr<GradientMesh::Vertex> v) -> juce::Colour
         {
-            auto angle = center.getAngleToPoint(v->position);
-            auto distance = center.getDistanceFrom(v->position);
-            return juce::Colour{ 0.75f + 0.25f * std::sin(angle), juce::jlimit(0.0f, 1.0f, distance / radius), 1.0f, 1.0f };
+            //auto angle = center.getAngleToPoint(v->position);
+            //auto distance = center.getDistanceFrom(v->position);
+            float diff = std::abs(v->position.x - 100.0f) / 200.0f;
+            //return //juce::Colour{ 0.75f + 0.25f * std::sin(angle), juce::jlimit(0.0f, 1.0f, distance / radius), 1.0f, 1.0f };
+            float angle = diff * juce::MathConstants<float>::twoPi;
+            auto level = std::sin(angle) * 0.5f + 0.5f;
+            float height = (500.0f - v->position.y) / 500.0f;
+            return juce::Colour::fromHSV(level * 0.1f, 1.0f, height * 0.5f + 0.5f, 1.0f);
         };
     gradientMesh = GradientMesh::pathToGridAlt(path, options);
 #endif
