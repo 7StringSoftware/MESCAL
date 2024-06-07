@@ -876,11 +876,13 @@ void GradientMesh::Patch::update()
 
 void GradientMesh::Patch::createPath()
 {
-#if 0
     path.clear();
 
+    if (halfedges.size() == 0)
+        return;
+
     {
-        auto halfedge = halfedges[(int)Direction::north].lock();
+        auto halfedge = halfedges.front().lock();
         if (!halfedge)
             return;
 
@@ -902,10 +904,12 @@ void GradientMesh::Patch::createPath()
             switch (halfedge->edgeType)
             {
             case EdgeType::straight:
+            default:
                 if (head)
                     path.lineTo(head->position);
                 break;
 
+#if 0
             case EdgeType::approximateQuadratic:
             case EdgeType::cubic:
             {
@@ -915,13 +919,13 @@ void GradientMesh::Patch::createPath()
                         head->position);
                 break;
             }
+#endif
             }
         }
 
     }
 
     path.closeSubPath();
-#endif
 }
 
 juce::String GradientMesh::toString() const
@@ -1077,6 +1081,7 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGrid(Path const& path, PathOpt
                     }
 
                     auto patch = std::make_shared<Patch>(patchHalfedges);
+                    patch->update();
                     mesh->addPatch(patch);
                 }
             }
@@ -1217,6 +1222,7 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGridAlt(juce::Path const& path
                 default:
                 case Path::Iterator::lineTo:
                 {
+#if 0
                     juce::Line<float> line{ edge->tail, edge->head };
 
                     int numInterpolatedPoints = (int)std::floor(line.getLength() / juce::jmin(options.nominalPatchWidth, options.nominalPatchHeight)) - 1;
@@ -1229,6 +1235,7 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGridAlt(juce::Path const& path
                         edges.push_back(PerimeterEdge{ lastPoint, point });
                         lastPoint = point;
                     }
+#endif
 
                     break;
                 }
@@ -1252,25 +1259,103 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGridAlt(juce::Path const& path
 
                     juce::Line<float> line{ edge->tail, edge->head };
 
-                    int numInterpolatedPoints = (int)std::floor(line.getLength() / juce::jmin(options.nominalPatchWidth, options.nominalPatchHeight)) - 1;
-
-                    for (int i = 0; i < numInterpolatedPoints; ++i)
+#if 0
                     {
-                        auto splitSegment = edgeCurve.split(double(i + 1) / (double)(numInterpolatedPoints + 1));
+                        float xDelta = edge->head.x - edge->tail.x;
+                        int numInterpolatedPoints = (int)std::floor(std::abs(xDelta) / options.nominalPatchHeight - 1);
+                        float xStep = xDelta / (numInterpolatedPoints + 1);
+                        float x = edge->tail.x;// +xStep;
 
-                        PerimeterEdge splitEdge;
-                        splitEdge.tail = toPoint(splitSegment.left[0]);
-                        auto splitPoint = splitSegment.left.valueAt(1.0);
-                        splitEdge.head = toPoint(splitPoint);
-                        auto edgeB0 = splitSegment.left[1];
-                        auto edgeB1 = splitSegment.left[2];
-                        splitEdge.b0.emplace(toPoint(edgeB0));
-                        splitEdge.b1.emplace(toPoint(edgeB1));
-                        edges.push_back(splitEdge);
+                        DBG("X " << x << " num:" << numInterpolatedPoints);
 
-                        edgeCurve = splitSegment.right;
-                        lastPoint = splitEdge.head;
+                        for (int i = 0; i < numInterpolatedPoints; ++i)
+                        {
+                            x += xStep;
+
+                            float splitPosition = 0.5f;
+                            float fraction = 0.25f;
+                            auto bezierPoint = edgeCurve.valueAt(splitPosition);
+                            while (std::abs(bezierPoint.x - x) > options.nominalPatchWidth * 0.5f && fraction > 0.03125f)
+                            {
+                                if (bezierPoint.x > x)
+                                {
+                                    splitPosition -= fraction;
+                                }
+                                else
+                                {
+                                    splitPosition += fraction;
+                                }
+                                fraction *= 0.5F;
+
+                                bezierPoint = edgeCurve.valueAt(splitPosition);
+                            }
+
+                            auto splitSegment = edgeCurve.split(splitPosition);
+
+                            PerimeterEdge splitEdge;
+                            splitEdge.tail = toPoint(splitSegment.left[0]);
+                            auto splitPoint = splitSegment.left.valueAt(1.0);
+                            splitEdge.head = toPoint(splitPoint);
+                            auto edgeB0 = splitSegment.left[1];
+                            auto edgeB1 = splitSegment.left[2];
+                            splitEdge.b0.emplace(toPoint(edgeB0));
+                            splitEdge.b1.emplace(toPoint(edgeB1));
+                            edges.push_back(splitEdge);
+
+                            edgeCurve = splitSegment.right;
+                            lastPoint = splitEdge.head;
+                        }
                     }
+#endif
+
+#if 1
+                    {
+                        float yDelta = edge->head.y - edge->tail.y;
+                        //int numInterpolatedPoints = (int)std::floor(std::abs(xDelta) / options.nominalPatchHeight);
+                        int numInterpolatedPoints = 1;
+                        float yStep = yDelta / (float)(numInterpolatedPoints + 1);
+                        float y = edge->tail.y;
+
+                        for (int i = 0; i < numInterpolatedPoints; ++i)
+                        {
+                            y += yStep;
+
+                            float splitPosition = 0.5f;
+                            float fraction = 0.25f;
+                            auto bezierPoint = edgeCurve.valueAt(splitPosition);
+                            while (std::abs(bezierPoint.y - y) > options.nominalPatchHeight * 0.5f && fraction > 0.03125f)
+                            {
+                                if (bezierPoint.y > y)
+                                {
+                                    splitPosition -= fraction;
+                                }
+                                else
+                                {
+                                    splitPosition += fraction;
+                                }
+                                fraction *= 0.5F;
+
+                                bezierPoint = edgeCurve.valueAt(splitPosition);
+                            }
+
+                            auto splitSegment = edgeCurve.split(splitPosition);
+
+                            PerimeterEdge splitEdge;
+                            splitEdge.tail = toPoint(splitSegment.left[0]);
+                            splitEdge.head = toPoint(splitSegment.left[3]);
+                            auto edgeB0 = splitSegment.left[1];
+                            auto edgeB1 = splitSegment.left[2];
+                            splitEdge.b0.emplace(toPoint(edgeB0));
+                            splitEdge.b1.emplace(toPoint(edgeB1));
+                            splitEdge.type = Path::Iterator::cubicTo;
+                            edges.push_back(splitEdge);
+
+                            edgeCurve = splitSegment.right;
+                            lastPoint = splitEdge.head;
+                        }
+                    }
+#endif
+
                     break;
                 }
                 }
