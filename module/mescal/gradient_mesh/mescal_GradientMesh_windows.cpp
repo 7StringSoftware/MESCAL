@@ -221,6 +221,122 @@ void GradientMesh::addPatch(std::shared_ptr<Patch> patch)
     patches.push_back(patch);
 }
 
+void GradientMesh::addPatch(juce::Path const& path, std::vector<juce::Colour> const& colors)
+{
+    jassert(colors.size() == 3 || colors.size() == 4);
+
+    juce::Path::Iterator it{ path };
+    juce::Point<float> subpathStart;
+    juce::Point<float> lastPoint;
+    int subpathCount = 0;
+
+    struct PathSegment
+    {
+        PathSegment(juce::Point<float> head_, juce::Path::Iterator::PathElementType type_)
+            : head(head_), type(type_)
+        {
+        }
+        juce::Point<float> head;
+        std::optional<juce::Point<float>> b0;
+        std::optional<juce::Point<float>> b1;
+        juce::Path::Iterator::PathElementType type;
+    };
+    std::vector<PathSegment> segments;
+
+    while (it.next())
+    {
+        switch (it.elementType)
+        {
+        case Path::Iterator::startNewSubPath:
+        {
+            subpathCount++;
+            subpathStart = { it.x1, it.y1 };
+            lastPoint = { it.x1, it.y1 };
+            break;
+        }
+
+        case Path::Iterator::lineTo:
+        {
+            segments.emplace_back(PathSegment{ { it.x1, it.y1 }, it.elementType });
+            lastPoint = { it.x1, it.y1 };
+            break;
+        }
+
+        case Path::Iterator::quadraticTo:
+        {
+            jassertfalse;
+            break;;
+        }
+
+        case Path::Iterator::cubicTo:
+        {
+            segments.emplace_back(PathSegment{ { it.x3, it.y3 }, it.elementType });
+            segments.back().b0 = { it.x1, it.y1 };
+            segments.back().b1 = { it.x2, it.y2 };
+            lastPoint = { it.x1, it.y1 };
+            break;
+        }
+
+        case Path::Iterator::closePath:
+        {
+            if (lastPoint != subpathStart)
+            {
+                segments.emplace_back(PathSegment{ subpathStart, Path::Iterator::lineTo });
+            }
+            break;
+        }
+
+        default:
+        {
+            break;
+        }
+        }
+    }
+
+    jassert(subpathCount == 1);
+    jassert(segments.size() == 3 || segments.size() == 4);
+
+    auto firstVertex = addVertex(subpathStart);
+    auto previousVertex = firstVertex;
+    previousVertex->color = colors.front();
+
+    size_t colorIndex = 1;
+    std::vector<std::shared_ptr<Halfedge>> patchHalfedges;
+    for (auto const& segment : segments)
+    {
+        std::shared_ptr<Vertex> head;
+
+        if (segment.head == subpathStart)
+        {
+            head = firstVertex;
+        }
+        else
+        {
+            head = addVertex(segment.head);
+            head->color = colors[colorIndex++];
+        }
+
+        std::shared_ptr<BezierControlPoint> b0, b1;
+        if (segment.b0)
+        {
+            b0 = addBezierControlPoint(segment.b0.value());
+        }
+
+        if (segment.b1)
+        {
+            b1 = addBezierControlPoint(segment.b1.value());
+        }
+
+        auto halfedge = addHalfedge(previousVertex, head, b0, b1);
+        patchHalfedges.push_back(halfedge);
+
+        previousVertex = head;
+    }
+
+    auto patch = std::make_shared<Patch>(patchHalfedges);
+    patches.push_back(patch);
+}
+
 void GradientMesh::removePatch(Patch* patch)
 {
     for (auto& halfedgeWeakPtr : patch->getHalfedges())
@@ -1294,7 +1410,7 @@ std::unique_ptr<GradientMesh> GradientMesh::pathToGridAlt(juce::Path const& path
             std::shared_ptr<BezierControlPoint> b0, b1;
             if (edge.b0)
             {
-               b0 = mesh->addBezierControlPoint(edge.b0.value());
+                b0 = mesh->addBezierControlPoint(edge.b0.value());
             }
             if (edge.b1)
             {

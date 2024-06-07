@@ -352,6 +352,7 @@ public:
 
     void addPatch(juce::Rectangle<float> bounds);
     void addPatch(std::shared_ptr<Patch> patch);
+    void addPatch(juce::Path const& path, std::vector<juce::Colour> const& colors);
     void removePatch(Patch* patch);
     std::shared_ptr<Patch> addConnectedPatch(Patch* sourcePatch, EdgePlacement sourceConnectedEdge);
 
@@ -364,6 +365,7 @@ public:
     juce::Rectangle<float> getBounds() const noexcept;
     auto const& getPatches() const { return patches; }
 
+    std::shared_ptr<Vertex> findVertex(juce::Point<float> position) const;
     auto const& getVertices() const { return vertices; }
     auto const& getHalfedges() const { return halfedges; }
 

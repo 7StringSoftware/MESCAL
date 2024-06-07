@@ -168,7 +168,7 @@ void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
     }
 #endif
 
-#if 1
+#if 0
     colorIndex = 0;
     float vertexDisplayMinDistance = 10000.0f, edgeDisplayMinDistance = 20.0f;
     for (auto& vertex : document.gradientMesh->getVertices())
@@ -177,8 +177,7 @@ void GradientMeshEditor::paintOverChildren([[maybe_unused]] juce::Graphics& g)
         if (distance > vertexDisplayMinDistance)
             continue;
 
-        g.setColour(colors[colorIndex].withAlpha(0.75f));
-        colorIndex = (colorIndex + 1) % colors.size();
+        g.setColour(vertex->color);
         auto size = 16.0f;
         g.fillEllipse(juce::Rectangle<float>{ size, size }.withCentre(vertex->position.transformedBy(patchToZoomedDisplayTransform)));
 
@@ -616,6 +615,7 @@ void GradientMeshEditor::ControlPointComponent::moved()
 
 void GradientMeshEditor::ControlPointComponent::paint(juce::Graphics& g)
 {
+#if 0
     int size = isMouseOver(true) ? 24 : 18;
 #if 0
     if (auto cp = controlPoint.lock())
@@ -632,6 +632,7 @@ void GradientMeshEditor::ControlPointComponent::paint(juce::Graphics& g)
     g.fillEllipse(getLocalBounds().withSizeKeepingCentre(size, size).toFloat());
     g.setColour(color);
     g.fillEllipse(getLocalBounds().withSizeKeepingCentre(size - 4, size - 4).toFloat());
+#endif
 }
 
 GradientMeshEditor::AddPatchButton::AddPatchButton() :
