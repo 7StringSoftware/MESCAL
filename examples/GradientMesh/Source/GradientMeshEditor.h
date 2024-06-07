@@ -3,6 +3,8 @@
 #include "Base.h"
 #include "Document.h"
 
+using GradientMesh = mescal::GradientMesh;
+
 class GradientMeshEditor : public juce::Component, public juce::ApplicationCommandTarget
 {
 public:

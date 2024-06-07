@@ -368,6 +368,8 @@ public:
 
     juce::String toString() const;
 
+    juce::String toJSON() const noexcept;
+
 private:
     std::vector<std::shared_ptr<Vertex>> vertices;
     std::vector<std::shared_ptr<BezierControlPoint>> bezierControlPoints;

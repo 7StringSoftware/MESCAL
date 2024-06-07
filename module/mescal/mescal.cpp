@@ -27,7 +27,14 @@
 #include <d2d1_3.h>
 #define JUCE_CORE_INCLUDE_COM_SMART_PTR 1
 #include <JuceHeader.h>
+#include <juce_graphics/native/juce_DirectX_windows.h>
+#include <juce_graphics/native/juce_Direct2DImage_windows.h>
 
 #include "mescal.h"
+#include "gradient_mesh/mescal_JSON.h"
 
+namespace mescal
+{
 #include "gradient_mesh/mescal_GradientMesh_windows.cpp"
+#include "gradient_mesh/mescal_JSON.cpp"
+}

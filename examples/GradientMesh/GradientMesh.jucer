@@ -11,6 +11,10 @@
       <FILE id="aXNKtb" name="Base.h" compile="0" resource="0" file="Source/Base.h"/>
       <FILE id="jEsi8N" name="Commander.cpp" compile="1" resource="0" file="Source/Commander.cpp"/>
       <FILE id="tv7bbM" name="Commander.h" compile="0" resource="0" file="Source/Commander.h"/>
+      <FILE id="K0tCu8" name="ContentComponent.cpp" compile="1" resource="0"
+            file="Source/ContentComponent.cpp"/>
+      <FILE id="ouDHOJ" name="ContentComponent.h" compile="0" resource="0"
+            file="Source/ContentComponent.h"/>
       <FILE id="HlLsqe" name="Controller.cpp" compile="1" resource="0" file="Source/Controller.cpp"/>
       <FILE id="iydeUM" name="Controller.h" compile="0" resource="0" file="Source/Controller.h"/>
       <FILE id="NqhFCY" name="Document.cpp" compile="1" resource="0" file="Source/Document.cpp"/>
@@ -19,11 +23,9 @@
             file="Source/GradientMeshEditor.cpp"/>
       <FILE id="TtcuWW" name="GradientMeshEditor.h" compile="0" resource="0"
             file="Source/GradientMeshEditor.h"/>
-      <FILE id="K0tCu8" name="ContentComponent.cpp" compile="1" resource="0"
-            file="Source/ContentComponent.cpp"/>
-      <FILE id="ouDHOJ" name="ContentComponent.h" compile="0" resource="0"
-            file="Source/ContentComponent.h"/>
       <FILE id="TEUkPq" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
+      <FILE id="YsUFiZ" name="Settings.cpp" compile="1" resource="0" file="Source/Settings.cpp"/>
+      <FILE id="jf0mj2" name="Settings.h" compile="0" resource="0" file="Source/Settings.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

@@ -41,4 +41,8 @@ END_JUCE_MODULE_DECLARATION
 
 #include <array>
 
-#include "gradient_mesh/mescal_GradientMesh_windows.h"
+namespace mescal
+{
+    #include "gradient_mesh/mescal_GradientMesh_windows.h"
+}
+
