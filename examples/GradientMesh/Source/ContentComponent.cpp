@@ -1,7 +1,7 @@
 #include "ContentComponent.h"
 
-ContentComponent::ContentComponent(juce::ApplicationCommandManager& commandManager_) :
-    meshEditor(commandManager_)
+ContentComponent::ContentComponent(juce::ApplicationCommandManager& commandManager_, Settings& settings_) :
+    meshEditor(commandManager_, settings_)
 {
     addAndMakeVisible(viewport);
     viewport.setViewedComponent(&meshEditor);

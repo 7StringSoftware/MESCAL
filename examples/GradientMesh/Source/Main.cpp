@@ -13,7 +13,7 @@ public:
     void initialise(const juce::String&) override
     {
         controller = std::make_unique <Controller>();
-        mainWindow.reset(new MainWindow("GradientMesh", new ContentComponent{ controller->commander.commandManager }, *this));
+        mainWindow.reset(new MainWindow("GradientMesh", new ContentComponent{ controller->commander.commandManager, controller->settings }, *this));
     }
 
     void shutdown() override { mainWindow = nullptr; }

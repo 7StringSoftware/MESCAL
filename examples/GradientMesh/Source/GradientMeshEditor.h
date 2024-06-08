@@ -8,7 +8,7 @@ using GradientMesh = mescal::GradientMesh;
 class GradientMeshEditor : public juce::Component, public juce::ApplicationCommandTarget
 {
 public:
-    GradientMeshEditor(juce::ApplicationCommandManager& commandManager_);
+    GradientMeshEditor(juce::ApplicationCommandManager& commandManager_, Settings& settings_);
     ~GradientMeshEditor() override;
 
     juce::Rectangle<int> getPreferredSize();
@@ -41,6 +41,7 @@ private:
     double lastMsec = juce::Time::getMillisecondCounterHiRes();
     double rotationAngle = 0.0;
     Document document;
+    Settings& settings;
     std::weak_ptr<GradientMesh::Patch> selectedPatch;
 
     struct Drawables

@@ -6,7 +6,7 @@
 class ContentComponent : public juce::Component
 {
 public:
-    ContentComponent(juce::ApplicationCommandManager& commandManager_);
+    ContentComponent(juce::ApplicationCommandManager& commandManager_, Settings& settings_);
     ~ContentComponent() override = default;
 
     void paint(juce::Graphics& g) override;

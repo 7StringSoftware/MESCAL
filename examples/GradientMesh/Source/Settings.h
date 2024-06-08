@@ -1,4 +1,4 @@
-#pragma once
+#pragma once 
 
 class Settings
 {
@@ -24,9 +24,8 @@ public:
         }
     }
 
+    Identifier const settingsID{ "Settings" };
     ValueTree settingsTree;
 
     static constexpr char defaultSubdirectoryName[] = "MESCAL";
-    Identifier const settingsID{ "Settings" };
-
 };

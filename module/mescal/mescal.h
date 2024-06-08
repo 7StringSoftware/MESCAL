@@ -43,7 +43,7 @@ END_JUCE_MODULE_DECLARATION
 
 namespace mescal
 {
-    #include "gradient_mesh/mescal_JSON.h"
+    #include "json/mescal_JSON.h"
     #include "gradient_mesh/mescal_GradientMesh_windows.h"
 }
 

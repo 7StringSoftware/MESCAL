@@ -1,8 +1,5 @@
 #pragma once
 
-namespace mescal
-{
-
 class JSONObject;
 class JSONArray;
 
@@ -244,6 +241,24 @@ public:
 
         return false;
     }
-};
 
-} // namespace mescal
+    juce::var* begin() const
+    {
+        if (auto array = jsonVar.getArray())
+        {
+            return array->begin();
+        }
+
+        return nullptr;
+    }
+
+    juce::var* end() const
+    {
+        if (auto array = jsonVar.getArray())
+        {
+            return array->end();
+        }
+
+        return nullptr;
+    }
+};

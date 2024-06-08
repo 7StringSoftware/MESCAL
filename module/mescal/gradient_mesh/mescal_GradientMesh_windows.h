@@ -150,10 +150,16 @@ public:
     struct Halfedge;
     struct Vertex
     {
-        explicit Vertex(juce::Point<float> position_, GradientMesh& mesh_, size_t index_) :
+        explicit Vertex(juce::Point<float> position_, GradientMesh& mesh_) :
             position(position_),
-            mesh(mesh_),
-            index(index_)
+            mesh(mesh_)
+        {
+        }
+
+        explicit Vertex(juce::Point<float> position_, juce::Uuid uuid_, GradientMesh& mesh_) :
+            position(position_),
+            uuid(uuid_),
+            mesh(mesh_)
         {
         }
 
@@ -181,8 +187,10 @@ public:
         void removeHalfedge(std::shared_ptr<Halfedge> halfedge);
 
         int getConnectionCount() const;
+        
+        mescal::JSONObject toJSON() const noexcept;
 
-        size_t const index;
+        juce::Uuid const uuid;
         juce::Point<float> position;
         std::array<std::weak_ptr<Halfedge>, 4> halfedges;
         GradientMesh& mesh;
@@ -198,8 +206,18 @@ public:
         {
         }
 
+        explicit BezierControlPoint(juce::Point<float> position_, juce::Uuid const& uuid_, GradientMesh& mesh_) :
+            uuid(uuid_),
+            position(position_),
+            mesh(mesh_)
+        {
+        }
+
+        juce::Uuid const uuid;
         juce::Point<float> position;
         GradientMesh& mesh;
+
+        mescal::JSONObject toJSON() const noexcept;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BezierControlPoint)
     };
@@ -208,10 +226,16 @@ public:
     struct Halfedge
     {
         Halfedge() = default;
+        Halfedge(juce::Uuid uuid_) :
+            uuid(uuid_)
+        {
+        }
 
         void release()
         {
         }
+
+        juce::Uuid const uuid;
 
         std::weak_ptr<Vertex> tail;
         std::weak_ptr<BezierControlPoint> b0, b1;
@@ -242,12 +266,15 @@ public:
             return text;
         }
 
+        mescal::JSONObject toJSON() const noexcept;
+
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Halfedge)
     };
 
     struct Patch
     {
         Patch(std::array<std::shared_ptr<Halfedge>, 4>& halfedges_);
+        Patch(std::array<std::shared_ptr<Halfedge>, 4>& halfedges_, juce::Uuid uuid_);
         ~Patch();
 
         void release()
@@ -331,7 +358,10 @@ public:
             return connected;
         }
 
+        mescal::JSONObject toJSON() const noexcept;
+
     private:
+        juce::Uuid const uuid;
         juce::Path path;
         bool modified = true;
 
@@ -368,7 +398,8 @@ public:
 
     juce::String toString() const;
 
-    juce::String toJSON() const noexcept;
+    mescal::JSONObject toJSON() const noexcept;
+    void loadFromJSON(mescal::JSONObject const& jsonObject);
 
 private:
     std::vector<std::shared_ptr<Vertex>> vertices;
@@ -380,7 +411,8 @@ private:
     std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head,
         std::shared_ptr<BezierControlPoint> b0,
         std::shared_ptr<BezierControlPoint> b1,
-        Direction edgePlacement);
+        Direction edgePlacement,
+        EdgeType type);
     void removeHalfedge(std::shared_ptr<Halfedge> halfedge);
     void removeVertex(std::shared_ptr<Vertex> vertex);
     void removeBezier(std::shared_ptr<BezierControlPoint> bezier);
@@ -400,10 +432,15 @@ private:
         const juce::Identifier halfedge{ "Halfedge" };
         const juce::Identifier tail{ "Tail" };
         const juce::Identifier head{ "Head" };
+        const juce::Identifier twin{ "Twin" };
         const juce::Identifier bezierControlPoints{ "BezierControlPoints" };
-        const juce::Identifier bezierControlPoint{ "BezierControlPoint" };
+        const juce::Identifier bezierControlPoint0{ "BezierControlPoint0" };
+        const juce::Identifier bezierControlPoint1{ "BezierControlPoint1" };
         const juce::Identifier x{ "X" };
         const juce::Identifier y{ "Y" };
+        const juce::Identifier edgeType{ "EdgeType" };
+        const juce::Identifier uniqueID{ "UniqueID" };
+        const juce::Identifier colors{ "Colors" };
     };
 
     struct Pimpl;

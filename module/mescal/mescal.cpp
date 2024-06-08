@@ -32,8 +32,5 @@
 
 #include "mescal.h"
 
-namespace mescal
-{
+#include "json/mescal_JSON.cpp"
 #include "gradient_mesh/mescal_GradientMesh_windows.cpp"
-#include "gradient_mesh/mescal_JSON.cpp"
-}

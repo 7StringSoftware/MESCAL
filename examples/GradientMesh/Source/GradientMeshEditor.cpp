@@ -1,9 +1,11 @@
 #include "GradientMeshEditor.h"
 #include "Commander.h"
 
-GradientMeshEditor::GradientMeshEditor(juce::ApplicationCommandManager& commandManager_)
+GradientMeshEditor::GradientMeshEditor(juce::ApplicationCommandManager& commandManager_, Settings& settings_)
     : commandManager(commandManager_),
-    displayComponent(*this)
+    displayComponent(*this),
+    settings(settings_),
+    document(settings_)
 {
     commandManager_.registerAllCommandsForTarget(this);
 
@@ -636,7 +638,7 @@ void GradientMeshEditor::DisplayComponent::paint(juce::Graphics& g)
         meshImage = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
     }
 
-    owner.document.gradientMesh.draw(meshImage, owner.patchToZoomedDisplayTransform);
+    owner.document.gradientMesh.draw(meshImage, {});// owner.patchToZoomedDisplayTransform);
     g.drawImageAt(meshImage, 0, 0);
 
     g.setColour(juce::Colours::white);
