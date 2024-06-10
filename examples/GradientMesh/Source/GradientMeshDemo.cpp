@@ -7,7 +7,6 @@ GradientMeshDemo::GradientMeshDemo()
     setOpaque(true);
 
     gradientMesh = std::make_unique<GradientMesh>();
-    innerMesh = std::make_unique<GradientMesh>();
 
     addAndMakeVisible(displayComponent);
 
@@ -141,6 +140,35 @@ void GradientMeshDemo::DisplayComponent::paint(juce::Graphics& g)
     }
 
     owner.gradientMesh->draw(meshImage, {});
+
+  #if 0
+  if (spriteAtlas.isNull())
+    {
+        spriteAtlas = juce::Image{ juce::Image::ARGB, 16, 16, true };
+        {
+            juce::Graphics g{ spriteAtlas };
+            g.setColour(juce::Colours::white);
+            g.fillEllipse(0.0f, 0.0f, 16.0f, 16.0f);
+        }
+        owner.spriteBatch.setAtlas(spriteAtlas);
+    }
+
+    std::vector<mescal::Sprite> sprites{ 16 };
+
+    float x = 32.0f;
+    for (int i = 0; i < 16; ++i)
+    {
+        sprites[i] = mescal::Sprite
+        {
+            { x, x, 16.0f, 16.0f },
+            { 0, 0, 16, 16 }
+        };
+        x += 40.0f;
+    }
+#endif
+
+    //owner.spriteBatch.draw(meshImage, sprites);
+
     g.drawImageAt(meshImage, 0, 0);
 }
 

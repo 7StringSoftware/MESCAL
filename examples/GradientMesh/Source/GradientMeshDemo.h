@@ -19,7 +19,7 @@ public:
 
 private:
     std::unique_ptr<GradientMesh> gradientMesh;
-    std::unique_ptr<GradientMesh> innerMesh;
+    mescal::SpriteBatch spriteBatch;
     juce::AffineTransform gradientMeshTransform;
 
     juce::VBlankAnimatorUpdater updater{ this };
@@ -39,33 +39,34 @@ private:
             })
         .build();
 
-        juce::Animator colorAnimator = juce::ValueAnimatorBuilder{}
-            .runningInfinitely()
-            .withEasing([this](auto t)
-                {
-                    return t;
-                })
-            .withValueChangedCallback([this](auto value)
-                {
-                    displayComponent.timestamp = value;
-                    createGradientMesh();
-                    displayComponent.repaint();
-                })
-            .build();
+    juce::Animator colorAnimator = juce::ValueAnimatorBuilder{}
+        .runningInfinitely()
+        .withEasing([this](auto t)
+            {
+                return t;
+            })
+        .withValueChangedCallback([this](auto value)
+            {
+                displayComponent.timestamp = value;
+                createGradientMesh();
+                displayComponent.repaint();
+            })
+        .build();
 
-        struct DisplayComponent : public juce::Component
-        {
-            DisplayComponent(GradientMeshDemo& owner_);
-            void paint(juce::Graphics& g) override;
+    struct DisplayComponent : public juce::Component
+    {
+        DisplayComponent(GradientMeshDemo& owner_);
+        void paint(juce::Graphics& g) override;
 
-            GradientMeshDemo& owner;
-            juce::Image meshImage;
+        GradientMeshDemo& owner;
+        juce::Image meshImage;
+        juce::Image spriteAtlas;
 
-            float gradientOpacity = 0.0f;
-            float timestamp = 0.0f;
-            int frameCount = 0;
-        } displayComponent;
+        float gradientOpacity = 0.0f;
+        float timestamp = 0.0f;
+        int frameCount = 0;
+    } displayComponent;
 
 
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GradientMeshDemo)
-        };
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GradientMeshDemo)
+};
