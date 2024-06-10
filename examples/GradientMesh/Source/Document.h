@@ -16,5 +16,4 @@ public:
     juce::String getDocumentTitle() override;
 
     Settings& settings;
-    mescal::GradientMesh gradientMesh;
 };

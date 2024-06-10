@@ -80,368 +80,79 @@ class GradientMesh
 {
 public:
 
-    struct Patch;
-
-    enum class EdgeType
+    struct Color128
     {
-        unknown = -1,
-        straight,
-        approximateQuadratic,
-        cubic
+        float red;
+        float green;
+        float blue;
+        float alpha;
+
+        juce::Colour toColour() const noexcept
+        {
+            return juce::Colour::fromFloatRGBA(red, green, blue, alpha);
+        }
+
+        static Color128 fromHSV(float hue, float saturation, float value, float alpha) noexcept;
     };
 
-    enum class Direction
+    enum class EdgePlacement
     {
-        north = 0,
-        east,
-        south,
-        west
+        left, bottom, right, top
     };
 
-    enum class CornerPlacement
+    struct Edge
     {
-        topLeft = 0,
-        topRight,
-        bottomRight,
-        bottomLeft
-    };
-
-    static constexpr std::array<CornerPlacement, 4> corners{ CornerPlacement::topLeft, CornerPlacement::topRight, CornerPlacement::bottomRight, CornerPlacement::bottomLeft };
-
-    static Direction opposite(Direction direction)
-    {
-        return Direction{ ((int)direction + 2) & 3 };
-    }
-
-    static Direction clockwiseFrom(Direction direction)
-    {
-        return Direction{ ((int)direction + 1) & 3 };
-    }
-
-    static CornerPlacement clockwiseFrom(CornerPlacement corner)
-    {
-        return CornerPlacement{ ((int)corner + 1) & 3 };
-    }
-
-    static Direction counterclockwiseFrom(Direction direction)
-    {
-        return Direction{ ((int)direction - 1) & 3 };
-    }
-
-    static std::pair<CornerPlacement, CornerPlacement> toCorners(Direction direction)
-    {
-        switch (direction)
-        {
-        default:
-        case Direction::north:
-            return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::topLeft }, { CornerPlacement::topRight } };
-        case Direction::east:
-            return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::topRight }, { CornerPlacement::bottomRight } };
-        case Direction::south:
-            return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::bottomRight }, { CornerPlacement::bottomLeft } };
-        case Direction::west:
-            return std::pair<CornerPlacement, CornerPlacement>{ { CornerPlacement::bottomLeft }, { CornerPlacement::topLeft } };
-        }
-    }
-
-    static constexpr std::array<Direction, 4> directions{ Direction::north, Direction::east, Direction::south, Direction::west };
-    static constexpr std::array<const char*, 4> directionNames{ "north", "east", "south", "west" };
-
-    struct Halfedge;
-    struct Vertex
-    {
-        explicit Vertex(juce::Point<float> position_, GradientMesh& mesh_) :
-            position(position_),
-            mesh(mesh_)
-        {
-        }
-
-        explicit Vertex(juce::Point<float> position_, juce::Uuid uuid_, GradientMesh& mesh_) :
-            position(position_),
-            uuid(uuid_),
-            mesh(mesh_)
-        {
-        }
-
-        auto getHalfedge(Direction edgePlacement) const
-        {
-            return halfedges[(size_t)edgePlacement];
-        }
-
-        juce::String toString(juce::String indent) const
-        {
-            juce::String text = indent + "Vertex ";
-#if 0
-            text << position.toString() << "\n";
-
-            for (auto direction : directions)
-            {
-                text << indent << indent << directionNames[(int)direction] << " ";
-                text << (halfedges[(int)direction] ? halfedges[(int)direction]->toString() : "null") << "\n";
-            }
-#endif
-
-            return text;
-        }
-
-        void removeHalfedge(std::shared_ptr<Halfedge> halfedge);
-
-        int getConnectionCount() const;
-        
-        mescal::JSONObject toJSON() const noexcept;
-
-        juce::Uuid const uuid;
-        juce::Point<float> position;
-        std::array<std::weak_ptr<Halfedge>, 4> halfedges;
-        GradientMesh& mesh;
-
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Vertex)
-    };
-
-    struct BezierControlPoint
-    {
-        explicit BezierControlPoint(juce::Point<float> position_, GradientMesh& mesh_) :
-            position(position_),
-            mesh(mesh_)
-        {
-        }
-
-        explicit BezierControlPoint(juce::Point<float> position_, juce::Uuid const& uuid_, GradientMesh& mesh_) :
-            uuid(uuid_),
-            position(position_),
-            mesh(mesh_)
-        {
-        }
-
-        juce::Uuid const uuid;
-        juce::Point<float> position;
-        GradientMesh& mesh;
-
-        mescal::JSONObject toJSON() const noexcept;
-
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BezierControlPoint)
-    };
-
-    struct Patch;
-    struct Halfedge
-    {
-        Halfedge() = default;
-        Halfedge(juce::Uuid uuid_) :
-            uuid(uuid_)
-        {
-        }
-
-        void release()
-        {
-        }
-
-        juce::Uuid const uuid;
-
-        std::weak_ptr<Vertex> tail;
-        std::weak_ptr<BezierControlPoint> b0, b1;
-        std::weak_ptr<Vertex> head;
-
-        std::weak_ptr<Halfedge> twin;
-
-        std::weak_ptr<Patch> patch;
-
-        EdgeType edgeType = EdgeType::cubic;
-
-        juce::String toString() const
-        {
-            juce::String text = "Halfedge ";
-
-            if (auto v = tail.lock())
-                text << v->position.toString() << " ";
-            else
-                text << "null ";
-
-            if (auto v = head.lock())
-                text << v->position.toString() << " ";
-            else
-                text << "null ";
-
-            text << (int)edgeType;
-
-            return text;
-        }
-
-        mescal::JSONObject toJSON() const noexcept;
-
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Halfedge)
+        juce::Point<float> tail;
+        Color128 tailColor;
+        std::pair<juce::Point<float>, juce::Point<float>> controlPoints;
     };
 
     struct Patch
     {
-        Patch(std::array<std::shared_ptr<Halfedge>, 4>& halfedges_);
-        Patch(std::array<std::shared_ptr<Halfedge>, 4>& halfedges_, juce::Uuid uuid_);
+        Patch() = default;
+        Patch(Patch const&) = default;
+        Patch(Patch&&) noexcept = default;
         ~Patch();
 
-        void release()
+        Patch& operator= (Patch const&);
+
+        std::array<Edge, 4> edges{};
+
+        const Edge& left() const noexcept
         {
+            return edges[(int)EdgePlacement::left];
         }
 
-        void update();
-
-        auto getCornerVertex(CornerPlacement corner) const
+        const Edge& bottom() const noexcept
         {
-            std::weak_ptr<Halfedge> halfedgeWeakPtr;
-            switch (corner)
-            {
-            case CornerPlacement::topLeft:
-                halfedgeWeakPtr = halfedges[(int)Direction::north];
-                break;
-
-            case CornerPlacement::topRight:
-                halfedgeWeakPtr = halfedges[(int)Direction::east];
-                break;
-
-            case CornerPlacement::bottomRight:
-                halfedgeWeakPtr = halfedges[(int)Direction::south];
-                break;
-
-            case CornerPlacement::bottomLeft:
-                halfedgeWeakPtr = halfedges[(int)Direction::west];
-                break;
-
-            default:
-                break;
-            }
-
-            if (auto halfedge = halfedgeWeakPtr.lock())
-            {
-                return halfedge->tail;
-            }
-
-            return std::weak_ptr<Vertex>{};
+            return edges[(int)EdgePlacement::bottom];
         }
 
-        const juce::Path& getPath()
+        const Edge& right() const noexcept
         {
-            if (path.isEmpty())
-                createPath();
-
-            return path;
+            return edges[(int)EdgePlacement::right];
         }
 
-        auto const& getHalfedges() const
+        const Edge& top() const noexcept
         {
-            return halfedges;
+            return edges[(int)EdgePlacement::top];
         }
-
-        const auto& getColors() const
-        {
-            return cornerColors;
-        }
-
-        void setColor(CornerPlacement corner, juce::Colour color)
-        {
-            cornerColors[(int)corner] = color;
-        }
-
-        bool isConnected(Direction direction) const
-        {
-            bool connected = true;
-            if (auto halfedge = halfedges[(int)direction].lock())
-            {
-                if (auto v = halfedge->tail.lock())
-                {
-                    connected &= v->getHalfedge(direction).lock() != nullptr;
-                }
-
-                if (auto v = halfedge->head.lock())
-                {
-                    connected &= v->getHalfedge(direction).lock() != nullptr;
-                }
-            }
-
-            return connected;
-        }
-
-        mescal::JSONObject toJSON() const noexcept;
-
-    private:
-        juce::Uuid const uuid;
-        juce::Path path;
-        bool modified = true;
-
-        std::array<std::weak_ptr<Halfedge>, 4> halfedges;
-        std::array<juce::Colour, 4> cornerColors
-        {
-            juce::Colours::red, juce::Colours::green, juce::Colours::blue, juce::Colours::yellow
-        };
-
-        void createPath();
-
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Patch)
     };
 
-    GradientMesh();
+    GradientMesh(int numPatches = 0);
     ~GradientMesh();
 
-    void addPatch(juce::Rectangle<float> bounds);
-    void addPatch(std::shared_ptr<Patch> patch);
-    void removePatch(Patch* patch);
-    std::shared_ptr<Patch> addConnectedPatch(Patch* sourcePatch, Direction direction);
+    void clearPatches() noexcept { patches.clear(); }
+    void addPatch(Patch& patch);
+    auto const& getPatches() const noexcept { return patches; }
+    void setPatch(size_t index, Patch& patch);
+    juce::Rectangle<float> getBounds() const noexcept;
 
     void applyTransform(const juce::AffineTransform& transform) noexcept;
     void draw(juce::Image image, juce::AffineTransform transform);
 
-    void setVertexPosition(Vertex* vertex, juce::Point<float> position);
-    void setEdgeType(Halfedge* edge, EdgeType edgeType);
-
-    juce::Rectangle<float> getBounds() const noexcept;
-    auto const& getPatches() const { return patches; }
-
-    auto const& getVertices() const { return vertices; }
-    auto const& getHalfedges() const { return halfedges; }
-
-    juce::String toString() const;
-
-    mescal::JSONObject toJSON() const noexcept;
-    void loadFromJSON(mescal::JSONObject const& jsonObject);
-
 private:
-    std::vector<std::shared_ptr<Vertex>> vertices;
-    std::vector<std::shared_ptr<BezierControlPoint>> bezierControlPoints;
-    std::vector<std::shared_ptr<Halfedge>> halfedges;
-    std::vector<std::shared_ptr<Patch>> patches;
-
-    std::shared_ptr<Vertex> addVertex(juce::Point<float> tail);
-    std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head,
-        std::shared_ptr<BezierControlPoint> b0,
-        std::shared_ptr<BezierControlPoint> b1,
-        Direction edgePlacement,
-        EdgeType type);
-    void removeHalfedge(std::shared_ptr<Halfedge> halfedge);
-    void removeVertex(std::shared_ptr<Vertex> vertex);
-    void removeBezier(std::shared_ptr<BezierControlPoint> bezier);
-
-#if JUCE_DEBUG
-    void check();
-#endif
-
-    struct Identifiers
-    {
-        const juce::Identifier patches{ "Patches" };
-        const juce::Identifier patch{ "Patch" };
-        const juce::Identifier vertices{ "Vertices" };
-        const juce::Identifier vertex{ "Vertex" };
-        const juce::Identifier position{ "Position" };
-        const juce::Identifier halfedges{ "Halfedges" };
-        const juce::Identifier halfedge{ "Halfedge" };
-        const juce::Identifier tail{ "Tail" };
-        const juce::Identifier head{ "Head" };
-        const juce::Identifier twin{ "Twin" };
-        const juce::Identifier bezierControlPoints{ "BezierControlPoints" };
-        const juce::Identifier bezierControlPoint0{ "BezierControlPoint0" };
-        const juce::Identifier bezierControlPoint1{ "BezierControlPoint1" };
-        const juce::Identifier x{ "X" };
-        const juce::Identifier y{ "Y" };
-        const juce::Identifier edgeType{ "EdgeType" };
-        const juce::Identifier uniqueID{ "UniqueID" };
-        const juce::Identifier colors{ "Colors" };
-    };
+    std::vector<Patch> patches;
 
     struct Pimpl;
     std::unique_ptr<Pimpl> pimpl;

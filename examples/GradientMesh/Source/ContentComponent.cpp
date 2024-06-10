@@ -1,10 +1,8 @@
 #include "ContentComponent.h"
 
-ContentComponent::ContentComponent(juce::ApplicationCommandManager& commandManager_, Settings& settings_) :
-    meshEditor(commandManager_, settings_)
+ContentComponent::ContentComponent(juce::ApplicationCommandManager& commandManager_, Settings& settings_)
 {
-    addAndMakeVisible(viewport);
-    viewport.setViewedComponent(&meshEditor);
+    addAndMakeVisible(meshDemo);
 
     setSize(2048, 1024);
 }
@@ -16,7 +14,5 @@ void ContentComponent::paint(juce::Graphics& g)
 
 void ContentComponent::resized()
 {
-    //meshEditor.setBounds(getLocalBounds().getUnion(meshEditor.getPreferredSize()));
-    meshEditor.setBounds(getLocalBounds());
-    viewport.setBounds(getLocalBounds());
+    meshDemo.setBounds(getLocalBounds());
 }

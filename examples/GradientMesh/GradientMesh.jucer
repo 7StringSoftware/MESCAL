@@ -19,16 +19,17 @@
       <FILE id="iydeUM" name="Controller.h" compile="0" resource="0" file="Source/Controller.h"/>
       <FILE id="NqhFCY" name="Document.cpp" compile="1" resource="0" file="Source/Document.cpp"/>
       <FILE id="OkT2uZ" name="Document.h" compile="0" resource="0" file="Source/Document.h"/>
-      <FILE id="PqVM7L" name="GradientMeshEditor.cpp" compile="1" resource="0"
-            file="Source/GradientMeshEditor.cpp"/>
-      <FILE id="TtcuWW" name="GradientMeshEditor.h" compile="0" resource="0"
-            file="Source/GradientMeshEditor.h"/>
+      <FILE id="PqVM7L" name="GradientMeshDemo.cpp" compile="1" resource="0"
+            file="Source/GradientMeshDemo.cpp"/>
+      <FILE id="TtcuWW" name="GradientMeshDemo.h" compile="0" resource="0"
+            file="Source/GradientMeshDemo.h"/>
       <FILE id="TEUkPq" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="YsUFiZ" name="Settings.cpp" compile="1" resource="0" file="Source/Settings.cpp"/>
       <FILE id="jf0mj2" name="Settings.h" compile="0" resource="0" file="Source/Settings.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>
+    <MODULE id="juce_animation" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
@@ -51,6 +52,7 @@
         <MODULEPATH id="juce_gui_basics" path=""/>
         <MODULEPATH id="juce_gui_extra" path="../../../JUCE-dev/modules"/>
         <MODULEPATH id="mescal" path="../../module"/>
+        <MODULEPATH id="juce_animation" path="../../../../JUCE/modules"/>
       </MODULEPATHS>
     </VS2022>
   </EXPORTFORMATS>
