@@ -12,8 +12,7 @@ public:
     void paint(juce::Graphics&) override;
     void paintOverChildren(Graphics& g) override;
     void resized() override;
-
-    void createGradientMesh();
+    void mouseDown(juce::MouseEvent const& event) override;
 
 private:
     mescal::GradientMesh mesh;
@@ -27,7 +26,6 @@ private:
         .withValueChangedCallback([this](auto value)
             {
                 displayComponent.gradientOpacity = value;
-                createGradientMesh();
                 displayComponent.repaint();
             })
         .withOnCompleteCallback([this]
@@ -46,7 +44,16 @@ private:
         .withValueChangedCallback([this](auto value)
             {
                 displayComponent.timestamp = value;
-                createGradientMesh();
+                displayComponent.repaint();
+            })
+        .build();
+
+    juce::Animator spriteAnimator = juce::ValueAnimatorBuilder{}
+        .withEasing(juce::Easings::createEaseInOut())
+        .withDurationMs(2000)
+        .withValueChangedCallback([this](auto value)
+            {
+                displayComponent.distance = std::sin(value * juce::MathConstants<float>::twoPi) * 200.0f + 200.0f;
                 displayComponent.repaint();
             })
         .build();
@@ -63,6 +70,7 @@ private:
         float gradientOpacity = 0.0f;
         float timestamp = 0.0f;
         int frameCount = 0;
+        float distance = 0.0f;
     } displayComponent;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GradientMeshDemo)

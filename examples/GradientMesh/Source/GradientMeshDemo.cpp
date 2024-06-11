@@ -9,6 +9,19 @@ GradientMeshDemo::GradientMeshDemo()
 
     //gradientMesh = std::make_unique<GradientMesh>();
 
+    displayComponent.spriteAtlas = juce::Image{ juce::Image::ARGB, 1536, 768, true };
+    {
+        juce::Graphics g{ displayComponent.spriteAtlas };
+
+        g.setColour(juce::Colours::black);
+        g.setFont({ 400.0f, juce::Font::bold });
+        //g.drawRect(displayComponent.spriteAtlas.getBounds(), 1.0f);
+        g.setColour(juce::Colours::blue);
+        g.fillEllipse(displayComponent.spriteAtlas.getBounds().toFloat() * 0.5f);
+        g.setColour(juce::Colours::red);
+        g.fillEllipse((displayComponent.spriteAtlas.getBounds().toFloat() * 0.5f).translated(displayComponent.spriteAtlas.getWidth() * 0.5f, 0.0f));
+        //g.drawText("MESCAL", displayComponent.spriteAtlas.getBounds(), juce::Justification::centred);
+    }
     addAndMakeVisible(displayComponent);
 
     updater.addAnimator(fadeInAnimator);
@@ -26,6 +39,7 @@ void GradientMeshDemo::paint(juce::Graphics& g)
 
 void GradientMeshDemo::paintOverChildren(Graphics& g)
 {
+#if 0
     auto mousePos = getMouseXYRelative().toFloat();
 
     std::shared_ptr<mescal::GradientMesh::Vertex> selectedVertex;
@@ -72,10 +86,8 @@ void GradientMeshDemo::paintOverChildren(Graphics& g)
                 g.drawArrow({ tail->position, head->position }, 4.0f, 14.0f, 12.0f);
         }
     }
+#endif
 
-    g.setColour(juce::Colours::black);
-    g.setFont({ getHeight() * 0.45f, juce::Font::bold });
-    g.drawText("MESCAL", getLocalBounds(), juce::Justification::centred);
 }
 
 void GradientMeshDemo::resized()
@@ -83,76 +95,10 @@ void GradientMeshDemo::resized()
     displayComponent.setBounds(getLocalBounds());
 }
 
-void GradientMeshDemo::createGradientMesh()
+void GradientMeshDemo::mouseDown(juce::MouseEvent const& event)
 {
-#if 0
-
-    gradientMesh->clearPatches();
-
-    juce::Point<float> topLeftCorner;
-    float patchWidth = (float)getWidth() * 0.25;
-    float patchHeight = (float)getHeight() * 0.25f;
-    while (topLeftCorner.x <= (float)getWidth() && topLeftCorner.y <= (float)getHeight())
-    {
-        GradientMesh::Patch patch;
-
-        auto setEdge = [&](GradientMesh::EdgePlacement edgePlacement, juce::Line<float> line)
-            {
-                auto& edge = patch.edges[(int)edgePlacement];
-                edge.tail = line.getStart();
-
-                auto colorX = line.getStartX() / (float)getWidth();
-                auto normalizedY = line.getStart().y / (float)getHeight();
-
-                auto hue = 0.5f * ((float)std::sin((colorX * 0.1f + normalizedY * 0.1f + displayComponent.timestamp * 0.0125) * juce::MathConstants<float>::twoPi) * 0.5f + 0.5f);
-                auto saturation = std::cos(normalizedY * juce::MathConstants<float>::twoPi) * 0.5f + 0.5f;
-
-                edge.tailColor = mescal::GradientMesh::Color128::fromHSV(hue,
-                    saturation,
-                    displayComponent.gradientOpacity,
-                    displayComponent.gradientOpacity);
-
-                float offset = 50.0f;
-                auto angle = line.getAngle();
-                if (edge.tail.x < patchWidth || edge.tail.x >(float)getWidth() - patchWidth ||
-                    edge.tail.y < patchHeight || edge.tail.y >(float)getHeight() - patchHeight)
-                {
-                    offset = 0.0f;
-                }
-                angle += juce::MathConstants<float>::halfPi;
-                edge.controlPoints =
-                {
-                    line.getPointAlongLineProportionally(0.25f).getPointOnCircumference(offset, angle + juce::MathConstants<float>::halfPi),
-                    line.getPointAlongLineProportionally(0.75f).getPointOnCircumference(offset, angle - juce::MathConstants<float>::halfPi)
-                };
-            };
-
-        std::array<juce::Point<float>, 4> patchCorners
-        {
-            topLeftCorner.translated(patchWidth, patchHeight),
-            topLeftCorner.translated(patchWidth, 0.0f),
-            topLeftCorner,
-            topLeftCorner.translated(0.0f, patchHeight)
-        };
-        size_t patchCornerIndex = 0;
-        juce::Line<float> line{ patchCorners[2], patchCorners[3] };
-        for (auto edgePlacement : { GradientMesh::EdgePlacement::left, GradientMesh::EdgePlacement::bottom, GradientMesh::EdgePlacement::right, GradientMesh::EdgePlacement::top })
-        {
-            setEdge(edgePlacement, line);
-
-            line = juce::Line<float>{ line.getEnd(), patchCorners[patchCornerIndex++] };
-        }
-
-        topLeftCorner += { patchWidth, 0.0f };
-        if (topLeftCorner.x >= (float)getWidth())
-        {
-            topLeftCorner.x = 0.0f;
-            topLeftCorner += { 0.0f, patchHeight};
-        }
-
-        gradientMesh->addPatch(patch);
-    }
-#endif
+    updater.addAnimator(spriteAnimator);
+    spriteAnimator.start();
 }
 
 GradientMeshDemo::DisplayComponent::DisplayComponent(GradientMeshDemo& owner_) :
@@ -174,17 +120,10 @@ void GradientMeshDemo::DisplayComponent::paint(juce::Graphics& g)
             float y = row * rowHeight + offset;
             juce::Point<float> p{ x, y };
             auto distance = p.getDistanceFrom(mousePos);
+
             auto angle = mousePos.getAngleToPoint(p);
             distance *= std::pow(1.001f, distance);
-            //distance = juce::roundToInt(distance / 100.0f) * 100.0f;
             vertex->position = mousePos.getPointOnCircumference(distance, angle);
-
-#if 0
-            float x = column * columnWidth;
-            float y = row * rowHeight + rowHeight * 0.4f * std::sin(juce::MathConstants<float>::twoPi * (float)column / (float)mesh.getNumColumns());
-            vertex->position = { x, y };
-#endif
-            angle = angle < 0.0f ? (juce::MathConstants<float>::twoPi + angle) : angle;
 
             float phase = (0.25f * (x / (float)getWidth()) * juce::MathConstants<float>::twoPi) + 0.0125f * timestamp * juce::MathConstants<float>::twoPi;
             if (row > owner.mesh.getNumRows() / 2)
@@ -203,35 +142,35 @@ void GradientMeshDemo::DisplayComponent::paint(juce::Graphics& g)
 
     owner.mesh.draw(meshImage, {});
 
-#if 0
-    if (spriteAtlas.isNull())
+    if (!owner.spriteAnimator.isComplete())
     {
-        spriteAtlas = juce::Image{ juce::Image::ARGB, 16, 16, true };
-        {
-            juce::Graphics g{ spriteAtlas };
-            g.setColour(juce::Colours::white);
-            g.fillEllipse(0.0f, 0.0f, 16.0f, 16.0f);
-        }
         owner.spriteBatch.setAtlas(spriteAtlas);
-    }
-
-    std::vector<mescal::Sprite> sprites{ 16 };
-
-    float x = 32.0f;
-    for (int i = 0; i < 16; ++i)
-    {
-        sprites[i] = mescal::Sprite
+        std::vector<mescal::Sprite> sprites;
+        int spriteWidth = spriteAtlas.getWidth() / 4;
+        int spriteHeight = spriteAtlas.getHeight() / 4;
+        auto center = getLocalBounds().getCentre().toFloat();
+        juce::Point<float> offset{ (getWidth() - spriteAtlas.getWidth()) * 0.5f, (getHeight() - spriteAtlas.getHeight()) * 0.5f };
+        for (int x = 0; x < spriteAtlas.getWidth(); x += spriteWidth)
         {
-            { x, x, 16.0f, 16.0f },
-            { 0, 0, 16, 16 }
-        };
-        x += 40.0f;
-    }
-#endif
+            for (int y = 0; y < spriteAtlas.getHeight(); y += spriteHeight)
+            {
+                juce::Rectangle<int> sourceR{ x, y, spriteWidth, spriteHeight };
+                auto destR = sourceR.toFloat() + offset;
+                auto angle = center.getAngleToPoint(destR.getCentre());
+                destR.setCentre(center.getPointOnCircumference(distance, angle));
+                    sprites.push_back({ destR, sourceR });
+            }
+        }
 
-    //owner.spriteBatch.draw(meshImage, sprites);
+        owner.spriteBatch.draw(meshImage, sprites);
+    }
 
     g.drawImageAt(meshImage, 0, 0);
+
+    if (owner.spriteAnimator.isComplete())
+    {
+        g.drawImageAt(spriteAtlas, (getWidth() - spriteAtlas.getWidth()) / 2, (getHeight() - spriteAtlas.getHeight()) / 2);
+    }
 }
 
 
