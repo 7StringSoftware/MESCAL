@@ -1,18 +1,17 @@
 #include "ContentComponent.h"
+#include "GradientMeshDemo.h"
+#include "SpriteBatchDemo.h"
 
-ContentComponent::ContentComponent(juce::ApplicationCommandManager& commandManager_, Settings& settings_)
+ContentComponent::ContentComponent()
 {
-    addAndMakeVisible(meshDemo);
-
+    //demoComponent = std::make_unique<GradientMeshDemo>();
+    demoComponent = std::make_unique<SpriteBatchDemo>();
+    addAndMakeVisible(demoComponent.get());
     setSize(2048, 1024);
-}
-
-void ContentComponent::paint(juce::Graphics& g)
-{
-    g.fillAll(juce::Colours::black);
 }
 
 void ContentComponent::resized()
 {
-    meshDemo.setBounds(getLocalBounds());
+    if (demoComponent)
+        demoComponent->setBounds(getLocalBounds());
 }

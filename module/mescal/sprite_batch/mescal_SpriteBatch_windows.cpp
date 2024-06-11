@@ -36,7 +36,7 @@ namespace mescal
             }
         }
 
-        void draw(juce::Image destinationImage, const std::vector<Sprite>& sprites)
+        void draw(juce::Image destinationImage, const std::vector<Sprite>& sprites, bool clearImage)
         {
             createResources(destinationImage);
 
@@ -102,6 +102,10 @@ namespace mescal
                         deviceContext->SetTarget(destinationBitmap);
                         deviceContext->BeginDraw();
                         deviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+                        if (clearImage)
+                        {
+                            deviceContext->Clear();
+                        }
 
                         deviceContext->DrawSpriteBatch(spriteBatch.get(),
                             atlasBitmap,
@@ -133,19 +137,14 @@ namespace mescal
     {
     }
 
-    void SpriteBatch::clear()
-    {
-
-    }
-
     void SpriteBatch::setAtlas(juce::Image atlas)
     {
         pimpl->atlas = atlas;
     }
 
-    void SpriteBatch::draw(juce::Image destinationImage, const std::vector<Sprite>& sprites)
+    void SpriteBatch::draw(juce::Image destinationImage, const std::vector<Sprite>& sprites, bool clearImage)
     {
-        pimpl->draw(destinationImage, sprites);
+        pimpl->draw(destinationImage, sprites, clearImage);
     }
 
 } // namespace mescal

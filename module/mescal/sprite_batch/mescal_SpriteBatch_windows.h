@@ -12,9 +12,8 @@ public:
     SpriteBatch();
     ~SpriteBatch();
 
-    void clear();
     void setAtlas(juce::Image atlas);
-    void draw(juce::Image destinationImage, const std::vector<Sprite>& sprites);
+    void draw(juce::Image destinationImage, const std::vector<Sprite>& sprites, bool clearImage);
 
 private:
     struct Pimpl;

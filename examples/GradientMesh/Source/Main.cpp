@@ -7,13 +7,13 @@ class Application : public juce::JUCEApplication
 public:
     Application() = default;
 
-    const juce::String getApplicationName() override { return "GradientMesh"; }
+    const juce::String getApplicationName() override { return "MESCAL Demo"; }
     const juce::String getApplicationVersion() override { return ""; }
 
     void initialise(const juce::String&) override
     {
         controller = std::make_unique <Controller>();
-        mainWindow.reset(new MainWindow("GradientMesh", new ContentComponent{ controller->commander.commandManager, controller->settings }, *this));
+        mainWindow.reset(new MainWindow("MESCAL Demo", new ContentComponent, *this));
     }
 
     void shutdown() override { mainWindow = nullptr; }
@@ -23,19 +23,26 @@ private:
     {
     public:
         MainWindow(const juce::String& name, juce::Component* c, JUCEApplication& a)
-            : DocumentWindow(name, juce::Desktop::getInstance().getDefaultLookAndFeel()
-                .findColour(ResizableWindow::backgroundColourId),
+            : DocumentWindow(name,
+                juce::Colours::black,
                 juce::DocumentWindow::allButtons),
             app(a)
         {
-            setUsingNativeTitleBar(true);
+            setUsingNativeTitleBar(false);
             setContentOwned(c, true);
 
             setResizable(true, false);
             setResizeLimits(300, 250, 10000, 10000);
             centreWithSize(getWidth(), getHeight());
 
+            setOpaque(false);
+
             setVisible(true);
+        }
+
+        ~MainWindow() override
+        {
+            setLookAndFeel(nullptr);
         }
 
         void closeButtonPressed() override

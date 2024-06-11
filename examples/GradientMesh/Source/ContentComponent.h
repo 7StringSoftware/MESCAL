@@ -1,17 +1,15 @@
 #pragma once
 
 #include "Base.h"
-#include "GradientMeshDemo.h"
 
 class ContentComponent : public juce::Component
 {
 public:
-    ContentComponent(juce::ApplicationCommandManager& commandManager_, Settings& settings_);
+    ContentComponent();
     ~ContentComponent() override = default;
 
-    void paint(juce::Graphics& g) override;
     void resized() override;
 
 private:
-    GradientMeshDemo meshDemo;
+    std::unique_ptr<juce::Component> demoComponent;
 };
