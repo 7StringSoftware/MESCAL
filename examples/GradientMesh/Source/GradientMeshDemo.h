@@ -3,8 +3,6 @@
 #include "Base.h"
 #include "Document.h"
 
-using GradientMesh = mescal::GradientMesh;
-
 class GradientMeshDemo : public juce::Component
 {
 public:
@@ -18,7 +16,7 @@ public:
     void createGradientMesh();
 
 private:
-    std::unique_ptr<GradientMesh> gradientMesh;
+    mescal::GradientMesh mesh;
     mescal::SpriteBatch spriteBatch;
     juce::AffineTransform gradientMeshTransform;
 
@@ -66,7 +64,6 @@ private:
         float timestamp = 0.0f;
         int frameCount = 0;
     } displayComponent;
-
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GradientMeshDemo)
 };

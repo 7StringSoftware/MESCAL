@@ -2,11 +2,12 @@
 #include "Commander.h"
 
 GradientMeshDemo::GradientMeshDemo()
-    : displayComponent(*this)
+    : displayComponent(*this),
+    mesh(16, 16)
 {
     setOpaque(true);
 
-    gradientMesh = std::make_unique<GradientMesh>();
+    //gradientMesh = std::make_unique<GradientMesh>();
 
     addAndMakeVisible(displayComponent);
 
@@ -25,27 +26,52 @@ void GradientMeshDemo::paint(juce::Graphics& g)
 
 void GradientMeshDemo::paintOverChildren(Graphics& g)
 {
-#if 0
-    for (auto& patch : gradientMesh->getPatches())
+    auto mousePos = getMouseXYRelative().toFloat();
+
+    std::shared_ptr<mescal::GradientMesh::Vertex> selectedVertex;
+
+    for (auto const& vertex : mesh.getVertices())
     {
-        juce::Rectangle<float> r{ patch.left().tail, patch.right().tail };
-        if (r.contains(getMouseXYRelative().toFloat()))
+        g.setColour(juce::Colours::white);
+        g.fillEllipse(juce::Rectangle<float>{ 22.0f, 22.0f }.withCentre(vertex->position));
+        g.setColour(vertex->color);
+        g.fillEllipse(juce::Rectangle<float>{ 16.0f, 16.0f }.withCentre(vertex->position));
+
+        if (vertex->position.getDistanceFrom(mousePos) < 50.0f)
         {
-            g.setColour(juce::Colours::white);
-            g.drawRect(r);
-
-            for (auto const& edge : patch.edges)
-            {
-                g.setColour(edge.tailColor.toColour());
-                g.fillEllipse(edge.tail.x - 5.0f, edge.tail.y - 5.0f, 10.0f, 10.0f);
-
-                g.setColour(juce::Colours::white);
-                g.fillEllipse(edge.controlPoints.first.x - 5.0f, edge.controlPoints.first.y - 5.0f, 10.0f, 10.0f);
-                g.fillEllipse(edge.controlPoints.second.x - 5.0f, edge.controlPoints.second.y - 5.0f, 10.0f, 10.0f);
-            }
+            selectedVertex = vertex;
         }
     }
-#endif
+
+    for (auto const& halfedge : mesh.getHalfedges())
+    {
+        auto tail = halfedge->tail.lock();
+        auto head = halfedge->head.lock();
+        if (tail && head)
+        {
+            auto color = juce::Colours::white.withAlpha(0.5f);
+            if (tail.get() == selectedVertex.get() || head.get() == selectedVertex.get())
+                color = juce::Colours::white;
+
+            g.setColour(color);
+            auto angle = tail->position.getAngleToPoint(head->position) + juce::MathConstants<float>::halfPi;
+            juce::Line<float> line{ tail->position.getPointOnCircumference(3.0f, angle), head->position.getPointOnCircumference(3.f, angle) };
+            g.drawArrow(line.withShortenedStart(5.0f).withShortenedEnd(5.0f), 2.0f, 12.0f, 12.0f);
+        }
+    }
+
+    if (selectedVertex)
+    {
+        if (auto halfedge = selectedVertex->halfedge.lock())
+        {
+            g.setColour(juce::Colours::white);
+
+            auto tail = halfedge->tail.lock();
+            auto head = halfedge->head.lock();
+            if (tail && head)
+                g.drawArrow({ tail->position, head->position }, 4.0f, 14.0f, 12.0f);
+        }
+    }
 
     g.setColour(juce::Colours::black);
     g.setFont({ getHeight() * 0.45f, juce::Font::bold });
@@ -59,6 +85,8 @@ void GradientMeshDemo::resized()
 
 void GradientMeshDemo::createGradientMesh()
 {
+#if 0
+
     gradientMesh->clearPatches();
 
     juce::Point<float> topLeftCorner;
@@ -124,6 +152,7 @@ void GradientMeshDemo::createGradientMesh()
 
         gradientMesh->addPatch(patch);
     }
+#endif
 }
 
 GradientMeshDemo::DisplayComponent::DisplayComponent(GradientMeshDemo& owner_) :
@@ -134,15 +163,48 @@ GradientMeshDemo::DisplayComponent::DisplayComponent(GradientMeshDemo& owner_) :
 
 void GradientMeshDemo::DisplayComponent::paint(juce::Graphics& g)
 {
+    auto mousePos = getLocalBounds().reduced(200).getConstrainedPoint(getMouseXYRelative()).toFloat();
+    auto center = getLocalBounds().getCentre().toFloat();
+    float columnWidth = (float)getWidth() / (float)(owner.mesh.getNumColumns() - 1);
+    float rowHeight = (float)getHeight() / (float)(owner.mesh.getNumRows() - 3);
+    owner.mesh.configureVertices([=](int row, int column, std::shared_ptr<mescal::GradientMesh::Vertex> vertex)
+        {
+            float x = column * columnWidth;
+            float offset = std::sin(x / (float)getWidth() * juce::MathConstants<float>::twoPi * 2.0f) * 25.0f;
+            float y = row * rowHeight + offset;
+            juce::Point<float> p{ x, y };
+            auto distance = p.getDistanceFrom(mousePos);
+            auto angle = mousePos.getAngleToPoint(p);
+            distance *= std::pow(1.001f, distance);
+            //distance = juce::roundToInt(distance / 100.0f) * 100.0f;
+            vertex->position = mousePos.getPointOnCircumference(distance, angle);
+
+#if 0
+            float x = column * columnWidth;
+            float y = row * rowHeight + rowHeight * 0.4f * std::sin(juce::MathConstants<float>::twoPi * (float)column / (float)mesh.getNumColumns());
+            vertex->position = { x, y };
+#endif
+            angle = angle < 0.0f ? (juce::MathConstants<float>::twoPi + angle) : angle;
+
+            float phase = (0.25f * (x / (float)getWidth()) * juce::MathConstants<float>::twoPi) + 0.0125f * timestamp * juce::MathConstants<float>::twoPi;
+            if (row > owner.mesh.getNumRows() / 2)
+            {
+                phase += juce::MathConstants<float>::pi;
+            }
+
+            auto hue = std::sin(phase) * 0.5f + 0.5f;
+            vertex->color = juce::Colour::fromHSV(hue, y / (float)getHeight(), 1.0f, gradientOpacity);
+        });
+
     if (meshImage.isNull() || meshImage.getWidth() != getWidth() || meshImage.getHeight() != getHeight())
     {
         meshImage = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
     }
 
-    owner.gradientMesh->draw(meshImage, {});
+    owner.mesh.draw(meshImage, {});
 
-  #if 0
-  if (spriteAtlas.isNull())
+#if 0
+    if (spriteAtlas.isNull())
     {
         spriteAtlas = juce::Image{ juce::Image::ARGB, 16, 16, true };
         {

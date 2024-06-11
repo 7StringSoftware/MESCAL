@@ -4,7 +4,6 @@ namespace mescal
 #ifdef __INTELLISENSE__
 
 #include "mescal_GradientMesh_windows.h"
-#include "../json/mescal_JSON.h"
 
 #endif
 
@@ -42,117 +41,238 @@ namespace mescal
         winrt::com_ptr<ID2D1GradientMesh> gradientMesh;
     };
 
-    GradientMesh::GradientMesh(int numPatches) :
+
+    GradientMesh::GradientMesh(int numRows_, int numColumns_) :
         pimpl(std::make_unique<Pimpl>(*this)),
-        patches(numPatches)
+        numRows(numRows_),
+        numColumns(numColumns_)
     {
+        float rowHeight = 1.0f;
+        float columnWidth = 1.0f;
+        auto numVertices = numRows_ * numColumns_;
+        vertices.reserve(numVertices);
+
+        for (int row = 0; row < numRows_; ++row)
+        {
+            for (int column = 0; column < numColumns_; ++column)
+            {
+                auto x = column * columnWidth;
+                auto y = row * rowHeight;
+                vertices.push_back(std::make_shared<Vertex>(juce::Point<float>{x, y}));
+            }
+        }
+
+        for (int row = 0; row < numRows_ - 1; row += 2)
+        {
+            for (int column = numColumns_ - 1; column >= 1; --column)
+            {
+                auto tail = vertices[row * numColumns_ + column];
+                auto head = vertices[row  * numColumns_ + column - 1];
+                auto halfedge = addHalfedge(tail, head);
+                tail->halfedge = halfedge;
+            }
+
+            for (int column = 0; column < numColumns_ - 1; ++column)
+            {
+                auto tail = vertices[(row + 1) * numColumns_ + column];
+                auto head = vertices[(row + 1) * numColumns_ + column + 1];
+                auto halfedge = addHalfedge(tail, head);
+                tail->halfedge = halfedge;
+            }
+        }
+
+        for (int column = 0; column < numColumns_ - 1; column += 2)
+        {
+            for (int row = 0; row < numRows_ - 1; ++row)
+            {
+                auto tail = vertices[row * numColumns_ + column];
+                auto head = vertices[(row + 1) * numColumns_ + column];
+                auto halfedge = addHalfedge(tail, head);
+                tail->halfedge = halfedge;
+            }
+
+            for (int row = numRows_ - 1; row >= 1; --row)
+            {
+                auto tail = vertices[row * numColumns_ + column + 1];
+                auto head = vertices[(row - 1) * numColumns_ + column + 1];
+                auto halfedge = addHalfedge(tail, head);
+                tail->halfedge = halfedge;
+            }
+        }
     }
+
+#if 0
+    GradientMesh GradientMesh::fromPath(const juce::Path& path)
+    {
+        GradientMesh mesh;
+        std::unordered_map<juce::Point<float>, std::shared_ptr<Vertex>> vertexMap;
+        std::shared_ptr<Vertex> subpathStart;
+        std::shared_ptr<Vertex> previousVertex;
+
+        auto addMappedVertex = [&](juce::Point<float> point) -> std::shared_ptr<Vertex>
+            {
+                auto newVertex = std::make_shared<Vertex>(point);
+                auto storedVertex = vertexMap[point];
+                if (newVertex == storedVertex)
+                {
+                    return storedVertex;
+                }
+
+                mesh.vertices.push_back(newVertex);
+                vertexMap[point] = newVertex;
+                return newVertex;
+            };
+
+        juce::Path::Iterator it{ path };
+        while (it.next())
+        {
+            switch (it.elementType)
+            {
+            case Path::Iterator::startNewSubPath:
+            {
+                subpathStart = addMappedVertex({ it.x1, it.y1 });
+                previousVertex = subpathStart;
+                break;
+            }
+
+            case Path::Iterator::lineTo:
+            {
+                auto vertex = addMappedVertex({ it.x1, it.y1 });
+                auto halfedge = mesh.addHalfedge(previousVertex, vertex);
+
+                previousVertex = vertex;
+                break;
+            }
+
+            case Path::Iterator::quadraticTo:
+            {
+                //
+                // GradientMesh edges need to be straight lines or cubic splines
+                //
+                jassertfalse;
+                break;
+            }
+
+            case Path::Iterator::cubicTo:
+            {
+                auto vertex = addMappedVertex({ it.x3, it.y3 });
+                previousVertex = vertex;
+                break;
+            }
+
+            case Path::Iterator::closePath:
+            {
+                if (previousVertex.get() != subpathStart.get())
+                {
+                }
+
+                subpathStart = {};
+                break;
+            }
+            }
+        }
+
+        return mesh;
+    }
+#endif
 
     GradientMesh::~GradientMesh()
     {
     }
 
-    void GradientMesh::applyTransform(const juce::AffineTransform& transform) noexcept
+    std::shared_ptr<GradientMesh::Vertex> GradientMesh::addVertex(juce::Point<float> point)
     {
+        auto vertex = std::make_shared<Vertex>(point);
+        vertices.push_back(vertex);
+        return vertex;
     }
 
-    void GradientMesh::addPatch(Patch& patch)
+    std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head)
     {
-        patches.push_back(patch);
+        auto halfedge = std::make_shared<Halfedge>();
+        halfedge->tail = tail;
+        halfedge->head = head;
+
+        auto twin = std::make_shared<Halfedge>();
+        twin->tail = head;
+        twin->head = tail;
+
+        halfedge->twin = twin;
+        twin->twin = halfedge;
+
+        halfedges.push_back(halfedge);
+        halfedges.push_back(twin);
+
+        return halfedge;
     }
 
-    juce::Rectangle<float> GradientMesh::getBounds() const noexcept
+    void GradientMesh::applyTransform(juce::AffineTransform const& transform)
     {
-        juce::Rectangle<float> bounds;
-        for (auto const& patch : patches)
+        jassertfalse;
+    }
+
+    void GradientMesh::configureVertices(std::function<void(int row, int column, std::shared_ptr<Vertex> vertex)> callback)
+    {
+        jassert(callback);
+
+        int row = 0;
+        int column = 0;
+        for (auto& vertex : vertices)
         {
-            for (auto const& edge : patch.edges)
+            callback(row, column, vertex);
+            ++column;
+            if (column >= numColumns)
             {
-                bounds = bounds.getUnion(juce::Rectangle<float>{ edge.tail.x, edge.tail.y, 1.0f, 1.0f });
+                column = 0;
+                ++row;
             }
-
         }
-
-        return bounds;
     }
 
     void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
     {
-        auto toPOINT_2F = [&](juce::Point<float> point)
+        auto toPOINT_2F = [&](int row, int column)
             {
-                auto transformedPoint = point.transformedBy(transform);
+                auto& vertex = vertices[row * numColumns + column];
+                auto transformedPoint = vertex->position.transformedBy(transform);
                 return D2D1_POINT_2F{ transformedPoint.x, transformedPoint.y };
-            };
-        auto toCOLOR_F = [](Color128 color)
-            {
-                return D2D1_COLOR_F{ color.red, color.green, color.blue, color.alpha };
             };
 
         std::vector<D2D1_GRADIENT_MESH_PATCH> d2dPatches;
-        for (auto const& patch : patches)
+        d2dPatches.reserve(numRows * numColumns);
+        for (int row = 0; row < numRows - 1; ++row)
         {
-            d2dPatches.emplace_back(D2D1_GRADIENT_MESH_PATCH{});
-            auto& d2dPatch = d2dPatches.back();
-
-            d2dPatch.point00 = toPOINT_2F(patch.left().tail);
-            d2dPatch.point30 = toPOINT_2F(patch.bottom().tail);
-            d2dPatch.point33 = toPOINT_2F(patch.right().tail);
-            d2dPatch.point03 = toPOINT_2F(patch.top().tail);
-
-            d2dPatch.color00 = toCOLOR_F(patch.left().tailColor);
-            d2dPatch.color30 = toCOLOR_F(patch.bottom().tailColor);
-            d2dPatch.color33 = toCOLOR_F(patch.right().tailColor);
-            d2dPatch.color03 = toCOLOR_F(patch.top().tailColor);
-
+            for (int column = 0; column < numColumns - 1; ++column)
             {
-                juce::Line<float> diagonal{ d2dPatch.point00.x, d2dPatch.point00.y, d2dPatch.point33.x, d2dPatch.point33.y };
-                d2dPatch.point11 = toPOINT_2F(diagonal.getPointAlongLine(0.25f));
-                d2dPatch.point22 = toPOINT_2F(diagonal.getPointAlongLine(0.75f));
-            }
-            {
-                juce::Line<float> diagonal{ d2dPatch.point03.x, d2dPatch.point03.y, d2dPatch.point30.x, d2dPatch.point30.y };
-                d2dPatch.point12 = toPOINT_2F(diagonal.getPointAlongLine(0.25f));
-                d2dPatch.point21 = toPOINT_2F(diagonal.getPointAlongLine(0.75f));
-            }
+                d2dPatches.emplace_back(D2D1_GRADIENT_MESH_PATCH{});
+                auto& d2dPatch = d2dPatches.back();
 
-            d2dPatch.point10 = toPOINT_2F(patch.left().controlPoints.first);
-            d2dPatch.point20 = toPOINT_2F(patch.left().controlPoints.second);
+                d2dPatch.point00 = toPOINT_2F(row, column);
+                d2dPatch.point03 = toPOINT_2F(row, column + 1);
+                d2dPatch.point30 = toPOINT_2F(row + 1, column);
+                d2dPatch.point33 = toPOINT_2F(row + 1, column + 1);
 
-            d2dPatch.point31 = toPOINT_2F(patch.bottom().controlPoints.first);
-            d2dPatch.point32 = toPOINT_2F(patch.bottom().controlPoints.second);
+                d2dPatch.point01 = d2dPatch.point00;
+                d2dPatch.point02 = d2dPatch.point03;
 
-            d2dPatch.point23 = toPOINT_2F(patch.right().controlPoints.first);
-            d2dPatch.point13 = toPOINT_2F(patch.right().controlPoints.second);
+                d2dPatch.point10 = d2dPatch.point00;
+                d2dPatch.point20 = d2dPatch.point30;
 
-            d2dPatch.point02 = toPOINT_2F(patch.top().controlPoints.first);
-            d2dPatch.point01 = toPOINT_2F(patch.top().controlPoints.second);
+                d2dPatch.point31 = d2dPatch.point30;
+                d2dPatch.point32 = d2dPatch.point33;
 
-            d2dPatch.topEdgeMode = D2D1_PATCH_EDGE_MODE_ALIASED;
-            d2dPatch.leftEdgeMode = D2D1_PATCH_EDGE_MODE_ALIASED;
-            d2dPatch.bottomEdgeMode = D2D1_PATCH_EDGE_MODE_ALIASED;
-            d2dPatch.rightEdgeMode = D2D1_PATCH_EDGE_MODE_ALIASED;
-        }
+                d2dPatch.point13 = d2dPatch.point03;
+                d2dPatch.point23 = d2dPatch.point33;
 
-        for (auto it = d2dPatches.begin(); it != d2dPatches.end(); ++it)
-        {
-            for (auto other = it + 1; other != d2dPatches.end(); ++other)
-            {
-                if (other->point00.x == it->point30.x && other->point00.y == it->point30.y)
-                {
-                    jassert(other->color00.a == it->color30.a);
-                    jassert(other->color00.r == it->color30.r);
-                    jassert(other->color00.g == it->color30.g);
-                    jassert(other->color00.b == it->color30.b);
-                }
+                d2dPatch.point11 = d2dPatch.point00;
+                d2dPatch.point12 = d2dPatch.point03;
+                d2dPatch.point21 = d2dPatch.point30;
+                d2dPatch.point22 = d2dPatch.point33;
 
-                if (other->point03.x == it->point33.x && other->point03.y == it->point33.y)
-                {
-                    jassert(other->color03.a == it->color33.a);
-                    jassert(other->color03.r == it->color33.r);
-                    jassert(other->color03.g == it->color33.g);
-                    jassert(other->color03.b == it->color33.b);
-                }
-
+                d2dPatch.color00 = juce::D2DUtilities::toCOLOR_F(vertices[row * numColumns + column]->color);
+                d2dPatch.color03 = juce::D2DUtilities::toCOLOR_F(vertices[row * numColumns + column + 1]->color);
+                d2dPatch.color30 = juce::D2DUtilities::toCOLOR_F(vertices[(row + 1) * numColumns + column]->color);
+                d2dPatch.color33 = juce::D2DUtilities::toCOLOR_F(vertices[(row + 1) * numColumns + column + 1]->color);
             }
         }
 
@@ -187,23 +307,7 @@ namespace mescal
         }
     }
 
-    GradientMesh::Patch::~Patch()
-    {
-    }
-
-    void GradientMesh::setPatch(size_t index, Patch& patch)
-    {
-        patches[index] = patch;
-    }
-
-    GradientMesh::Patch& GradientMesh::Patch::operator=(Patch const& other)
-    {
-        edges = other.edges;
-
-        return *this;
-    }
-
-    GradientMesh::Color128 GradientMesh::Color128::fromHSV(float hue, float saturation, float brightness, float alpha) noexcept
+    Color128 Color128::fromHSV(float hue, float saturation, float brightness, float alpha) noexcept
     {
         brightness = jlimit(0.0f, 1.0f, brightness);
 

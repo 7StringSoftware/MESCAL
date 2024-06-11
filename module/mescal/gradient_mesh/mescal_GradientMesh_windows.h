@@ -76,83 +76,77 @@
 
 */
 
+struct Color128
+{
+    float red;
+    float green;
+    float blue;
+    float alpha;
+
+    juce::Colour toColour() const noexcept
+    {
+        return juce::Colour::fromFloatRGBA(red, green, blue, alpha);
+    }
+
+    static Color128 fromHSV(float hue, float saturation, float value, float alpha) noexcept;
+};
+
 class GradientMesh
 {
 public:
-
-    struct Color128
-    {
-        float red;
-        float green;
-        float blue;
-        float alpha;
-
-        juce::Colour toColour() const noexcept
-        {
-            return juce::Colour::fromFloatRGBA(red, green, blue, alpha);
-        }
-
-        static Color128 fromHSV(float hue, float saturation, float value, float alpha) noexcept;
-    };
-
-    enum class EdgePlacement
-    {
-        left, bottom, right, top
-    };
-
-    struct Edge
-    {
-        juce::Point<float> tail;
-        Color128 tailColor;
-        std::pair<juce::Point<float>, juce::Point<float>> controlPoints;
-    };
-
-    struct Patch
-    {
-        Patch() = default;
-        Patch(Patch const&) = default;
-        Patch(Patch&&) noexcept = default;
-        ~Patch();
-
-        Patch& operator= (Patch const&);
-
-        std::array<Edge, 4> edges{};
-
-        const Edge& left() const noexcept
-        {
-            return edges[(int)EdgePlacement::left];
-        }
-
-        const Edge& bottom() const noexcept
-        {
-            return edges[(int)EdgePlacement::bottom];
-        }
-
-        const Edge& right() const noexcept
-        {
-            return edges[(int)EdgePlacement::right];
-        }
-
-        const Edge& top() const noexcept
-        {
-            return edges[(int)EdgePlacement::top];
-        }
-    };
-
-    GradientMesh(int numPatches = 0);
+    GradientMesh(int numRows_, int numColumns_);
+    GradientMesh() = default;
     ~GradientMesh();
 
-    void clearPatches() noexcept { patches.clear(); }
-    void addPatch(Patch& patch);
-    auto const& getPatches() const noexcept { return patches; }
-    void setPatch(size_t index, Patch& patch);
-    juce::Rectangle<float> getBounds() const noexcept;
+    struct Halfedge;
+    struct Vertex
+    {
+        Vertex(juce::Point<float> position_) :
+            position(position_)
+        {
+        }
 
-    void applyTransform(const juce::AffineTransform& transform) noexcept;
+        bool operator== (const Vertex& other) const
+        {
+            return juce::approximatelyEqual(position.x, other.position.x) && juce::approximatelyEqual(position.y, other.position.y);
+        }
+
+        juce::Point<float> position;
+        std::weak_ptr<Halfedge> halfedge{};
+        juce::Colour color;
+    };
+
+    struct Halfedge
+    {
+        std::weak_ptr<Vertex> tail, head;
+        std::weak_ptr<Halfedge> twin;
+    };
+
+    int getNumRows() const
+    {
+        return numRows;
+    }
+
+    int getNumColumns() const
+    {
+        return numColumns;
+    }
+
+    std::shared_ptr<Vertex> addVertex(juce::Point<float> point);
+    std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head);
+    const auto& getVertices() const { return vertices; }
+    const auto& getHalfedges() const { return halfedges; }
+
+    void applyTransform(juce::AffineTransform const& transform);
+    void configureVertices(std::function<void(int row, int column, std::shared_ptr<Vertex> vertex)> callback);
+    
     void draw(juce::Image image, juce::AffineTransform transform);
 
 private:
-    std::vector<Patch> patches;
+    int const numRows;
+    int const numColumns;
+    std::vector<std::shared_ptr<Vertex>> vertices;
+    std::vector<std::shared_ptr<Halfedge>> halfedges;
 
     struct Pimpl;
     std::unique_ptr<Pimpl> pimpl;
