@@ -17,6 +17,7 @@ private:
     float gradientOpacity = 0.0f;
     float timestamp = 0.0f;
     juce::GlowEffect glowEffect;
+    mescal::ScatterEffect scatterEffect;
 
     juce::VBlankAnimatorUpdater updater{ this };
     juce::Animator fadeInAnimator = juce::ValueAnimatorBuilder{}

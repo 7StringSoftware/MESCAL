@@ -35,3 +35,4 @@
 #include "json/mescal_JSON.cpp"
 #include "gradient_mesh/mescal_GradientMesh_windows.cpp"
 #include "sprite_batch/mescal_SpriteBatch_windows.cpp"
+#include "sprite_batch/mescal_ScatterEffect_windows.cpp"

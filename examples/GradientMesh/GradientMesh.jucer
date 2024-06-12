@@ -4,6 +4,10 @@
               id="NJ5XEl" jucerFormatVersion="1">
   <MAINGROUP id="fTgw8y" name="MESCAL demo">
     <GROUP id="{07B94160-CF67-DC8B-7081-698B080E7B38}" name="Source">
+      <FILE id="phClZ7" name="DemoSelectorComponent.cpp" compile="1" resource="0"
+            file="Source/DemoSelectorComponent.cpp"/>
+      <FILE id="wpxeVN" name="DemoSelectorComponent.h" compile="0" resource="0"
+            file="Source/DemoSelectorComponent.h"/>
       <GROUP id="{1A05B7D7-4DAF-D246-7CA0-0DB8E0EC7BE7}" name="Demos">
         <FILE id="qdr3LL" name="SpriteBatchDemo.cpp" compile="1" resource="0"
               file="Source/SpriteBatchDemo.cpp"/>

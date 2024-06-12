@@ -309,7 +309,7 @@ namespace mescal
 
     Color128 Color128::fromHSV(float hue, float saturation, float brightness, float alpha) noexcept
     {
-        brightness = jlimit(0.0f, 1.0f, brightness);
+        brightness = juce::jlimit(0.0f, 1.0f, brightness);
 
         if (saturation <= 0)
             return { brightness, brightness, brightness, alpha };

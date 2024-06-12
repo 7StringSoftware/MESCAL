@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Base.h"
+#include "DemoSelectorComponent.h"
 
 class ContentComponent : public juce::Component
 {
@@ -12,4 +13,5 @@ public:
 
 private:
     std::unique_ptr<juce::Component> demoComponent;
+    DemoSelectorComponent demoSelector, demoSelector2, demoSelector3;
 };

@@ -28,7 +28,7 @@ private:
                 juce::DocumentWindow::allButtons),
             app(a)
         {
-            setUsingNativeTitleBar(false);
+            setUsingNativeTitleBar(true);
             setContentOwned(c, true);
 
             setResizable(true, false);

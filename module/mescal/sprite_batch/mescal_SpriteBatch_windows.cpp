@@ -38,6 +38,9 @@ namespace mescal
 
         void draw(juce::Image destinationImage, const std::vector<Sprite>& sprites, bool clearImage)
         {
+            if (sprites.size() == 0)
+                return;
+
             createResources(destinationImage);
 
             if (spriteBatch && spriteBatch->GetSpriteCount() != sprites.size())
@@ -56,6 +59,11 @@ namespace mescal
 
                 destinationRectangles.realloc(sprites.size());
                 sourceRectangles.realloc(sprites.size());
+            }
+
+            if (destinationRectangles.getData() == nullptr || sourceRectangles.getData() == nullptr)
+            {
+                return;
             }
 
             deviceContext->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
@@ -84,7 +92,7 @@ namespace mescal
                 ++sourceRectangle;
             }
 
-            spriteBatch->AddSprites((uint32)sprites.size(),
+            spriteBatch->AddSprites((uint32_t)sprites.size(),
                 destinationRectangles.getData(),
                 sourceRectangles.getData());
 
