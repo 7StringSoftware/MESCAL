@@ -35,7 +35,10 @@ void SpriteBatchDemo::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::black);
 
-    auto mousePos = getLocalBounds().reduced(200).getConstrainedPoint(getMouseXYRelative()).toFloat();
+    juce::Path clipPath;
+    clipPath.addRoundedRectangle(getLocalBounds().reduced(100).toFloat(), 50.0f);
+    g.reduceClipRegion(clipPath);
+
     particles.draw(spriteBatchImage);
     g.drawImageAt(spriteBatchImage, 0, 0);
 
@@ -45,12 +48,13 @@ void SpriteBatchDemo::paint(juce::Graphics& g)
         ((float)getHeight() - logoImage.getHeight()) * 0.5f
     };
     g.addTransform(juce::AffineTransform::translation(offset));
-    glowEffect.setGlowProperties(50.0f, juce::Colours::white);
-    glowEffect.applyEffect(logoImage, g, 1.0f, opacity);
+    //glowEffect.setGlowProperties(50.0f, juce::Colours::white);
+    //glowEffect.applyEffect(logoImage, g, 1.0f, opacity);
+    shadowEffect.setShadowProperties(juce::DropShadow{ juce::Colours::white, 50, {} });
+    shadowEffect.applyEffect(logoImage, g, 1.0f, opacity);
 }
 
-
-void SpriteBatchDemo::Particles::update(float timeSeconds, juce::Rectangle<float> area)
+void SpriteBatchDemo::Particles::update(float timeSeconds, juce::Rectangle<float> area, juce::Point<float> mousePos)
 {
     juce::Random random;
     float elapsedTime = timeSeconds - lastTimestamp;
@@ -101,8 +105,10 @@ void SpriteBatchDemo::Particles::update(float timeSeconds, juce::Rectangle<float
             sprite.source = juce::Rectangle<int>{ sourceX, sourceY, spriteSize, spriteSize };
             float x = random.nextFloat() * area.getWidth();
             sprite.destination = juce::Rectangle<float>{ x, 0.0f, (float)spriteSize, (float)spriteSize };
+            auto distance = mousePos.getDistanceFrom(sprite.destination.getCentre());
+            distance = juce::jmax(1.0f, distance);
             velocity.speed = random.nextFloat() * 100.0f;
-            velocity.angle = (random.nextFloat() * 0.1f + 0.45f) * juce::MathConstants<float>::twoPi;
+            velocity.angle = (random.nextFloat() * 0.1f - 0.05f) * juce::MathConstants<float>::twoPi + juce::MathConstants<float>::pi;
         }
 
         auto center = sprite.destination.getCentre().getPointOnCircumference(elapsedTime * velocity.speed, velocity.angle);

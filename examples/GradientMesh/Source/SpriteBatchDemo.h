@@ -11,15 +11,18 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
 
+
+
 private:
     juce::Image logoImage;
     juce::Image spriteBatchImage;
     float opacity = 0.0f;
     juce::GlowEffect glowEffect;
+    juce::DropShadowEffect shadowEffect;
 
     struct Particles
     {
-        void update(float timeSeconds, juce::Rectangle<float> area);
+        void update(float timeSeconds, juce::Rectangle<float> area, juce::Point<float> mousePos);
         void draw(juce::Image& destinationImage);
 
         struct Velocity
@@ -41,7 +44,7 @@ private:
         .runningInfinitely()
         .withValueChangedCallback([this](auto value)
             {
-                particles.update(value, getLocalBounds().toFloat());
+                particles.update(value, getLocalBounds().toFloat(), getMouseXYRelative().toFloat());
                 repaint();
             })
         .build();

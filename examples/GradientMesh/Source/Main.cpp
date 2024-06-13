@@ -19,25 +19,27 @@ public:
     void shutdown() override { mainWindow = nullptr; }
 
 private:
-    class MainWindow : public juce::DocumentWindow
+    class MainWindow : public juce::DocumentWindow, public juce::LookAndFeel_V4
     {
     public:
         MainWindow(const juce::String& name, juce::Component* c, JUCEApplication& a)
             : DocumentWindow(name,
-                juce::Colours::black,
+                juce::Colours::transparentBlack,
                 juce::DocumentWindow::allButtons),
             app(a)
         {
-            setUsingNativeTitleBar(true);
+            setUsingNativeTitleBar(false);
             setContentOwned(c, true);
 
-            setResizable(true, false);
+            setResizable(true, true);
             setResizeLimits(300, 250, 10000, 10000);
             centreWithSize(getWidth(), getHeight());
 
             setOpaque(false);
 
             setVisible(true);
+
+            setLookAndFeel(this);
         }
 
         ~MainWindow() override
@@ -48,6 +50,11 @@ private:
         void closeButtonPressed() override
         {
             app.systemRequestedQuit();
+        }
+
+        void paint(juce::Graphics& g) override
+        {
+            DocumentWindow::paint(g);
         }
 
     private:

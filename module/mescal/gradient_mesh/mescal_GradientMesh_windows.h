@@ -138,8 +138,9 @@ public:
     const auto& getHalfedges() const { return halfedges; }
 
     void applyTransform(juce::AffineTransform const& transform);
+    void setVertexColor(int row, int column, juce::Colour color);
     void configureVertices(std::function<void(int row, int column, std::shared_ptr<Vertex> vertex)> callback);
-    
+
     void draw(juce::Image image, juce::AffineTransform transform);
 
 private:

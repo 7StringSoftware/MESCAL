@@ -9,9 +9,9 @@ ContentComponent::ContentComponent()
     addAndMakeVisible(demoComponent.get());
     setSize(2048, 1024);
 
-    addAndMakeVisible(demoSelector);
-    addAndMakeVisible(demoSelector2);
-    addAndMakeVisible(demoSelector3);
+//     addAndMakeVisible(demoSelector);
+//     addAndMakeVisible(demoSelector2);
+//     addAndMakeVisible(demoSelector3);
 }
 
 void ContentComponent::resized()

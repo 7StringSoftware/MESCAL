@@ -211,6 +211,11 @@ namespace mescal
         jassertfalse;
     }
 
+    void GradientMesh::setVertexColor(int row, int column, juce::Colour color)
+    {
+        vertices[row * numColumns + column]->color = color;
+    }
+
     void GradientMesh::configureVertices(std::function<void(int row, int column, std::shared_ptr<Vertex> vertex)> callback)
     {
         jassert(callback);
@@ -328,4 +333,3 @@ namespace mescal
     }
 
 } // namespace mescal
-

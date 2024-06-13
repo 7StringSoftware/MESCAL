@@ -9,15 +9,24 @@ public:
     ~GradientMeshDemo() override;
 
     void paint(juce::Graphics&) override;
+    void resized() override;
 
 private:
+    enum
+    {
+        gradientMeshBackground = 1,
+        snowfallBackground
+    };
+
     mescal::GradientMesh mesh;
     juce::Image meshImage;
     juce::Image logoImage;
     float gradientOpacity = 0.0f;
+    float maskBoundarySize = 0.0f;
     float timestamp = 0.0f;
     juce::GlowEffect glowEffect;
-    mescal::ScatterEffect scatterEffect;
+    juce::ToggleButton showMeshToggle{ "Show mesh grid" };
+    juce::ComboBox backgroundCombo;
 
     juce::VBlankAnimatorUpdater updater{ this };
     juce::Animator fadeInAnimator = juce::ValueAnimatorBuilder{}
@@ -28,10 +37,20 @@ private:
                 gradientOpacity = value;
                 repaint();
             })
-        .withOnCompleteCallback([this]
+        .build();
+
+    juce::Animator maskAnimator = juce::ValueAnimatorBuilder{}
+        .withEasing(juce::Easings::createEaseIn())
+        .withDurationMs(1000)
+        .withValueChangedCallback([this](auto value)
             {
-                updater.addAnimator(colorAnimator);
-                colorAnimator.start();
+                maskBoundarySize = value * 100.0f;
+                repaint();
+            })
+        .withOnCompleteCallback([this]()
+            {
+                showMeshToggle.setVisible(true);
+                backgroundCombo.setVisible(true);
             })
         .build();
 
@@ -47,6 +66,15 @@ private:
                 repaint();
             })
         .build();
+
+    juce::Animator animator = juce::AnimatorSetBuilder{ fadeInAnimator }
+        .followedBy(colorAnimator)
+        .togetherWith(1000.0).followedBy(maskAnimator)
+        .build();
+
+    void paintMesh(juce::Graphics& g);
+    void paintMeshWireframe(juce::Graphics& g);
+    void paintSnowfall(juce::Graphics& g);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GradientMeshDemo)
 };
