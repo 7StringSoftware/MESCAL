@@ -10,7 +10,7 @@ DemoSelectorComponent::DemoSelectorComponent() :
     scatterAnimator.start();
 }
 
-void DemoSelectorComponent::paintButton(juce::Graphics& g, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
+void DemoSelectorComponent::paintButton(juce::Graphics& g, bool /*shouldDrawButtonAsHighlighted*/, bool /*shouldDrawButtonAsDown*/)
 {
     g.setColour(juce::Colours::black);
     g.fillRoundedRectangle(hitBox.toFloat(), hitBox.getHeight() * 0.1f);

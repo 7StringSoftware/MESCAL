@@ -13,12 +13,11 @@ GradientMeshDemo::GradientMeshDemo() :
     backgroundCombo.setSelectedId(gradientMeshBackground, juce::dontSendNotification);
     addChildComponent(backgroundCombo);
 
-
     logoImage = juce::Image{ juce::Image::ARGB, 1536, 768, true };
     {
         juce::Graphics g{ logoImage };
         g.setColour(juce::Colours::black);
-        g.setFont({ 400.0f, juce::Font::bold });
+        g.setFont(juce::FontOptions{ 400.0f, juce::Font::bold });
         g.drawText("MESCAL", logoImage.getBounds(), juce::Justification::centred);
     }
 
@@ -94,7 +93,7 @@ void GradientMeshDemo::paintMesh(juce::Graphics& g)
             }
 
             auto hue = std::sin(phase) * 0.5f + 0.5f;
-            vertex->color = juce::Colour::fromHSV(hue, y / (float)getHeight(), 1.0f, gradientOpacity);
+            vertex->setColor(juce::Colour::fromHSV(hue, y / (float)getHeight(), 1.0f, gradientOpacity));
         });
 
     mesh.draw(meshImage, {});
@@ -114,9 +113,7 @@ void GradientMeshDemo::paintMeshWireframe(juce::Graphics& g)
 
     for (auto const& vertex : mesh.getVertices())
     {
-        g.setColour(vertex->color.contrasting());
-        g.fillEllipse(juce::Rectangle<float>{ 22.0f, 22.0f }.withCentre(vertex->position));
-        g.setColour(vertex->color);
+        g.setColour(juce::Colours::black);
         g.fillEllipse(juce::Rectangle<float>{ 16.0f, 16.0f }.withCentre(vertex->position));
 
         if (vertex->position.getDistanceFrom(mousePos) < 50.0f)

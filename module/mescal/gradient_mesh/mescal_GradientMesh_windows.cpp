@@ -213,7 +213,7 @@ namespace mescal
 
     void GradientMesh::setVertexColor(int row, int column, juce::Colour color)
     {
-        vertices[row * numColumns + column]->color = color;
+        vertices[row * numColumns + column]->setColor(color);
     }
 
     void GradientMesh::configureVertices(std::function<void(int row, int column, std::shared_ptr<Vertex> vertex)> callback)
@@ -274,10 +274,10 @@ namespace mescal
                 d2dPatch.point21 = d2dPatch.point30;
                 d2dPatch.point22 = d2dPatch.point33;
 
-                d2dPatch.color00 = juce::D2DUtilities::toCOLOR_F(vertices[row * numColumns + column]->color);
-                d2dPatch.color03 = juce::D2DUtilities::toCOLOR_F(vertices[row * numColumns + column + 1]->color);
-                d2dPatch.color30 = juce::D2DUtilities::toCOLOR_F(vertices[(row + 1) * numColumns + column]->color);
-                d2dPatch.color33 = juce::D2DUtilities::toCOLOR_F(vertices[(row + 1) * numColumns + column + 1]->color);
+                d2dPatch.color00 = juce::D2DUtilities::toCOLOR_F(vertices[row * numColumns + column]->southeastColor);
+                d2dPatch.color03 = juce::D2DUtilities::toCOLOR_F(vertices[row * numColumns + column + 1]->southwestColor);
+                d2dPatch.color30 = juce::D2DUtilities::toCOLOR_F(vertices[(row + 1) * numColumns + column]->northeastColor);
+                d2dPatch.color33 = juce::D2DUtilities::toCOLOR_F(vertices[(row + 1) * numColumns + column + 1]->northwestColor);
             }
         }
 
@@ -331,5 +331,40 @@ namespace mescal
         if (hue < 5.0f)   return Color128{ brightness * (1.0f - (saturation * (1.0f - f))), x, brightness, alpha, };
         return                 Color128{ brightness, x, brightness * (1.0f - saturation * f), alpha, };
     }
+
+    void GradientMesh::makeConicGradient(juce::Rectangle<float> bounds)
+    {
+        /*
+                      A---B B---C           B   B
+        A---B---C     |   | |   |          /|   | \ 
+        |   |   |     |   | |   |         / |   |  \
+        |   |   |     D---E E---F        A--DE  EF--C
+        D---E---F                
+        |   |   |     D---E E---F        G--DE  EF--I
+        |   |   |     |   | |   |        \  |   | /
+        G---H---I     |   | |   |         \ |   |/
+                      G---H H---I           H   H
+
+
+            01     01
+          / |      |  \
+        /   |      |   \
+       00--10 11  11 12-02
+
+       20--10 11  11 12-22
+         \  |     |  /
+          \ |     | /
+            21     21
+
+        00 -> 01 -> 11 -> 10
+        01 -> 02 -> 12 -> 11
+        22 -> 21 -> 11 -> 12
+        21 -> 20 -> 10 -> 11
+
+        */
+
+
+    }
+
 
 } // namespace mescal

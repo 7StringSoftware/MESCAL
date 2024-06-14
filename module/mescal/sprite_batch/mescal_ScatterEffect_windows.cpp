@@ -27,7 +27,7 @@ namespace mescal
             for (int y = 0; y < sourceImage.getHeight(); y += particleSize)
             {
                 Sprite sprite;
-                sprite.destination = juce::Rectangle<float>(x, y, particleSize, particleSize);
+                sprite.destination = juce::Rectangle<int>(x, y, particleSize, particleSize).toFloat();
 
                 auto angle = center.getAngleToPoint(sprite.destination.getCentre());
                 auto distance = center.getDistanceFrom(sprite.destination.getCentre());

@@ -45,6 +45,7 @@ namespace mescal
 {
     #include "json/mescal_JSON.h"
     #include "gradient_mesh/mescal_GradientMesh_windows.h"
+    #include "gradient_mesh/mescal_ConicGradient_windows.h"
     #include "sprite_batch/mescal_SpriteBatch_windows.h"
     #include "sprite_batch/mescal_ScatterEffect_windows.h"
 }

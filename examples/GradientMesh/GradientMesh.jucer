@@ -9,6 +9,10 @@
               resource="1" file="Source/Assets/TrashcanButton-Transparent.svg"/>
       </GROUP>
       <GROUP id="{1A05B7D7-4DAF-D246-7CA0-0DB8E0EC7BE7}" name="Demos">
+        <FILE id="JPkI7n" name="ConicGradientDemo.cpp" compile="1" resource="0"
+              file="Source/ConicGradientDemo.cpp"/>
+        <FILE id="txZj3l" name="ConicGradientDemo.h" compile="0" resource="0"
+              file="Source/ConicGradientDemo.h"/>
         <FILE id="PqVM7L" name="GradientMeshDemo.cpp" compile="1" resource="0"
               file="Source/GradientMeshDemo.cpp"/>
         <FILE id="TtcuWW" name="GradientMeshDemo.h" compile="0" resource="0"

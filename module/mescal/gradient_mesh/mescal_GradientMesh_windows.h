@@ -111,9 +111,21 @@ public:
             return juce::approximatelyEqual(position.x, other.position.x) && juce::approximatelyEqual(position.y, other.position.y);
         }
 
+        void setColor(juce::Colour color)
+        {
+            northwestColor = color;
+            southwestColor = color;
+            southeastColor = color;
+            northeastColor = color;
+        }
+
         juce::Point<float> position;
         std::weak_ptr<Halfedge> halfedge{};
-        juce::Colour color;
+        
+        juce::Colour northwestColor;
+        juce::Colour southwestColor;
+        juce::Colour southeastColor;
+        juce::Colour northeastColor;
     };
 
     struct Halfedge
@@ -142,6 +154,8 @@ public:
     void configureVertices(std::function<void(int row, int column, std::shared_ptr<Vertex> vertex)> callback);
 
     void draw(juce::Image image, juce::AffineTransform transform);
+
+    void makeConicGradient(juce::Rectangle<float> bounds);
 
 private:
     int const numRows;
