@@ -25,13 +25,6 @@ public:
         firstCommand = 1,
 
         quitCommand = firstCommand,
-#if 0
-        showSettingsCommand,
-        newCommand,
-        saveCommand,
-        saveAsCommand,
-        loadCommand,
-#endif
 
         lastCommand
     };

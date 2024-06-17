@@ -1,11 +1,16 @@
 /*
   ==============================================================================
 
-    Document.cpp
-    Created: 23 Apr 2024 9:25:14am
+    Controller.cpp
+    Created: 23 Apr 2024 10:06:55am
     Author:  Matt Gonzalez
 
   ==============================================================================
 */
 
-#include "Document.h"
+#include "Controller.h"
+
+Controller::Controller()
+{
+    commander.initialize(this);
+}

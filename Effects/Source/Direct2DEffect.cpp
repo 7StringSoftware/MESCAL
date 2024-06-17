@@ -8,16 +8,15 @@
 #include <juce_graphics/native/juce_Direct2DImage_windows.h>
 #include <JuceHeader.h>
 #include "Direct2DEffect.h"
-#include "Direct2DEdgeDetectionEffect.h"
-#include "Direct2DEmbossEffect.h"
 
 struct Direct2DEffect::Pimpl
 {
-    Pimpl(GUID const effectGuid_) : effectGuid(effectGuid_)
+    Pimpl(EffectType effectType_) :
+        effectType(effectType_)
     {
     }
 
-    virtual ~Pimpl()
+    ~Pimpl()
     {
     }
 
@@ -43,8 +42,7 @@ struct Direct2DEffect::Pimpl
             }
         }
 
-        auto effectGuid = *effectGuids[(size_t)effectType];
-        if (auto hr = deviceContext->CreateEffect(effectGuid, d2dEffect.put()); FAILED(hr))
+        if (auto hr = deviceContext->CreateEffect(*effectGuids[(size_t)effectType], d2dEffect.put()); FAILED(hr))
         {
             jassertfalse;
         }
@@ -52,29 +50,7 @@ struct Direct2DEffect::Pimpl
 
     void configureEffect()
     {
-        switch (effectType)
-        {
-        case EffectType::spotSpecularLighting:
-            d2dEffect->SetValue(D2D1_SPOTSPECULAR_PROP_LIGHT_POSITION, D2D1_VECTOR_3F{ 50.0f, 50.0f, 100.0f });
-            d2dEffect->SetValue(D2D1_SPOTSPECULAR_PROP_POINTS_AT, D2D1_VECTOR_3F{ 0.0f, 0.0f, 0.0f });
-            d2dEffect->SetValue(D2D1_SPOTSPECULAR_PROP_FOCUS, 1.0f);
-            d2dEffect->SetValue(D2D1_SPOTSPECULAR_PROP_LIMITING_CONE_ANGLE, 90.0f);
-            d2dEffect->SetValue(D2D1_SPOTSPECULAR_PROP_SPECULAR_EXPONENT, 10.0f);
-            d2dEffect->SetValue(D2D1_SPOTSPECULAR_PROP_SPECULAR_CONSTANT, 1.0f);
-            d2dEffect->SetValue(D2D1_SPOTSPECULAR_PROP_SURFACE_SCALE, 1.0f);
-            d2dEffect->SetValue(D2D1_SPOTSPECULAR_PROP_COLOR, D2D1_VECTOR_3F{ 1.0f, 0.0f, 1.0f });
-            break;
 
-        case EffectType::spotDiffuseLighting:
-            d2dEffect->SetValue(D2D1_SPOTDIFFUSE_PROP_LIGHT_POSITION, D2D1_VECTOR_3F{ 50.0f, 50.0f, 100.0f });
-            d2dEffect->SetValue(D2D1_SPOTDIFFUSE_PROP_POINTS_AT, D2D1_VECTOR_3F{ 0.0f, 0.0f, 0.0f });
-            d2dEffect->SetValue(D2D1_SPOTDIFFUSE_PROP_FOCUS, 1.0f);
-            d2dEffect->SetValue(D2D1_SPOTDIFFUSE_PROP_LIMITING_CONE_ANGLE, 90.0f);
-            d2dEffect->SetValue(D2D1_SPOTDIFFUSE_PROP_DIFFUSE_CONSTANT, 1.0f);
-            d2dEffect->SetValue(D2D1_SPOTDIFFUSE_PROP_SURFACE_SCALE, 1.0f);
-            d2dEffect->SetValue(D2D1_SPOTDIFFUSE_PROP_COLOR, D2D1_VECTOR_3F{ 1.0f, 0.0f, 1.0f });
-            break;
-        }
     }
 
     EffectType effectType;
@@ -106,7 +82,7 @@ Direct2DEffect::~Direct2DEffect()
 {
 }
 
-void Direct2DEffect::setProperty(int index, PropertyValue&& value)
+void Direct2DEffect::setProperty(PropertyIndex index, PropertyValue&& value)
 {
 
 }
@@ -119,9 +95,8 @@ void Direct2DEffect::applyEffect(juce::Image& sourceImage, juce::Graphics& destC
         return;
     }
 
-    auto pimpl = getPimpl();
     pimpl->createResources(sourceImage);
-    if (!pimpl->deviceContext || !pimpl->adapter || !pimpl->adapter->dxgiAdapter)
+    if (!pimpl->deviceContext || !pimpl->adapter || !pimpl->adapter->dxgiAdapter || !pimpl->d2dEffect)
     {
         return;
     }
@@ -130,12 +105,6 @@ void Direct2DEffect::applyEffect(juce::Image& sourceImage, juce::Graphics& destC
     if (!outputPixelData || outputPixelData->width < sourceImage.getWidth() || outputPixelData->height < sourceImage.getHeight())
     {
         outputPixelData = juce::Direct2DPixelData::make(juce::Image::ARGB, sourceImage.getWidth(), sourceImage.getHeight(), true, pimpl->adapter);
-    }
-
-    if (auto hr = pimpl->deviceContext->CreateEffect(CLSID_D2D1Emboss, pimpl->d2dEffect.put()); FAILED(hr))
-    {
-        jassertfalse;
-        return;
     }
 
     pimpl->configureEffect();

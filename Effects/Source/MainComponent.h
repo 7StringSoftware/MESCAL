@@ -1,8 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "Direct2DEdgeDetectionEffect.h"
-#include "Direct2DEmbossEffect.h"
+#include "Direct2DEffect.h"
 
 class MainComponent  : public juce::Component
 {
@@ -14,10 +13,8 @@ public:
     void resized() override;
 
 private:
-    juce::VBlankAttachment vblank{ this, [this] { repaint(); } };
-    juce::Image input, blurred, output;
-    std::unique_ptr<Direct2DEffect> blur = Direct2DEffect::create(Direct2DEffect::EffectType::gaussianBlur);
-    std::unique_ptr<Direct2DEffect> effect = Direct2DEffect::create(Direct2DEffect::EffectType::spotDiffuseLighting);
+    juce::Image input, output;
+    Direct2DEffect effect{ Direct2DEffect::EffectType::gaussianBlur };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Base.h"
-#include "GradientMeshEditor.h"
+#include "DemoSelectorComponent.h"
 
 class ContentComponent : public juce::Component
 {
@@ -9,10 +9,9 @@ public:
     ContentComponent();
     ~ContentComponent() override = default;
 
-    void paint(juce::Graphics& g) override;
     void resized() override;
 
 private:
-    juce::Viewport viewport;
-    GradientMeshEditor meshEditor;
+    std::unique_ptr<juce::Component> demoComponent;
+    DemoSelectorComponent demoSelector, demoSelector2, demoSelector3;
 };
