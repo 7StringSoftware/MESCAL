@@ -1,7 +1,6 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "Direct2DEffect.h"
 
 class MainComponent  : public juce::Component
 {
@@ -14,7 +13,7 @@ public:
 
 private:
     juce::Image input, output;
-    Direct2DEffect effect{ Direct2DEffect::EffectType::gaussianBlur };
+    mescal::Effect effect{ mescal::Effect::EffectType::gaussianBlur };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

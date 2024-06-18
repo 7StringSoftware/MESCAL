@@ -58,7 +58,7 @@ namespace mescal
                 return D2D1_POINT_2F{ p.x, p.y };
             };
 
-        zerostruct(pimpl->patches);
+        juce::zerostruct(pimpl->patches);
 
         jassert(numSegments >= 4);
 
