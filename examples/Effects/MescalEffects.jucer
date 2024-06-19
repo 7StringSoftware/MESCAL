@@ -4,6 +4,10 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
   <MAINGROUP id="VYSsCw" name="Mescal Effects">
     <GROUP id="{8B15FD36-06CF-DAD8-A43B-75B5A35F0253}" name="Source">
+      <FILE id="ZNvebn" name="FormatConverter.cpp" compile="1" resource="0"
+            file="Source/FormatConverter.cpp"/>
+      <FILE id="SSeCbL" name="FormatConverter.h" compile="0" resource="0"
+            file="Source/FormatConverter.h"/>
       <FILE id="fRU9qi" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="z8zkXI" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
       <FILE id="Gc4QFf" name="MainComponent.cpp" compile="1" resource="0"

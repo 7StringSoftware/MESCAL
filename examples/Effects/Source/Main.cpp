@@ -1,5 +1,6 @@
 #include <JuceHeader.h>
 #include "MainComponent.h"
+#include "FormatConverter.h"
 
 class Direct2DEffectsApplication  : public juce::JUCEApplication
 {
@@ -12,6 +13,9 @@ public:
 
     void initialise (const juce::String&) override
     {
+        FormatConverter converter;
+        converter.convert(converter.singleChannel, converter.argb);
+
         mainWindow.reset (new MainWindow (getApplicationName()));
     }
 
