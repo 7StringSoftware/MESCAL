@@ -13,9 +13,6 @@ public:
 
     void initialise (const juce::String&) override
     {
-        FormatConverter converter;
-        converter.convert(converter.singleChannel, converter.argb);
-
         mainWindow.reset (new MainWindow (getApplicationName()));
     }
 

@@ -8,10 +8,10 @@ public:
 	FormatConverter();
 	~FormatConverter();
 
-	juce::Image argb{ juce::Image::ARGB, 16, 16, true };
-	juce::Image singleChannel{ juce::Image::SingleChannel, 16, 16, true };
+    juce::Image convert(const juce::Image& source, juce::Image::PixelFormat outputFormat);
 
-	void convert(const juce::Image& source, juce::Image& destination);
+private:
+    juce::Image convertToSingleChannel(const juce::Image& source);
 
     void print(juce::Image const& image)
         {
