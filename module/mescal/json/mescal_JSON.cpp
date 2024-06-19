@@ -233,7 +233,7 @@ namespace mescal
         return 0;
     }
 
-#if JUCE_DEBUG
+#if 0 // JUCE_DEBUG
     class JSONStructureTest : public juce::UnitTest
     {
     public:

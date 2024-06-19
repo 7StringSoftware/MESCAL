@@ -25,11 +25,13 @@ struct FormatConverter::Pimpl
     void createResources(const juce::Image& sourceImage, juce::Image destinationImage)
     {
         sourcePixelData = dynamic_cast<juce::Direct2DPixelData*>(sourceImage.getPixelData());
-        destinationPixelData = dynamic_cast<juce::Direct2DPixelData*>(destinationImage.getPixelData());
 
-        if (!deviceContext && sourcePixelData && destinationPixelData)
+        if (destinationImage.isValid())
+            destinationPixelData = dynamic_cast<juce::Direct2DPixelData*>(destinationImage.getPixelData());
+
+        if (!deviceContext && sourcePixelData)
         {
-            if (auto adapter = destinationPixelData->getAdapter())
+            if (auto adapter = sourcePixelData->getAdapter())
             {
                 winrt::com_ptr<ID2D1DeviceContext1> deviceContext1;
                 if (const auto hr = adapter->direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE,
@@ -59,127 +61,6 @@ FormatConverter::~FormatConverter()
 {
 }
 
-#if 0
-void FormatConverter::convert(const juce::Image& source, juce::Image& destination)
-{
-    pimpl->release();
-    pimpl->createResources(destination);
-
-    if (pimpl->deviceContext)
-    {
-        if (auto sourcePixelData = dynamic_cast<juce::Direct2DPixelData*>(source.getPixelData()))
-        {
-            if (auto sourceBitmap = sourcePixelData->getAdapterD2D1Bitmap())
-            {
-#if 0
-                winrt::com_ptr<ID2D1Effect> colorMatrixEffect, premultiplyEffect;
-
-                pimpl->deviceContext->CreateEffect(CLSID_D2D1ColorMatrix, colorMatrixEffect.put());
-                pimpl->deviceContext->CreateEffect(CLSID_D2D1Premultiply, premultiplyEffect.put());
-
-                colorMatrixEffect->SetValue(D2D1_COLORMATRIX_PROP_COLOR_MATRIX,
-                    D2D1::Matrix5x4F
-                    {
-                        1.0f, 0.0f, 0.0f, 0.0f,
-                        0.0f, 1.0f, 0.0f, 0.0f,
-                        0.0f, 0.0f, 1.0f, 0.0f,
-                        1.0f, 1.0f, 1.0f, 1.0f,
-                        0.0f, 0.0f, 0.0f, 0.0f
-                    });
-                colorMatrixEffect->SetValue(D2D1_COLORMATRIX_PROP_ALPHA_MODE, D2D1_COLORMATRIX_ALPHA_MODE_STRAIGHT);
-
-                colorMatrixEffect->SetInput(0, sourceBitmap);
-                premultiplyEffect->SetInputEffect(0, colorMatrixEffect.get());
-
-                pimpl->deviceContext->SetTarget(pimpl->destinationPixelData->getAdapterD2D1Bitmap());
-                pimpl->deviceContext->BeginDraw();
-                pimpl->deviceContext->Clear();
-                pimpl->deviceContext->DrawImage(premultiplyEffect.get());
-                pimpl->deviceContext->EndDraw();
-                pimpl->deviceContext->SetTarget(nullptr);
-#endif
-#if 0
-                winrt::com_ptr<ID2D1Effect> effect;
-                if (const auto hr = pimpl->deviceContext->CreateEffect(CLSID_D2D1Saturation, effect.put());
-                    SUCCEEDED(hr))
-                {
-                    effect->SetInput(0, sourceBitmap);
-                    effect->SetValue(D2D1_SATURATION_PROP_SATURATION, 0.0f);
-
-                    pimpl->deviceContext->SetTarget(pimpl->destinationPixelData->getAdapterD2D1Bitmap());
-                    pimpl->deviceContext->BeginDraw();
-                    pimpl->deviceContext->Clear();
-
-                    pimpl->deviceContext->DrawImage(effect.get());
-                    pimpl->deviceContext->EndDraw();
-                    pimpl->deviceContext->SetTarget(nullptr);
-                }
-#endif
-#if 0
-                winrt::com_ptr<ID2D1Effect> effect;
-                if (const auto hr = pimpl->deviceContext->CreateEffect(CLSID_D2D1Tint, effect.put());
-                    SUCCEEDED(hr))
-                {
-                    effect->SetInput(0, sourceBitmap);
-                    effect->SetValue(D2D1_TINT_PROP_COLOR, D2D1::Vector4F(1.0f, 0.0f, 0.0f, 1.0f));
-                    effect->SetValue(D2D1_TINT_PROP_FORCE_DWORD, TRUE);
-
-                    pimpl->deviceContext->SetTarget(pimpl->destinationPixelData->getAdapterD2D1Bitmap());
-                    pimpl->deviceContext->BeginDraw();
-                    pimpl->deviceContext->Clear();
-
-                    pimpl->deviceContext->DrawImage(effect.get());
-                    pimpl->deviceContext->EndDraw();
-                    pimpl->deviceContext->SetTarget(nullptr);
-                }
-#endif
-
-#if 1
-                winrt::com_ptr<ID2D1SolidColorBrush> colorBrush;
-                pimpl->deviceContext->CreateSolidColorBrush({ 1.0f, 1.0f, 1.0f, 1.0f }, colorBrush.put());
-
-                auto format = sourceBitmap->GetPixelFormat();
-                format = pimpl->destinationPixelData->getAdapterD2D1Bitmap()->GetPixelFormat();
-
-                auto scratchpadBitmap = dynamic_cast<juce::Direct2DPixelData*>(scratchpad.getPixelData())->getAdapterD2D1Bitmap();
-                pimpl->deviceContext->SetTarget(scratchpadBitmap);
-                pimpl->deviceContext->BeginDraw();
-
-                pimpl->deviceContext->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-                auto check = pimpl->deviceContext->GetAntialiasMode();
-                pimpl->deviceContext->FillOpacityMask(sourceBitmap,
-                    colorBrush.get(),
-                    juce::D2DUtilities::toRECT_F(destination.getBounds().toFloat()),
-                    juce::D2DUtilities::toRECT_F(source.getBounds().toFloat()));
-                auto hr = pimpl->deviceContext->EndDraw();
-                pimpl->deviceContext->SetTarget(nullptr);
-#if 0
-
-                winrt::com_ptr<ID2D1Effect> effect;
-                pimpl->deviceContext->CreateEffect(CLSID_D2D1Premultiply, effect.put());
-
-                effect->SetInput(0, scratchpadBitmap);
-                pimpl->deviceContext->SetTarget(pimpl->destinationPixelData->getAdapterD2D1Bitmap());
-                pimpl->deviceContext->BeginDraw();
-                pimpl->deviceContext->DrawImage(effect.get());
-                pimpl->deviceContext->EndDraw();
-                pimpl->deviceContext->SetTarget(nullptr);
-#endif
-
-
-                DBG("hr " << (int)hr);
-#endif
-            }
-        }
-    }
-
-
-    print(source);
-    DBG("");
-    print(destination);
-}
-#endif
-
 juce::Image FormatConverter::convert(const juce::Image& source, juce::Image::PixelFormat outputFormat)
 {
     switch (source.getFormat())
@@ -197,7 +78,7 @@ juce::Image FormatConverter::convert(const juce::Image& source, juce::Image::Pix
         case juce::Image::ARGB:
         {
 
-            return {};
+            return singleChannelToARGB(source);
         }
         }
 
@@ -254,3 +135,234 @@ juce::Image FormatConverter::convertToSingleChannel(const juce::Image& source)
 
     return {};
 }
+
+juce::Image FormatConverter::singleChannelToARGB(const juce::Image& source)
+{
+    //juce::Image temp{ juce::Image::ARGB, source.getWidth(), source.getHeight(), true };
+    juce::Image destination{ juce::Image::ARGB, source.getWidth(), source.getHeight(), true };
+
+
+    //auto tempBitmap = dynamic_cast<juce::Direct2DPixelData*>(temp.getPixelData())->getAdapterD2D1Bitmap();
+
+    pimpl->createResources(source, destination);
+
+    auto sourceBitmap = pimpl->sourcePixelData->getAdapterD2D1Bitmap();
+    auto destinationBitmap = pimpl->destinationPixelData->getAdapterD2D1Bitmap();
+
+    winrt::com_ptr<ID2D1Bitmap1> tempBitmap;
+    if (const auto hr = pimpl->deviceContext->CreateBitmap(D2D1_SIZE_U{ (uint32_t)source.getWidth(), (uint32_t)source.getHeight() },
+        nullptr, 0, D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+            D2D1::PixelFormat(DXGI_FORMAT_R8G8B8A8_UNORM, D2D1_ALPHA_MODE_STRAIGHT)),
+        tempBitmap.put());
+        FAILED(hr))
+    {
+        jassertfalse;
+        return {};
+    }
+
+    if (sourceBitmap && destinationBitmap)
+    {
+        auto& deviceContext = pimpl->deviceContext;
+
+#if 0
+        winrt::com_ptr<ID2D1BitmapBrush1> brush;
+        if (const auto hr = deviceContext->CreateBitmapBrush(sourceBitmap, brush.put());
+            FAILED(hr))
+        {
+            jassertfalse;
+            return {};
+        }
+
+        deviceContext->SetTarget(destinationBitmap);
+        deviceContext->BeginDraw();
+        deviceContext->Clear();// { 1.0f, 1.0f, 1.0f, 1.0f });
+        deviceContext->FillRectangle(juce::D2DUtilities::toRECT_F(destination.getBounds().toFloat()), brush.get());
+        auto hr = deviceContext->EndDraw();
+        deviceContext->SetTarget(nullptr);
+#endif
+
+#if 0
+        winrt::com_ptr<ID2D1Effect> effect;
+        deviceContext->CreateEffect(CLSID_D2D1Grayscale, effect.put());
+        effect->SetInput(0, sourceBitmap);
+
+        deviceContext->SetTarget(destinationBitmap);
+        deviceContext->BeginDraw();
+        deviceContext->Clear();
+        deviceContext->DrawImage(effect.get());
+        auto hr = deviceContext->EndDraw();
+        deviceContext->SetTarget(nullptr);
+#endif
+
+#if 0
+        deviceContext->SetTarget(tempBitmap);
+        deviceContext->BeginDraw();
+        deviceContext->Clear({ 1.0f, 1.0f, 1.0f, 1.0f });
+        deviceContext->EndDraw();
+        deviceContext->SetTarget(nullptr);
+
+        winrt::com_ptr<ID2D1Effect> effect;
+        deviceContext->CreateEffect(CLSID_D2D1AlphaMask, effect.put());
+        effect->SetInput(0, sourceBitmap);
+        effect->SetInput(1, tempBitmap);
+        deviceContext->SetTarget(destinationBitmap);
+        deviceContext->BeginDraw();
+        deviceContext->Clear();
+        deviceContext->DrawImage(effect.get());
+        auto hr = deviceContext->EndDraw();
+        deviceContext->SetTarget(nullptr);
+#endif
+
+
+#if 1
+        winrt::com_ptr<ID2D1SolidColorBrush> brush;
+        if (const auto hr = deviceContext->CreateSolidColorBrush({ 1.0f, 1.0f, 1.0f, 1.0f }, brush.put());
+            FAILED(hr))
+        {
+            jassertfalse;
+            return {};
+        }
+
+        deviceContext->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
+
+        deviceContext->SetTarget(tempBitmap.get());
+        deviceContext->BeginDraw();
+        deviceContext->Clear();
+        deviceContext->FillOpacityMask(sourceBitmap,
+            brush.get(),
+            juce::D2DUtilities::toRECT_F(destination.getBounds().toFloat()),
+            juce::D2DUtilities::toRECT_F(source.getBounds().toFloat()));
+        auto hr = deviceContext->EndDraw();
+        deviceContext->SetTarget(nullptr);
+
+        winrt::com_ptr<ID2D1Effect> premutiplyEffect;
+        deviceContext->CreateEffect(CLSID_D2D1Premultiply, premutiplyEffect.put());
+        premutiplyEffect->SetInput(0, tempBitmap.get());
+        deviceContext->SetTarget(destinationBitmap);
+        deviceContext->BeginDraw();
+        deviceContext->DrawImage(premutiplyEffect.get());
+        hr = deviceContext->EndDraw();
+        deviceContext->SetTarget(nullptr);
+#endif
+
+#if 0
+        if (FAILED(hr))
+            return {};
+
+        winrt::com_ptr<ID2D1Effect> effect;
+        deviceContext->CreateEffect(CLSID_D2D1Premultiply, effect.put());
+        effect->SetValue(D2D1_COLORMATRIX_PROP_ALPHA_MODE, D2D1_COLORMATRIX_ALPHA_MODE_STRAIGHT);
+        effect->SetValue(D2D1_COLORMATRIX_PROP_CLAMP_OUTPUT, FALSE);
+        effect->SetValue(D2D1_COLORMATRIX_PROP_COLOR_MATRIX, D2D1_MATRIX_5X4_F{
+            0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f,
+            0.0f, 0.0f, 0.0f, 0.0f,
+            1.0f, 1.0f, 1.0f, 1.0f,
+            0.0f, 0.0f, 0.0f, 0.0f
+            });
+
+        effect->SetInput(0, tempBitmap.get());
+        deviceContext->SetTarget(destinationBitmap);
+        deviceContext->BeginDraw();
+        deviceContext->Clear();
+        deviceContext->DrawImage(effect.get());
+        hr = deviceContext->EndDraw();
+        deviceContext->SetTarget(nullptr);
+
+#endif
+
+        return destination;
+    }
+
+    return {};
+}
+
+#if MESCAL_UNIT_TESTS
+
+class FormatConverterUnitTest : public juce::UnitTest
+{
+public:
+    FormatConverterUnitTest() : UnitTest("FormatConverterUnitTest") {}
+
+    void runTest() override
+    {
+        testARGBToSingleChannel();
+        testSingleChannelToARGB();
+    }
+
+    void testARGBToSingleChannel()
+    {
+        beginTest("ARGBToSingleChannel");
+
+        juce::Image source{ juce::Image::ARGB, 16, 16, true };
+        {
+            juce::Graphics g{ source };
+            g.setColour(juce::Colours::white);
+            g.fillEllipse(source.getBounds().reduced(4).toFloat());
+        }
+
+        FormatConverter converter;
+        auto destination = converter.convert(source, juce::Image::SingleChannel);
+
+        expect(destination.isValid());
+
+        DBG("source");
+        converter.print(source);
+        DBG("destination");
+        converter.print(destination);
+
+        juce::Image::BitmapData sourceBitmapData{ source, juce::Image::BitmapData::readOnly };
+        juce::Image::BitmapData destinationBitmapData{ destination, juce::Image::BitmapData::readOnly };
+
+        for (int y = 0; y < source.getHeight(); ++y)
+        {
+            for (int x = 0; x < source.getWidth(); ++x)
+            {
+                auto sourcePixel = sourceBitmapData.getPixelColour(x, y);
+                auto destinationPixel = destinationBitmapData.getPixelColour(x, y);
+
+                expectEquals(sourcePixel.getAlpha(), destinationPixel.getAlpha());
+            }
+        }
+    }
+
+    void testSingleChannelToARGB()
+    {
+        juce::Image source{ juce::Image::SingleChannel, 16, 16, true };
+        {
+            juce::Graphics g{ source };
+            g.setColour(juce::Colours::white.withAlpha(0.75f));
+            g.fillEllipse(source.getBounds().reduced(4).toFloat());
+        }
+
+        FormatConverter converter;
+        auto destination = converter.convert(source, juce::Image::ARGB);
+
+        expect(destination.isValid());
+
+        DBG("source");
+        converter.print(source);
+        DBG("destination");
+        converter.print(destination);
+
+#if 0
+        juce::Image::BitmapData sourceBitmapData{ source, juce::Image::BitmapData::readOnly };
+        juce::Image::BitmapData destinationBitmapData{ destination, juce::Image::BitmapData::readOnly };
+
+        for (int y = 0; y < source.getHeight(); ++y)
+        {
+            for (int x = 0; x < source.getWidth(); ++x)
+            {
+                auto sourcePixel = sourceBitmapData.getPixelColour(x, y);
+                auto destinationPixel = destinationBitmapData.getPixelColour(x, y);
+
+                expectEquals(sourcePixel.getAlpha(), destinationPixel.getAlpha());
+            }
+        }
+#endif
+    }
+};
+
+static FormatConverterUnitTest formatConverterUnitTest;
+
+#endif

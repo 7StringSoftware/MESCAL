@@ -1,6 +1,7 @@
 #include <JuceHeader.h>
 #include "MainComponent.h"
 #include "FormatConverter.h"
+#include <memory>
 
 class Direct2DEffectsApplication  : public juce::JUCEApplication
 {
@@ -13,7 +14,12 @@ public:
 
     void initialise (const juce::String&) override
     {
-        mainWindow.reset (new MainWindow (getApplicationName()));
+#if MESCAL_UNIT_TESTS
+        juce::UnitTestRunner runner;
+        runner.runAllTests();
+#endif
+
+        mainWindow = std::make_unique<MainWindow> (getApplicationName());
     }
 
     void shutdown() override
