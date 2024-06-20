@@ -78,9 +78,9 @@ namespace mescal
             auto p1 = center.getPointOnCircumference(1.0f, angle);
             auto p2 = center.getPointOnCircumference(1.0f, angle + juce::MathConstants<float>::halfPi);
 
-            auto patchStartColor = juce::Colour::fromHSV(colorPosition, 1.0f, 1.0f, 1.0f);
+            auto patchStartColor = juce::Colour::fromHSV((float)colorPosition, 1.0f, 1.0f, 1.0f);
                 //gradient.getColourAtPosition(colorPosition);
-            auto patchStopColor = juce::Colour::fromHSV(colorPosition + colorStep, 1.0f, 1.0f, 1.0f);//gradient.getColourAtPosition(colorPosition + colorStep);
+            auto patchStopColor = juce::Colour::fromHSV((float)(colorPosition + colorStep), 1.0f, 1.0f, 1.0f);//gradient.getColourAtPosition(colorPosition + colorStep);
 
             patch.point00 = toPOINT_2F(p1.transformedBy(transform));
             patch.point03 = toPOINT_2F(p2.transformedBy(transform));

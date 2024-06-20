@@ -13,7 +13,7 @@ public:
 
 private:
     juce::Image input, output;
-    mescal::Effect effect{ mescal::Effect::EffectType::gaussianBlur };
+    mescal::Effect effect{ mescal::Effect::Type::gaussianBlur };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

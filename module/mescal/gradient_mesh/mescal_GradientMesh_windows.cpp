@@ -206,7 +206,7 @@ namespace mescal
         return halfedge;
     }
 
-    void GradientMesh::applyTransform(juce::AffineTransform const& transform)
+    void GradientMesh::applyTransform([[maybe_unused]] juce::AffineTransform const& transform)
     {
         jassertfalse;
     }
@@ -332,6 +332,7 @@ namespace mescal
         return                 Color128{ brightness, x, brightness * (1.0f - saturation * f), alpha, };
     }
 
+#if 0
     void GradientMesh::makeConicGradient(juce::Rectangle<float> bounds)
     {
         /*
@@ -365,6 +366,7 @@ namespace mescal
 
 
     }
+#endif
 
 
 } // namespace mescal

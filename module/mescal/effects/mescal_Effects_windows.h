@@ -3,7 +3,7 @@
 class Effect : public juce::ImageEffectFilter
 {
 public:
-	enum class EffectType
+	enum class Type
 	{
 		gaussianBlur,
 		spotSpecularLighting,
@@ -21,8 +21,8 @@ public:
 	using PropertyIndex = std::variant<GaussianBlurPropertyIndex>;
 	using PropertyValue = std::variant<float, juce::Colour, juce::Point<float>, juce::Rectangle<float>, juce::AffineTransform>;
 
-	static std::unique_ptr<Effect> create(EffectType effectType);
-	Effect(EffectType effectType_);
+	static std::unique_ptr<Effect> create(Type effectType);
+	Effect(Type effectType_);
 	~Effect() override;
 
 	void setProperty(PropertyIndex index, const PropertyValue& value);
@@ -31,7 +31,7 @@ public:
 	void applyEffect(juce::Image& sourceImage, juce::Graphics& destContext, float scaleFactor, float alpha) override;
 	void applyEffect(juce::Image& sourceImage, juce::Image& outputImage, float scaleFactor, float alpha);
 
-	EffectType const effectType;
+	Type const effectType;
 
 protected:
 	struct Pimpl;
