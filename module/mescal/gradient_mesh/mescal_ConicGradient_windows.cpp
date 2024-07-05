@@ -163,5 +163,9 @@ namespace mescal
         bounds = bounds_;
     }
 
-} // namespace mescal
+    juce::Rectangle<float> ConicGradient::getBounds() const noexcept
+    {
+        return bounds;
+    }
 
+} // namespace mescal

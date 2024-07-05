@@ -8,6 +8,7 @@ public:
 
     void setBounds(juce::Rectangle<float> bounds_);
     void setColourGradient(juce::ColourGradient gradient_);
+    juce::Rectangle<float> getBounds() const noexcept;
 
     void draw(int numSegments, juce::Image image, juce::AffineTransform transform);
 

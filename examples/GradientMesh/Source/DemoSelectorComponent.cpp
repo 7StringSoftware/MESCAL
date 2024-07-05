@@ -3,11 +3,6 @@
 DemoSelectorComponent::DemoSelectorComponent() :
     Button("Demo selector")
 {
-    scatterEffect.setParticleSize(2);
-    setComponentEffect(&scatterEffect);
-
-    updater.addAnimator(scatterAnimator);
-    scatterAnimator.start();
 }
 
 void DemoSelectorComponent::paintButton(juce::Graphics& g, bool /*shouldDrawButtonAsHighlighted*/, bool /*shouldDrawButtonAsDown*/)
@@ -32,5 +27,4 @@ bool DemoSelectorComponent::hitTest(int x, int y)
 
 void DemoSelectorComponent::resized()
 {
-    scatterEffect.setSize(getWidth(), getHeight());
 }

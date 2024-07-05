@@ -14,6 +14,7 @@ void ConicGradientDemo::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::black);
     paintMesh(g);
+
 }
 
 void ConicGradientDemo::resized()
@@ -27,21 +28,21 @@ void ConicGradientDemo::updateConicGradient()
      gradient.addColour(0.25, juce::Colours::orange);
      gradient.addColour(0.5, juce::Colours::yellow);
      gradient.addColour(0.75, juce::Colours::yellow);
-
-
 //     gradient.addColour(0.66, juce::Colours::yellow);
 
     conicGradient.setColourGradient(gradient);
-    conicGradient.setBounds(juce::Rectangle<float>{ getWidth() * 0.9f, getHeight() * 0.9f}.withCentre(getLocalBounds().getCentre().toFloat()));
+    auto size = juce::jmin(getWidth() * 0.9f, getHeight() * 0.9f);
+    conicGradient.setBounds(juce::Rectangle<float>{ size, size });
 }
 
 void ConicGradientDemo::paintMesh(juce::Graphics& g)
 {
     if (image.isNull() || image.getWidth() != getWidth() || image.getHeight() != getHeight())
     {
-        image = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
+        auto bounds = conicGradient.getBounds().toNearestInt();
+        image = juce::Image(juce::Image::ARGB, bounds.getWidth(), bounds.getHeight(), true);
     }
 
-    conicGradient.draw(32, image, {});
-    g.drawImageAt(image, 0, 0);
+    conicGradient.draw(4, image, {});
+    g.drawImage(image, getLocalBounds().toFloat(), juce::RectanglePlacement::centred);
 }
