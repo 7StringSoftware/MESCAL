@@ -151,8 +151,8 @@ juce::Image FormatConverter::singleChannelToARGB(const juce::Image& source)
 
     winrt::com_ptr<ID2D1Bitmap1> tempBitmap;
     if (const auto hr = pimpl->deviceContext->CreateBitmap(D2D1_SIZE_U{ (uint32_t)source.getWidth(), (uint32_t)source.getHeight() },
-        nullptr, 0, D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
-            D2D1::PixelFormat(DXGI_FORMAT_R8G8B8A8_UNORM, D2D1_ALPHA_MODE_STRAIGHT)),
+        nullptr, 0, D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET,
+            D2D1::PixelFormat(DXGI_FORMAT_R8G8B8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED)),
         tempBitmap.put());
         FAILED(hr))
     {
@@ -182,39 +182,44 @@ juce::Image FormatConverter::singleChannelToARGB(const juce::Image& source)
 #endif
 
 #if 0
-        winrt::com_ptr<ID2D1Effect> effect;
-        deviceContext->CreateEffect(CLSID_D2D1Grayscale, effect.put());
-        effect->SetInput(0, sourceBitmap);
+        winrt::com_ptr<ID2D1Effect> grayscale;
+        deviceContext->CreateEffect(CLSID_D2D1Grayscale, grayscale.put());
+        grayscale->SetInput(0, sourceBitmap);
 
         deviceContext->SetTarget(destinationBitmap);
         deviceContext->BeginDraw();
         deviceContext->Clear();
-        deviceContext->DrawImage(effect.get());
+        deviceContext->DrawImage(grayscale.get());
         auto hr = deviceContext->EndDraw();
         deviceContext->SetTarget(nullptr);
 #endif
 
 #if 0
-        deviceContext->SetTarget(tempBitmap);
+        deviceContext->SetTarget(tempBitmap.get());
         deviceContext->BeginDraw();
         deviceContext->Clear({ 1.0f, 1.0f, 1.0f, 1.0f });
         deviceContext->EndDraw();
         deviceContext->SetTarget(nullptr);
 
-        winrt::com_ptr<ID2D1Effect> effect;
-        deviceContext->CreateEffect(CLSID_D2D1AlphaMask, effect.put());
-        effect->SetInput(0, sourceBitmap);
-        effect->SetInput(1, tempBitmap);
+        winrt::com_ptr<ID2D1Effect> alphaMaskEffect;
+        deviceContext->CreateEffect(CLSID_D2D1AlphaMask, alphaMaskEffect.put());
+        alphaMaskEffect->SetInput(1, sourceBitmap);
+        alphaMaskEffect->SetInput(0, tempBitmap.get());
+
+        winrt::com_ptr<ID2D1Effect> premultiplyEffect;
+        deviceContext->CreateEffect(CLSID_D2D1Premultiply, premultiplyEffect.put());
+        premultiplyEffect->SetInputEffect(0, alphaMaskEffect.get());
+
         deviceContext->SetTarget(destinationBitmap);
         deviceContext->BeginDraw();
         deviceContext->Clear();
-        deviceContext->DrawImage(effect.get());
+        deviceContext->DrawImage(premultiplyEffect.get());
         auto hr = deviceContext->EndDraw();
         deviceContext->SetTarget(nullptr);
 #endif
 
 
-#if 1
+#if 0
         winrt::com_ptr<ID2D1SolidColorBrush> brush;
         if (const auto hr = deviceContext->CreateSolidColorBrush({ 1.0f, 1.0f, 1.0f, 1.0f }, brush.put());
             FAILED(hr))
@@ -245,13 +250,13 @@ juce::Image FormatConverter::singleChannelToARGB(const juce::Image& source)
         deviceContext->SetTarget(nullptr);
 #endif
 
-#if 0
-        if (FAILED(hr))
-            return {};
+#if 1
+//        if (FAILED(hr))
+//             return {};
 
         winrt::com_ptr<ID2D1Effect> effect;
-        deviceContext->CreateEffect(CLSID_D2D1Premultiply, effect.put());
-        effect->SetValue(D2D1_COLORMATRIX_PROP_ALPHA_MODE, D2D1_COLORMATRIX_ALPHA_MODE_STRAIGHT);
+        deviceContext->CreateEffect(CLSID_D2D1ColorMatrix, effect.put());
+        effect->SetValue(D2D1_COLORMATRIX_PROP_ALPHA_MODE, D2D1_COLORMATRIX_ALPHA_MODE_PREMULTIPLIED);
         effect->SetValue(D2D1_COLORMATRIX_PROP_CLAMP_OUTPUT, FALSE);
         effect->SetValue(D2D1_COLORMATRIX_PROP_COLOR_MATRIX, D2D1_MATRIX_5X4_F{
             0.0f, 0.0f, 0.0f, 0.0f,
@@ -261,12 +266,12 @@ juce::Image FormatConverter::singleChannelToARGB(const juce::Image& source)
             0.0f, 0.0f, 0.0f, 0.0f
             });
 
-        effect->SetInput(0, tempBitmap.get());
+        effect->SetInput(0, sourceBitmap);
         deviceContext->SetTarget(destinationBitmap);
         deviceContext->BeginDraw();
         deviceContext->Clear();
         deviceContext->DrawImage(effect.get());
-        hr = deviceContext->EndDraw();
+        auto hr = deviceContext->EndDraw();
         deviceContext->SetTarget(nullptr);
 
 #endif
@@ -286,7 +291,7 @@ public:
 
     void runTest() override
     {
-        testARGBToSingleChannel();
+        //testARGBToSingleChannel();
         testSingleChannelToARGB();
     }
 
@@ -328,6 +333,8 @@ public:
 
     void testSingleChannelToARGB()
     {
+        beginTest("singleChannelToARGB");
+
         juce::Image source{ juce::Image::SingleChannel, 16, 16, true };
         {
             juce::Graphics g{ source };

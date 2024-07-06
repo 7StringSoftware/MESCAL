@@ -25,6 +25,8 @@
 #include <d2d1_3helper.h>
 #include <d3d11_3.h>
 #include <d2d1_3.h>
+#include <d2d1effectauthor.h>
+#include <d2d1effecthelpers.h>
 #define JUCE_CORE_INCLUDE_COM_SMART_PTR 1
 #include <JuceHeader.h>
 #include <juce_graphics/native/juce_DirectX_windows.h>
@@ -37,3 +39,4 @@
 #include "gradient_mesh/mescal_ConicGradient_windows.cpp"
 #include "sprite_batch/mescal_SpriteBatch_windows.cpp"
 #include "effects/mescal_Effects_windows.cpp"
+//#include "effects/mescal_CustomEffect_windows.cpp"
