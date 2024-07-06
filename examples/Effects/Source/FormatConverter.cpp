@@ -47,6 +47,88 @@ struct FormatConverter::Pimpl
         }
     }
 
+#if JUCE_DEBUG
+    void print(juce::Image const& image)
+    {
+        juce::Image::BitmapData bitmapData{ image, juce::Image::BitmapData::readOnly };
+
+        switch (image.getFormat())
+        {
+        case juce::Image::SingleChannel:
+        {
+            for (int y = 0; y < image.getHeight(); ++y)
+            {
+                juce::String line;
+                for (int x = 0; x < image.getWidth(); ++x)
+                {
+                    line << juce::String::toHexString(bitmapData.getPixelColour(x, y).getAlpha()).paddedLeft('0', 2);
+                }
+
+                DBG(line);
+            }
+            break;
+        }
+
+        case juce::Image::ARGB:
+        {
+            for (int y = 0; y < image.getHeight(); ++y)
+            {
+                juce::String line;
+                for (int x = 0; x < image.getWidth(); ++x)
+                {
+                    line << bitmapData.getPixelColour(x, y).toString().paddedLeft('0', 8) << " ";
+                }
+
+                DBG(line);
+            }
+            break;
+        }
+
+        case juce::Image::ARGBFloat16:
+        {
+            auto float16ToFloat32 = [](uint8_t* bytes)
+                {
+                    uint16_t u16 = *(uint16_t*)bytes;
+                    uint16_t sign = u16 & 0x8000;
+                    int exponent = ((int)(u16 & 0x7C00) >> 10) - 15;
+                    uint16_t mantissa = u16 & 0x03FF;
+
+                    float value = (float)mantissa;
+                    value *= std::pow(2.0f, (float)exponent);
+                    if (sign) value *= -1.0f;
+
+                    return value;
+                };
+
+            auto printFloat = [](float f)
+                {
+                    return  juce::String{ f, 2 }.paddedLeft(' ', 6);
+                };
+
+            for (int y = 0; y < image.getHeight(); ++y)
+            {
+                juce::String text;
+                for (int x = 0; x < image.getWidth(); ++x)
+                {
+                    auto line = bitmapData.data + bitmapData.lineStride * y;
+                    auto pixel = line + bitmapData.pixelStride * x;
+
+                    auto r = float16ToFloat32(pixel + 0);
+                    auto g = float16ToFloat32(pixel + 2);
+                    auto b = float16ToFloat32(pixel + 4);
+                    auto a = float16ToFloat32(pixel + 6);
+
+                    text << printFloat(a) << "/" << printFloat(r) << "/" << printFloat(g) << "/" << printFloat(b) << ", ";
+                }
+
+                DBG(text);
+            }
+            break;
+        }
+        }
+    }
+#endif
+
     FormatConverter& owner;
     winrt::com_ptr<ID2D1DeviceContext2> deviceContext;
     juce::Direct2DPixelData::Ptr sourcePixelData, destinationPixelData;
@@ -59,6 +141,11 @@ FormatConverter::FormatConverter() :
 
 FormatConverter::~FormatConverter()
 {
+}
+
+void FormatConverter::print(juce::Image const& image)
+{
+    pimpl->print(image);
 }
 
 juce::Image FormatConverter::convert(const juce::Image& source, juce::Image::PixelFormat outputFormat)
@@ -107,6 +194,7 @@ juce::Image FormatConverter::convert(const juce::Image& source, juce::Image::Pix
     }
     }
 
+    jassertfalse;
     return {};
 }
 
@@ -138,143 +226,33 @@ juce::Image FormatConverter::convertToSingleChannel(const juce::Image& source)
 
 juce::Image FormatConverter::singleChannelToARGB(const juce::Image& source)
 {
-    //juce::Image temp{ juce::Image::ARGB, source.getWidth(), source.getHeight(), true };
     juce::Image destination{ juce::Image::ARGB, source.getWidth(), source.getHeight(), true };
-
-
-    //auto tempBitmap = dynamic_cast<juce::Direct2DPixelData*>(temp.getPixelData())->getAdapterD2D1Bitmap();
 
     pimpl->createResources(source, destination);
 
     auto sourceBitmap = pimpl->sourcePixelData->getAdapterD2D1Bitmap();
     auto destinationBitmap = pimpl->destinationPixelData->getAdapterD2D1Bitmap();
 
-    winrt::com_ptr<ID2D1Bitmap1> tempBitmap;
-    if (const auto hr = pimpl->deviceContext->CreateBitmap(D2D1_SIZE_U{ (uint32_t)source.getWidth(), (uint32_t)source.getHeight() },
-        nullptr, 0, D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET,
-            D2D1::PixelFormat(DXGI_FORMAT_R8G8B8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED)),
-        tempBitmap.put());
-        FAILED(hr))
-    {
-        jassertfalse;
-        return {};
-    }
-
     if (sourceBitmap && destinationBitmap)
     {
         auto& deviceContext = pimpl->deviceContext;
 
-#if 0
-        winrt::com_ptr<ID2D1BitmapBrush1> brush;
-        if (const auto hr = deviceContext->CreateBitmapBrush(sourceBitmap, brush.put());
-            FAILED(hr))
-        {
-            jassertfalse;
-            return {};
-        }
-
-        deviceContext->SetTarget(destinationBitmap);
-        deviceContext->BeginDraw();
-        deviceContext->Clear();// { 1.0f, 1.0f, 1.0f, 1.0f });
-        deviceContext->FillRectangle(juce::D2DUtilities::toRECT_F(destination.getBounds().toFloat()), brush.get());
-        auto hr = deviceContext->EndDraw();
-        deviceContext->SetTarget(nullptr);
-#endif
-
-#if 0
-        winrt::com_ptr<ID2D1Effect> grayscale;
-        deviceContext->CreateEffect(CLSID_D2D1Grayscale, grayscale.put());
-        grayscale->SetInput(0, sourceBitmap);
-
-        deviceContext->SetTarget(destinationBitmap);
-        deviceContext->BeginDraw();
-        deviceContext->Clear();
-        deviceContext->DrawImage(grayscale.get());
-        auto hr = deviceContext->EndDraw();
-        deviceContext->SetTarget(nullptr);
-#endif
-
-#if 0
-        deviceContext->SetTarget(tempBitmap.get());
-        deviceContext->BeginDraw();
-        deviceContext->Clear({ 1.0f, 1.0f, 1.0f, 1.0f });
-        deviceContext->EndDraw();
-        deviceContext->SetTarget(nullptr);
+        winrt::com_ptr<ID2D1Effect> flood;
+        deviceContext->CreateEffect(CLSID_D2D1Flood, flood.put());
+        flood->SetValue(D2D1_FLOOD_PROP_COLOR, D2D1_VECTOR_4F{ 1.0f, 1.0f, 1.0f, 1.0f });
 
         winrt::com_ptr<ID2D1Effect> alphaMaskEffect;
         deviceContext->CreateEffect(CLSID_D2D1AlphaMask, alphaMaskEffect.put());
+
+        alphaMaskEffect->SetInputEffect(0, flood.get());
         alphaMaskEffect->SetInput(1, sourceBitmap);
-        alphaMaskEffect->SetInput(0, tempBitmap.get());
-
-        winrt::com_ptr<ID2D1Effect> premultiplyEffect;
-        deviceContext->CreateEffect(CLSID_D2D1Premultiply, premultiplyEffect.put());
-        premultiplyEffect->SetInputEffect(0, alphaMaskEffect.get());
 
         deviceContext->SetTarget(destinationBitmap);
         deviceContext->BeginDraw();
         deviceContext->Clear();
-        deviceContext->DrawImage(premultiplyEffect.get());
+        deviceContext->DrawImage(alphaMaskEffect.get());
         auto hr = deviceContext->EndDraw();
         deviceContext->SetTarget(nullptr);
-#endif
-
-
-#if 0
-        winrt::com_ptr<ID2D1SolidColorBrush> brush;
-        if (const auto hr = deviceContext->CreateSolidColorBrush({ 1.0f, 1.0f, 1.0f, 1.0f }, brush.put());
-            FAILED(hr))
-        {
-            jassertfalse;
-            return {};
-        }
-
-        deviceContext->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-
-        deviceContext->SetTarget(tempBitmap.get());
-        deviceContext->BeginDraw();
-        deviceContext->Clear();
-        deviceContext->FillOpacityMask(sourceBitmap,
-            brush.get(),
-            juce::D2DUtilities::toRECT_F(destination.getBounds().toFloat()),
-            juce::D2DUtilities::toRECT_F(source.getBounds().toFloat()));
-        auto hr = deviceContext->EndDraw();
-        deviceContext->SetTarget(nullptr);
-
-        winrt::com_ptr<ID2D1Effect> premutiplyEffect;
-        deviceContext->CreateEffect(CLSID_D2D1Premultiply, premutiplyEffect.put());
-        premutiplyEffect->SetInput(0, tempBitmap.get());
-        deviceContext->SetTarget(destinationBitmap);
-        deviceContext->BeginDraw();
-        deviceContext->DrawImage(premutiplyEffect.get());
-        hr = deviceContext->EndDraw();
-        deviceContext->SetTarget(nullptr);
-#endif
-
-#if 1
-//        if (FAILED(hr))
-//             return {};
-
-        winrt::com_ptr<ID2D1Effect> effect;
-        deviceContext->CreateEffect(CLSID_D2D1ColorMatrix, effect.put());
-        effect->SetValue(D2D1_COLORMATRIX_PROP_ALPHA_MODE, D2D1_COLORMATRIX_ALPHA_MODE_PREMULTIPLIED);
-        effect->SetValue(D2D1_COLORMATRIX_PROP_CLAMP_OUTPUT, FALSE);
-        effect->SetValue(D2D1_COLORMATRIX_PROP_COLOR_MATRIX, D2D1_MATRIX_5X4_F{
-            0.0f, 0.0f, 0.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 0.0f,
-            0.0f, 0.0f, 0.0f, 0.0f,
-            1.0f, 1.0f, 1.0f, 1.0f,
-            0.0f, 0.0f, 0.0f, 0.0f
-            });
-
-        effect->SetInput(0, sourceBitmap);
-        deviceContext->SetTarget(destinationBitmap);
-        deviceContext->BeginDraw();
-        deviceContext->Clear();
-        deviceContext->DrawImage(effect.get());
-        auto hr = deviceContext->EndDraw();
-        deviceContext->SetTarget(nullptr);
-
-#endif
 
         return destination;
     }
@@ -291,82 +269,49 @@ public:
 
     void runTest() override
     {
-        //testARGBToSingleChannel();
-        testSingleChannelToARGB();
+        test("SingleChannel to ARGB",
+            juce::Image::SingleChannel,
+            juce::Image::ARGB);
+        test("ARGB to SingleChannel",
+            juce::Image::ARGB,
+            juce::Image::SingleChannel);
     }
 
-    void testARGBToSingleChannel()
+    void test(juce::String testName,
+        juce::Image::PixelFormat sourceFormat,
+        juce::Image::PixelFormat destinationFormat)
     {
-        beginTest("ARGBToSingleChannel");
+        beginTest(testName);
 
-        juce::Image source{ juce::Image::ARGB, 16, 16, true };
+        juce::Image softwareSource{ sourceFormat, 8, 8, true, juce::SoftwareImageType{} };
         {
-            juce::Graphics g{ source };
-            g.setColour(juce::Colours::white);
-            g.fillEllipse(source.getBounds().reduced(4).toFloat());
-        }
-
-        FormatConverter converter;
-        auto destination = converter.convert(source, juce::Image::SingleChannel);
-
-        expect(destination.isValid());
-
-        DBG("source");
-        converter.print(source);
-        DBG("destination");
-        converter.print(destination);
-
-        juce::Image::BitmapData sourceBitmapData{ source, juce::Image::BitmapData::readOnly };
-        juce::Image::BitmapData destinationBitmapData{ destination, juce::Image::BitmapData::readOnly };
-
-        for (int y = 0; y < source.getHeight(); ++y)
-        {
-            for (int x = 0; x < source.getWidth(); ++x)
-            {
-                auto sourcePixel = sourceBitmapData.getPixelColour(x, y);
-                auto destinationPixel = destinationBitmapData.getPixelColour(x, y);
-
-                expectEquals(sourcePixel.getAlpha(), destinationPixel.getAlpha());
-            }
-        }
-    }
-
-    void testSingleChannelToARGB()
-    {
-        beginTest("singleChannelToARGB");
-
-        juce::Image source{ juce::Image::SingleChannel, 16, 16, true };
-        {
-            juce::Graphics g{ source };
+            juce::Graphics g{ softwareSource };
             g.setColour(juce::Colours::white.withAlpha(0.75f));
-            g.fillEllipse(source.getBounds().reduced(4).toFloat());
+            g.fillEllipse(softwareSource.getBounds().toFloat());
         }
+
+        auto softwareDestination = softwareSource.convertedToFormat(destinationFormat);
+        expect(softwareDestination.isValid());
 
         FormatConverter converter;
-        auto destination = converter.convert(source, juce::Image::ARGB);
+        converter.print(softwareSource);
+        converter.print(softwareDestination);
 
-        expect(destination.isValid());
+        auto nativeSource = juce::NativeImageType{}.convert(softwareSource);
+        auto nativeDestination = converter.convert(nativeSource, destinationFormat);
+        converter.print(softwareSource);
+        converter.print(nativeDestination);
 
-        DBG("source");
-        converter.print(source);
-        DBG("destination");
-        converter.print(destination);
-
-#if 0
-        juce::Image::BitmapData sourceBitmapData{ source, juce::Image::BitmapData::readOnly };
-        juce::Image::BitmapData destinationBitmapData{ destination, juce::Image::BitmapData::readOnly };
-
-        for (int y = 0; y < source.getHeight(); ++y)
+        for (int y = 0; y < softwareDestination.getHeight(); ++y)
         {
-            for (int x = 0; x < source.getWidth(); ++x)
+            for (int x = 0; x < softwareDestination.getWidth(); ++x)
             {
-                auto sourcePixel = sourceBitmapData.getPixelColour(x, y);
-                auto destinationPixel = destinationBitmapData.getPixelColour(x, y);
+                auto softwarePixel = softwareDestination.getPixelAt(x, y);
+                auto nativePixel = nativeDestination.getPixelAt(x, y);
 
-                expectEquals(sourcePixel.getAlpha(), destinationPixel.getAlpha());
+                expect(softwarePixel == nativePixel);
             }
         }
-#endif
     }
 };
 
