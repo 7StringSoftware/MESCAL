@@ -1,7 +1,10 @@
 #include "MainComponent.h"
+#include "RippleEffect.h"
 
 MainComponent::MainComponent()
 {
+    RippleEffect::registerSelf();
+
     setSize (900, 400);
     setRepaintsOnMouseActivity(true);
 }
@@ -24,8 +27,9 @@ void MainComponent::resized()
 
     {
 	    juce::Graphics g{ input };
-	    g.fillCheckerBoard(getLocalBounds().toFloat(), 20.0f, 20.0f, juce::Colours::darkgrey, juce::Colours::transparentBlack);
+	    g.fillCheckerBoard(getLocalBounds().toFloat(), 20.0f, 20.0f, juce::Colours::darkgrey, juce::Colours::white);
 
+#if 0
 	    {
 	        g.setColour(juce::Colours::darkseagreen.withAlpha(1.0f));
 	        juce::Path path;
@@ -45,15 +49,17 @@ void MainComponent::resized()
 	        path.addCentredArc(getWidth() * 0.15f, getHeight() * 0.45f, 125.0f, 125.0f, 0.0f, 0.35f * juce::MathConstants<float>::pi, 1.15f * juce::MathConstants<float>::pi, true);
 	        g.strokePath(path, juce::PathStrokeType{ 30.0f });
 	    }
+#endif
     }
 
     output = juce::Image{ juce::Image::PixelFormat::ARGB, getWidth() / 2, getHeight(), true };
 
     {
         juce::Graphics g{ output };
-        effect.applyEffect(input, g, 1.0f, 1.0f);
+        customEffect.applyEffect(input, g, 1.0f, 1.0f);
     }
 
+#if 0
     {
         juce::Image::BitmapData bitmapData{ output, juce::Image::BitmapData::ReadWriteMode::readWrite };
         for (auto x = 0; x < bitmapData.width; ++x)
@@ -77,4 +83,5 @@ void MainComponent::resized()
     }
 
     output = temp;
+#endif
 }

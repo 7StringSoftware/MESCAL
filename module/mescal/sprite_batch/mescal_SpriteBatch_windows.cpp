@@ -93,8 +93,7 @@ namespace mescal
             }
 
             spriteBatch->AddSprites((uint32_t)sprites.size(),
-                destinationRectangles.getData(),
-                sourceRectangles.getData());
+                destinationRectangles.getData(),sourceRectangles.getData());
 
             if (deviceContext && destinationImage.isValid() && spriteBatch)
             {
