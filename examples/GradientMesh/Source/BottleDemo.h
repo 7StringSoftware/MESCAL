@@ -11,12 +11,11 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
 
-    juce::Path originalBottlePath;
-    juce::Path bottleBodyTopPath;
-    juce::AffineTransform pathTransform;
-    juce::Path transformedBottlePath;
     std::unique_ptr<mescal::GradientMesh> mesh;
+    mescal::Effect effect{ mescal::Effect::Type::spotSpecularLighting };
+    juce::AffineTransform transform;
     juce::Image meshImage;
+    juce::Image effectImage;
 
     juce::Path splitPath(juce::Path const& p);
 };

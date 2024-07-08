@@ -90,7 +90,7 @@ void SpriteBatchDemo::Particles::update(float timeSeconds, juce::Rectangle<float
             }
         }
 
-        source.getPixelData()->applyGaussianBlurEffect(0.0f * spriteSize * 0.25f, atlas);
+        source.getPixelData()->applyGaussianBlurEffect(0.5f * spriteSize * 0.25f, atlas);
     }
 
     if (sprites.size() == 0)
@@ -107,20 +107,19 @@ void SpriteBatchDemo::Particles::update(float timeSeconds, juce::Rectangle<float
         if (sprite.source.isEmpty() || !area.contains(sprite.destination.getCentre()))
         {
             sprite.source = juce::Rectangle<int>{ sourceX, sourceY, spriteSize, spriteSize };
-            float x = (random.nextFloat() - 0.5f) * area.getWidth() * 0.1f + area.getCentreX();
-            float y = (random.nextFloat() - 0.5f) * area.getHeight() * 0.1f + area.getCentreY();
+            float x = random.nextFloat() * area.getWidth();
+            float y = random.nextFloat() * area.getHeight();
             sprite.destination = juce::Rectangle<float>{ x, y, (float)spriteSize, (float)spriteSize };
             auto distance = mousePos.getDistanceFrom(sprite.destination.getCentre());
             distance = juce::jmax(1.0f, distance);
-            velocity.speed = 10.0f;// random.nextFloat() * 100.0f;
-            velocity.angle = (random.nextFloat() /** 0.1f - 0.05f*/) * juce::MathConstants<float>::twoPi + juce::MathConstants<float>::pi;
+            velocity.speed = 0.0f;// random.nextFloat() * 100.0f;
+            velocity.angle = (random.nextFloat() * 0.1f - 0.05f) * juce::MathConstants<float>::twoPi + juce::MathConstants<float>::pi;
             
             sourceY += spriteSize;
             if (sourceY >= atlasSize)
             {
                 sourceY = 0;
                 sourceX += spriteSize;
-                sourceX %= atlasSize;
             }
         }
 

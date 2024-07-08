@@ -15,21 +15,11 @@ body top
 
 BottleDemo::BottleDemo()
 {
-    auto drawable = juce::Drawable::createFromImageData(BinaryData::Wine_bottle_svg, BinaryData::Wine_bottle_svgSize);
-    originalBottlePath = drawable->getOutlineAsPath();
-
-    juce::Range<float> yRange = { 115.0f, 145.0f };
-    juce::Range<float> topEdgeXRange = { 30.0f, 70.0f };
-    juce::Range<float> bottomEdgeXRange = { 0.0f, 100.0f };
-
     int numRows = 6;
-    int numColumns = 8;
+    int numColumns = 32;
 
     mesh = std::make_unique<mescal::GradientMesh>(numRows, numColumns);
 
-    //
-    //
-    //
     juce::Path p;
     auto addPatches = [&](juce::Line<float> topLine, juce::Line<float> bottomLine)
         {
@@ -81,8 +71,8 @@ BottleDemo::BottleDemo()
 
     for (int row = 0; row < numRows; row += 2)
     {
-        auto const& topLine = lines[row];
-        auto const& bottomLine = lines[row + 1];
+        auto topLine = lines[row];
+        auto bottomLine = lines[row + 1];
 
         for (int column = 0; column < numColumns; ++column)
         {
@@ -92,35 +82,48 @@ BottleDemo::BottleDemo()
             auto topPoint = topLine.getPointAlongLineProportionally(x);
 
             auto grey = std::sin(x * juce::MathConstants<float>::pi);
+            grey = juce::jlimit(0.0f, 1.0f, grey);
             auto topColor = juce::Colour::greyLevel(grey * 0.5f);
             auto bottomColor = topColor;
 
-            if (row == 2 && column >= 32 && column <= 48)
+#if 0
+            if (row == 2 && column >= 32 && column <= 33)
             {
                 topColor = juce::Colours::red;
-                bottomColor = juce::Colours::darkred;
+                bottomColor = juce::Colours::blue;
             }
+#endif
 
-            mesh->configureVertex(row, column, topPoint, topColor);
-            mesh->configureVertex(row + 1, column, bottomPoint, bottomColor);
+            //mesh->configureVertex(row, column, topPoint, topColor);
+            //mesh->configureVertex(row + 1, column, bottomPoint, bottomColor);
+
+            auto topVertex = mesh->getVertex(row, column);
+            topVertex->position = topPoint;
+            auto bottomVertex = mesh->getVertex(row + 1, column);
+            bottomVertex->position = bottomPoint;
+
+            topVertex->setColor(topColor);
+            bottomVertex->setColor(bottomColor);
 
             float height = bottomPoint.getY() - topPoint.getY();
             auto c1 = juce::Point<float>{ bottomPoint.getX(), bottomPoint.getY() - height * 0.55f };
             auto c2 = juce::Point<float>{ topPoint.getX(), topPoint.getY() };
-            if (approximatelyEqual(c1.x, c2.x))
+
+            if (approximatelyEqual(topPoint.x, bottomPoint.x))
             {
-                c1 = bottomPoint;
-                c2 = topPoint;
                 continue;
             }
-            else if (c1.x < c2.x)
+
+            float xOffset = 0.0f;
+            if (bottomPoint.x < topPoint.x)
             {
-                c2.x -= (c2.x - c1.x) * 0.35f;
+                xOffset = (c2.x - c1.x) * -0.35f;
             }
             else
             {
-                c2.x += (c1.x - c2.x) * 0.35f;
+                xOffset = (c1.x - c2.x) * 0.35f;
             }
+            c2.x += xOffset;
 
             auto head = mesh->getVertex(row, column);
             auto tail = mesh->getVertex(row + 1, column);
@@ -132,8 +135,6 @@ BottleDemo::BottleDemo()
             }
         }
     }
-        
-    bottleBodyTopPath = p;
 
 
 #if 0
@@ -192,11 +193,11 @@ void BottleDemo::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::white);
 
-    g.setColour(juce::Colours::black);
-    g.strokePath(bottleBodyTopPath, juce::PathStrokeType{ 1.0f });
-
-    mesh->draw(meshImage, pathTransform, juce::Colours::white);
+    mesh->draw(meshImage, transform, juce::Colours::white);
     g.drawImageAt(meshImage, 0, 0);
+
+    effect.applyEffect(meshImage, effectImage, 1.0f, 1.0f);
+    g.drawImageAt(effectImage, 0, 0);
 
 #if 0
     for (auto const& halfedge : mesh->getHalfedges())
@@ -208,9 +209,13 @@ void BottleDemo::paint(juce::Graphics& g)
     }
 #endif
 
-#if 1
+#if 0
     for (auto const& vertex : mesh->getVertices())
     {
+        g.setColour(juce::Colours::hotpink);
+        g.fillEllipse(juce::Rectangle<float>{ 5.0f, 5.0f }.withCentre(vertex->position));
+        continue;
+
         g.setColour(juce::Colours::black);
 
         std::array<juce::Colour, 4> colors
@@ -228,7 +233,7 @@ void BottleDemo::paint(juce::Graphics& g)
             if (auto halfedge = halfedges[i].lock())
             {
                 juce::Line<float> line{ halfedge->tail.lock()->position, halfedge->head.lock()->position };
-                line = { line.getStart().transformedBy(pathTransform), line.getEnd().transformedBy(pathTransform) };
+                line = { line.getStart().transformedBy({}), line.getEnd().transformedBy({}) };
 
                 auto angle = line.getAngle();
                 angle += juce::MathConstants<float>::halfPi;
@@ -246,11 +251,6 @@ void BottleDemo::paint(juce::Graphics& g)
 
 void BottleDemo::resized()
 {
-    float scale = juce::jmin((float)getWidth() / originalBottlePath.getBounds().getWidth(), (float)getHeight() / originalBottlePath.getBounds().getHeight());
-    pathTransform = juce::AffineTransform::scale(scale * 0.9f).translated(0.0f, 10.0f);
-    transformedBottlePath = originalBottlePath;
-    transformedBottlePath.applyTransform(pathTransform);
-
 #if 0
     mesh = std::make_unique<mescal::GradientMesh>(8, 8);
     std::array<juce::Colour, 8> colors
@@ -280,7 +280,14 @@ void BottleDemo::resized()
         });
 #endif
 
-    meshImage = juce::Image{ juce::Image::ARGB, (int)transformedBottlePath.getBounds().getWidth(), (int)transformedBottlePath.getBounds().getHeight(), true};
+    float scale = (float)juce::jmin(getWidth(), getHeight()) / 400.0f;
+    transform = juce::AffineTransform::scale(scale * 0.8f).translated(50.0f, 50.0f);
+
+    meshImage = juce::Image{ juce::Image::ARGB, getHeight() / 4, getHeight(), true };
+    effectImage = juce::Image{ juce::Image::ARGB, getHeight() / 4, getHeight(), true };
+
+    effect.setProperty(mescal::SpotSpecularLightingProperty::lightPosition, mescal::Point3D{ 0.0f, 0.0f, 100.0f });
+    effect.setProperty(mescal::SpotSpecularLightingProperty::focusPointPosition, mescal::Point3D{ 200.0f, 400.0f, 0.0f });
 }
 
 juce::Path BottleDemo::splitPath(juce::Path const& p)
