@@ -16,9 +16,10 @@ public:
 private:
     juce::Image logoImage;
     juce::Image spriteBatchImage;
+    juce::Image effectOutputImage;
+    mescal::Effect effect{ mescal::Effect::Type::gaussianBlur };
+
     float opacity = 0.0f;
-    juce::GlowEffect glowEffect;
-    juce::DropShadowEffect shadowEffect;
 
     struct Particles
     {
