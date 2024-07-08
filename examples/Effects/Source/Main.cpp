@@ -46,10 +46,15 @@ public:
                               DocumentWindow::allButtons)
         {
             setUsingNativeTitleBar (true);
-            setContentOwned (new MainComponent(), true);
+            setContentNonOwned(&mainComponent, true);
 
             setResizable (true, true);
-            centreWithSize (getWidth(), getHeight());
+
+            if (auto display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay())
+            {
+                setBounds (display->userArea.reduced (100));
+                mainComponent.initEffect();
+            }
 
             setVisible (true);
         }
@@ -60,6 +65,7 @@ public:
         }
 
     private:
+        MainComponent mainComponent;
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainWindow)
     };
 
