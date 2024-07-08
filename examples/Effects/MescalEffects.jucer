@@ -4,6 +4,12 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" defines="MESCAL_UNIT_TESTS=1">
   <MAINGROUP id="VYSsCw" name="Mescal Effects">
     <GROUP id="{8B15FD36-06CF-DAD8-A43B-75B5A35F0253}" name="Source">
+      <GROUP id="{B0EEC4CB-78B8-A0CD-B9D0-25768C77B9A3}" name="Effect UI">
+        <FILE id="wEcTt8" name="SpotSpecularLightingControlComponent.cpp" compile="1"
+              resource="0" file="Source/SpotSpecularLightingControlComponent.cpp"/>
+        <FILE id="zviEU4" name="SpotSpecularLightingControlComponent.h" compile="0"
+              resource="0" file="Source/SpotSpecularLightingControlComponent.h"/>
+      </GROUP>
       <FILE id="EmLZkt" name="RippleEffect.cpp" compile="1" resource="0"
             file="Source/RippleEffect.cpp"/>
       <FILE id="SiT6z6" name="RippleEffect.h" compile="0" resource="0" file="Source/RippleEffect.h"/>
@@ -25,6 +31,7 @@
     <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
     <MODULE id="mescal" showAllCode="1" useLocalCopy="0" useGlobalPath="0"/>
   </MODULES>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1"/>
@@ -41,6 +48,7 @@
         <MODULEPATH id="juce_graphics" path="../../../../JUCE-dev/modules"/>
         <MODULEPATH id="juce_gui_basics" path="../../../../JUCE-dev/modules"/>
         <MODULEPATH id="mescal" path="../../module"/>
+        <MODULEPATH id="juce_gui_extra" path="../../../../JUCE/modules"/>
       </MODULEPATHS>
     </VS2022>
   </EXPORTFORMATS>
