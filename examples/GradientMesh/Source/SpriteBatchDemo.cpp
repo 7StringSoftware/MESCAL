@@ -42,6 +42,7 @@ void SpriteBatchDemo::paint(juce::Graphics& g)
     particles.draw(spriteBatchImage);
     g.drawImageAt(spriteBatchImage, 0, 0);
 
+#if 0
     juce::Point<float> offset
     {
         ((float)getWidth() - logoImage.getWidth()) * 0.5f,
@@ -52,6 +53,7 @@ void SpriteBatchDemo::paint(juce::Graphics& g)
     //glowEffect.applyEffect(logoImage, g, 1.0f, opacity);
     shadowEffect.setShadowProperties(juce::DropShadow{ juce::Colours::white, 50, {} });
     shadowEffect.applyEffect(logoImage, g, 1.0f, opacity);
+#endif
 }
 
 void SpriteBatchDemo::Particles::update(float timeSeconds, juce::Rectangle<float> area, juce::Point<float> mousePos)
@@ -84,7 +86,7 @@ void SpriteBatchDemo::Particles::update(float timeSeconds, juce::Rectangle<float
             }
         }
 
-        source.getPixelData()->applyGaussianBlurEffect(spriteSize * 0.25f, atlas);
+        source.getPixelData()->applyGaussianBlurEffect(0.5f * spriteSize * 0.25f, atlas);
     }
 
     if (sprites.size() == 0)
@@ -93,22 +95,28 @@ void SpriteBatchDemo::Particles::update(float timeSeconds, juce::Rectangle<float
         velocities = std::vector<Velocity>(numSprites);
     }
 
+    int sourceX = 0, sourceY = 0;
     for (int i = 0; i < numSprites; ++i)
     {
         auto& sprite = sprites[i];
         auto& velocity = velocities[i];
         if (sprite.source.isEmpty() || !area.contains(sprite.destination.getCentre()))
         {
-            auto sourceX = i % spritesPerRow;
-            auto sourceY = i / spritesPerRow;
-
             sprite.source = juce::Rectangle<int>{ sourceX, sourceY, spriteSize, spriteSize };
             float x = random.nextFloat() * area.getWidth();
-            sprite.destination = juce::Rectangle<float>{ x, 0.0f, (float)spriteSize, (float)spriteSize };
+            float y = random.nextFloat() * area.getHeight();
+            sprite.destination = juce::Rectangle<float>{ x, y, (float)spriteSize, (float)spriteSize };
             auto distance = mousePos.getDistanceFrom(sprite.destination.getCentre());
             distance = juce::jmax(1.0f, distance);
-            velocity.speed = random.nextFloat() * 100.0f;
+            velocity.speed = 0.0f;// random.nextFloat() * 100.0f;
             velocity.angle = (random.nextFloat() * 0.1f - 0.05f) * juce::MathConstants<float>::twoPi + juce::MathConstants<float>::pi;
+            
+            sourceY += spriteSize;
+            if (sourceY >= atlasSize)
+            {
+                sourceY = 0;
+                sourceX += spriteSize;
+            }
         }
 
         auto center = sprite.destination.getCentre().getPointOnCircumference(elapsedTime * velocity.speed, velocity.angle);
