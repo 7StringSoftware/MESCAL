@@ -2,11 +2,13 @@
 #include "GradientMeshDemo.h"
 #include "SpriteBatchDemo.h"
 #include "ConicGradientDemo.h"
+#include "BottleDemo.h"
 
 ContentComponent::ContentComponent()
 {
     //demoComponent = std::make_unique<GradientMeshDemo>();
-    demoComponent = std::make_unique<SpriteBatchDemo>();
+    //demoComponent = std::make_unique<SpriteBatchDemo>();
+    demoComponent = std::make_unique<BottleDemo>();
     //demoComponent = std::make_unique<ConicGradientDemo>();
     addAndMakeVisible(demoComponent.get());
     setSize(2048, 1024);

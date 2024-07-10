@@ -7,8 +7,11 @@
       <GROUP id="{D78BC46E-82DA-99F8-8906-D8CAC837949D}" name="Assets">
         <FILE id="SmVNva" name="TrashcanButton-Transparent.svg" compile="0"
               resource="1" file="Source/Assets/TrashcanButton-Transparent.svg"/>
+        <FILE id="CjH0Z7" name="Wine_bottle.svg" compile="0" resource="1" file="Source/Assets/Wine_bottle.svg"/>
       </GROUP>
       <GROUP id="{1A05B7D7-4DAF-D246-7CA0-0DB8E0EC7BE7}" name="Demos">
+        <FILE id="lyST9H" name="BottleDemo.cpp" compile="1" resource="0" file="Source/BottleDemo.cpp"/>
+        <FILE id="N9BNd7" name="BottleDemo.h" compile="0" resource="0" file="Source/BottleDemo.h"/>
         <FILE id="JPkI7n" name="ConicGradientDemo.cpp" compile="1" resource="0"
               file="Source/ConicGradientDemo.cpp"/>
         <FILE id="txZj3l" name="ConicGradientDemo.h" compile="0" resource="0"

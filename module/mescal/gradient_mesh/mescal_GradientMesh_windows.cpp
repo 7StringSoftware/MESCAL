@@ -47,6 +47,9 @@ namespace mescal
         numRows(numRows_),
         numColumns(numColumns_)
     {
+        jassert(numRows_ > 1);
+        jassert(numColumns_ > 1);
+
         float rowHeight = 1.0f;
         float columnWidth = 1.0f;
         auto numVertices = numRows_ * numColumns_;
@@ -234,7 +237,7 @@ namespace mescal
         }
     }
 
-    void GradientMesh::draw(juce::Image image, juce::AffineTransform transform)
+    void GradientMesh::draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor)
     {
         auto toPOINT_2F = [&](int row, int column)
             {
@@ -297,13 +300,8 @@ namespace mescal
                         pimpl->deviceContext->SetTarget(bitmap);
                         pimpl->deviceContext->BeginDraw();
                         pimpl->deviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
-                        pimpl->deviceContext->Clear({ 0.0f, 0.0f, 0.0f, 0.0f });
-
-                        if (pimpl->gradientMesh)
-                        {
-                            pimpl->deviceContext->DrawGradientMesh(pimpl->gradientMesh.get());
-                        }
-
+                        pimpl->deviceContext->Clear(juce::D2DUtilities::toCOLOR_F(backgroundColor));
+                        pimpl->deviceContext->DrawGradientMesh(pimpl->gradientMesh.get());
                         pimpl->deviceContext->EndDraw();
                         pimpl->deviceContext->SetTarget(nullptr);
                     }

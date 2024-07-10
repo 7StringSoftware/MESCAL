@@ -153,7 +153,7 @@ public:
     void setVertexColor(int row, int column, juce::Colour color);
     void configureVertices(std::function<void(int row, int column, std::shared_ptr<Vertex> vertex)> callback);
 
-    void draw(juce::Image image, juce::AffineTransform transform);
+    void draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor = juce::Colours::transparentBlack);
 
     void makeConicGradient(juce::Rectangle<float> bounds);
 
