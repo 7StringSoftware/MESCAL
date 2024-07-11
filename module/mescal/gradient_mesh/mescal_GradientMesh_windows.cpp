@@ -65,41 +65,59 @@ namespace mescal
             }
         }
 
+#if 0
         for (int row = 0; row < numRows_ - 1; row += 2)
         {
+            //
+            // Move right to left across this row and add halfedges
+            //
             for (int column = numColumns_ - 1; column >= 1; --column)
             {
                 auto tail = vertices[row * numColumns_ + column];
-                auto head = vertices[row  * numColumns_ + column - 1];
+                auto head = vertices[row * numColumns_ + column - 1];
                 auto halfedge = addHalfedge(tail, head);
-                tail->halfedge = halfedge;
+                tail->eastHalfedge = halfedge;
+                head->westHalfedge = halfedge->twin;
             }
 
+            //
+            // Left to right across next row; add halfedges
+            //
             for (int column = 0; column < numColumns_ - 1; ++column)
             {
                 auto tail = vertices[(row + 1) * numColumns_ + column];
                 auto head = vertices[(row + 1) * numColumns_ + column + 1];
                 auto halfedge = addHalfedge(tail, head);
-                tail->halfedge = halfedge;
+                tail->westHalfedge = halfedge;
+                head->eastHalfedge = halfedge->twin;
             }
         }
+#endif
 
         for (int column = 0; column < numColumns_ - 1; column += 2)
         {
+            //
+            // Add halfedges top to bottom
+            //
             for (int row = 0; row < numRows_ - 1; ++row)
             {
                 auto tail = vertices[row * numColumns_ + column];
                 auto head = vertices[(row + 1) * numColumns_ + column];
                 auto halfedge = addHalfedge(tail, head);
-                tail->halfedge = halfedge;
+                tail->southHalfedge = halfedge;
+                head->northHalfedge = halfedge->twin;
             }
 
+            //
+            // Add halfedges bottom to top for the next column
+            //
             for (int row = numRows_ - 1; row >= 1; --row)
             {
                 auto tail = vertices[row * numColumns_ + column + 1];
                 auto head = vertices[(row - 1) * numColumns_ + column + 1];
                 auto halfedge = addHalfedge(tail, head);
-                tail->halfedge = halfedge;
+                tail->northHalfedge = halfedge;
+                head->southHalfedge = halfedge->twin;
             }
         }
     }
@@ -219,6 +237,13 @@ namespace mescal
         vertices[row * numColumns + column]->setColor(color);
     }
 
+    void GradientMesh::configureVertex(int row, int column, juce::Point<float> position, juce::Colour color)
+    {
+        auto& vertex = vertices[row * numColumns + column];
+        vertex->position = position;
+        vertex->setColor(color);
+    }
+
     void GradientMesh::configureVertices(std::function<void(int row, int column, std::shared_ptr<Vertex> vertex)> callback)
     {
         jassert(callback);
@@ -237,13 +262,51 @@ namespace mescal
         }
     }
 
+    std::shared_ptr<GradientMesh::Vertex> GradientMesh::getVertex(int row, int column)
+    {
+        return vertices[row * numColumns + column];
+    }
+
+    std::shared_ptr<GradientMesh::Halfedge> GradientMesh::getHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head)
+    {
+        if (!tail || !head)
+        {
+            return {};
+        }
+
+        std::array<std::weak_ptr<Halfedge>, 4> tailHalfedges
+        {
+            tail->northHalfedge,
+            tail->westHalfedge,
+            tail->southHalfedge,
+            tail->eastHalfedge
+        };
+
+        for (auto& tailHalfedge : tailHalfedges)
+        {
+            if (auto halfedgeLock = tailHalfedge.lock())
+            {
+                if (halfedgeLock->head.lock() == head)
+                    return tailHalfedge.lock();
+            }
+        }
+
+        return {};
+    }
+
     void GradientMesh::draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor)
     {
-        auto toPOINT_2F = [&](int row, int column)
+        auto vertexToPOINT_2F = [&](int row, int column)
             {
                 auto& vertex = vertices[row * numColumns + column];
                 auto transformedPoint = vertex->position.transformedBy(transform);
                 return D2D1_POINT_2F{ transformedPoint.x, transformedPoint.y };
+            };
+
+        auto pointToPOINT_2F = [&](juce::Point<float> p)
+            {
+                p = p.transformedBy(transform);
+                return D2D1_POINT_2F{ p.x, p.y };
             };
 
         std::vector<D2D1_GRADIENT_MESH_PATCH> d2dPatches;
@@ -255,10 +318,10 @@ namespace mescal
                 d2dPatches.emplace_back(D2D1_GRADIENT_MESH_PATCH{});
                 auto& d2dPatch = d2dPatches.back();
 
-                d2dPatch.point00 = toPOINT_2F(row, column);
-                d2dPatch.point03 = toPOINT_2F(row, column + 1);
-                d2dPatch.point30 = toPOINT_2F(row + 1, column);
-                d2dPatch.point33 = toPOINT_2F(row + 1, column + 1);
+                d2dPatch.point00 = vertexToPOINT_2F(row, column);
+                d2dPatch.point03 = vertexToPOINT_2F(row, column + 1);
+                d2dPatch.point30 = vertexToPOINT_2F(row + 1, column);
+                d2dPatch.point33 = vertexToPOINT_2F(row + 1, column + 1);
 
                 d2dPatch.point01 = d2dPatch.point00;
                 d2dPatch.point02 = d2dPatch.point03;
@@ -277,10 +340,39 @@ namespace mescal
                 d2dPatch.point21 = d2dPatch.point30;
                 d2dPatch.point22 = d2dPatch.point33;
 
-                d2dPatch.color00 = juce::D2DUtilities::toCOLOR_F(vertices[row * numColumns + column]->southeastColor);
-                d2dPatch.color03 = juce::D2DUtilities::toCOLOR_F(vertices[row * numColumns + column + 1]->southwestColor);
-                d2dPatch.color30 = juce::D2DUtilities::toCOLOR_F(vertices[(row + 1) * numColumns + column]->northeastColor);
-                d2dPatch.color33 = juce::D2DUtilities::toCOLOR_F(vertices[(row + 1) * numColumns + column + 1]->northwestColor);
+                auto northwestVertex = getVertex(row, column);
+                auto southwestVertex = getVertex(row + 1, column);
+                auto northeastVertex = getVertex(row, column + 1);
+                auto southeastVertex = getVertex(row + 1, column + 1);
+
+                if (auto eastHalfedge = getHalfedge(northeastVertex, southeastVertex))
+                {
+                    if (eastHalfedge->bezierControlPoints.has_value())
+                    {
+                        d2dPatch.point13 = pointToPOINT_2F(eastHalfedge->bezierControlPoints->first);
+                        d2dPatch.point23 = pointToPOINT_2F(eastHalfedge->bezierControlPoints->second);
+                    }
+
+                    if (eastHalfedge->antialiasing)
+                        d2dPatch.rightEdgeMode = D2D1_PATCH_EDGE_MODE_ANTIALIASED;
+                }
+
+                if (auto westHalfedge = getHalfedge(northwestVertex, southwestVertex))
+                {
+                    if (westHalfedge->bezierControlPoints.has_value())
+                    {
+                        d2dPatch.point10 = pointToPOINT_2F(westHalfedge->bezierControlPoints->first);
+                        d2dPatch.point20 = pointToPOINT_2F(westHalfedge->bezierControlPoints->second);
+                    }
+
+                    if (westHalfedge->antialiasing)
+                        d2dPatch.leftEdgeMode = D2D1_PATCH_EDGE_MODE_ANTIALIASED;
+                }
+
+                d2dPatch.color00 = juce::D2DUtilities::toCOLOR_F(northwestVertex->southeastColor);
+                d2dPatch.color03 = juce::D2DUtilities::toCOLOR_F(northeastVertex->southwestColor);
+                d2dPatch.color30 = juce::D2DUtilities::toCOLOR_F(southwestVertex->northeastColor);
+                d2dPatch.color33 = juce::D2DUtilities::toCOLOR_F(southeastVertex->northwestColor);
             }
         }
 
@@ -335,10 +427,10 @@ namespace mescal
     {
         /*
                       A---B B---C           B   B
-        A---B---C     |   | |   |          /|   | \ 
+        A---B---C     |   | |   |          /|   | \
         |   |   |     |   | |   |         / |   |  \
         |   |   |     D---E E---F        A--DE  EF--C
-        D---E---F                
+        D---E---F
         |   |   |     D---E E---F        G--DE  EF--I
         |   |   |     |   | |   |        \  |   | /
         G---H---I     |   | |   |         \ |   |/
@@ -363,7 +455,7 @@ namespace mescal
         */
 
 
-    }
+}
 #endif
 
 

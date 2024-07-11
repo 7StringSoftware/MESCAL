@@ -139,6 +139,7 @@ void GradientMeshDemo::paintMeshWireframe(juce::Graphics& g)
         }
     }
 
+#if 0
     if (selectedVertex)
     {
         if (auto halfedge = selectedVertex->halfedge.lock())
@@ -151,6 +152,7 @@ void GradientMeshDemo::paintMeshWireframe(juce::Graphics& g)
                 g.drawArrow({ tail->position, head->position }, 4.0f, 14.0f, 12.0f);
         }
     }
+#endif
 }
 
 void GradientMeshDemo::paintSnowfall(juce::Graphics& g)

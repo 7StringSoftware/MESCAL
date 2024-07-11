@@ -120,7 +120,7 @@ public:
         }
 
         juce::Point<float> position;
-        std::weak_ptr<Halfedge> halfedge{};
+        std::weak_ptr<Halfedge> northHalfedge, eastHalfedge, southHalfedge, westHalfedge;
         
         juce::Colour northwestColor;
         juce::Colour southwestColor;
@@ -132,6 +132,10 @@ public:
     {
         std::weak_ptr<Vertex> tail, head;
         std::weak_ptr<Halfedge> twin;
+
+        std::optional<std::pair<juce::Point<float>, juce::Point<float>>> bezierControlPoints;
+
+        bool antialiasing = false;
     };
 
     int getNumRows() const
@@ -151,7 +155,10 @@ public:
 
     void applyTransform(juce::AffineTransform const& transform);
     void setVertexColor(int row, int column, juce::Colour color);
+    void configureVertex(int row, int column, juce::Point<float> position, juce::Colour color);
     void configureVertices(std::function<void(int row, int column, std::shared_ptr<Vertex> vertex)> callback);
+    std::shared_ptr<Vertex> getVertex(int row, int column);
+    std::shared_ptr<Halfedge> getHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head);
 
     void draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor = juce::Colours::transparentBlack);
 
