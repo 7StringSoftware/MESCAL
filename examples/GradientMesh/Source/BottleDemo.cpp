@@ -13,12 +13,23 @@ body top
 
 */
 
+
 BottleDemo::BottleDemo()
 {
-    int numRows = 6;
-    int numColumns = 32;
+    std::array<juce::Line<float>, 3> const lines
+    {
+        juce::Line<float>
+        /*{ 40.0f, 0.0f, 60.0f, 0.0f},
+        { 30.0f, 5.0f, 70.0f, 5.0f },
+        { 30.0f, 115.0f, 70.0f, 115.0f },*/
+        { 0.0f, 145.0f, 100.0f, 145.0f },
+        { 0.0f, 400.0f, 100.0f, 400.0f },
+        { 20.0f, 410.0f, 80.0f, 410.0f }
+    };
+    auto numRows = lines.size();
+    int numColumns = 64;
 
-    mesh = std::make_unique<mescal::GradientMesh>(numRows, numColumns);
+    mesh = std::make_unique<mescal::GradientMesh>((int)numRows, numColumns);
 
     juce::Path p;
     auto addPatches = [&](juce::Line<float> topLine, juce::Line<float> bottomLine)
@@ -59,17 +70,122 @@ BottleDemo::BottleDemo()
             p.lineTo(bottomLine.getEnd());
         };
 
-    std::array<juce::Line<float>, 6> const lines
-    {
-        juce::Line<float>{ 40.0f, 0.0f, 60.0f, 0.0f},
-        { 30.0f, 5.0f, 70.0f, 5.0f },
-        { 30.0f, 115.0f, 70.0f, 115.0f },
-        { 0.0f, 145.0f, 100.0f, 145.0f },
-        { 0.0f, 400.0f, 100.0f, 400.0f },
-        { 20.0f, 410.0f, 80.0f, 410.0f }
-    };
+    float totalHeight = lines.back().getEndY() - lines.front().getEndY();
 
-    for (int row = 0; row < numRows; row += 2)
+    {
+        int row = 0;
+        const auto& line = lines[0];
+
+        for (auto column = 0; column < numColumns; ++column)
+        {
+            auto proportionalX = (float)column / (float)(numColumns - 1);
+            auto x = std::cos(proportionalX * juce::MathConstants<float>::pi) * 0.5f + 0.5f;
+            auto pos = line.getPointAlongLineProportionally(1.0f - x);
+            auto vertex = mesh->getVertex(row, column);
+            vertex->position = pos;
+        }
+    }
+
+    juce::Line<float> topLine;
+    for (int row = 0; row < numRows - 1; ++row)
+    {
+        auto const& bottomLine = lines[row + 1];
+
+        for (auto column = 0; column < numColumns; ++column)
+        {
+            auto proportionalColumn = (float)column / (float)(numColumns - 1);
+            auto x = std::cos(proportionalColumn * juce::MathConstants<float>::pi) * 0.5f + 0.5f;
+            x = 1.0f - x;
+            auto bottomPoint = bottomLine.getPointAlongLineProportionally(x);
+
+            auto topVertex = mesh->getVertex(row, column);
+            auto bottomVertex = mesh->getVertex(row + 1, column);
+            bottomVertex->position = bottomPoint;
+
+            //auto level = std::sin((x + 0.1f) * juce::MathConstants<float>::pi * 1.2f) * 0.8f;
+            //level *= std::sin((proportionalY - 0.05f) * juce::MathConstants<float>::halfPi)
+            //level = juce::jlimit(0.5f, 1.0f, level);
+            //level = level * 0.25f + 0.5f;
+            float proportionalTopY = (topVertex->position.y - lines.front().getEndY()) / totalHeight;
+            float verticalColorScale = std::sin(proportionalTopY * juce::MathConstants<float>::pi) * 0.15f + 0.85f;
+            auto levelPos = x;
+            auto level = std::sin((levelPos + 0.25f) * juce::MathConstants<float>::pi * 0.8f);
+            level = level * 0.25f * verticalColorScale + 0.75f;
+            auto color = juce::Colour::fromFloatRGBA(level, level, level, 0.75f);
+            topVertex->setColor(color);
+            bottomVertex->setColor(color);
+
+            if (approximatelyEqual(topVertex->position.x, bottomPoint.x))
+            {
+                continue;
+            }
+
+            auto delta = bottomPoint - topVertex->position;
+            auto c1 = topVertex->position;
+            auto c2 = bottomPoint;
+
+            if (bottomLine.getLength() < topLine.getLength())
+            {
+                c1.y += delta.y * 0.55f;
+                c2.x += delta.x * -0.35f;
+            }
+            else
+            {
+                c1.x += delta.x * 0.35f;
+                c2.y += delta.y * -0.55f;
+            }
+
+            if (auto halfedge = mesh->getHalfedge(topVertex, bottomVertex))
+            {
+                halfedge->bezierControlPoints = { c1, c2 };
+                halfedge->twin.lock()->bezierControlPoints = { c2, c1 };
+                halfedge->antialiasing = true;
+            }
+        }
+
+        topLine = bottomLine;
+    }
+
+
+
+#if 0
+    {
+        juce::Range<int> columnRange{ juce::roundToInt(numColumns * 0.2f), juce::roundToInt(numColumns * 0.4f) };
+        float alpha = 0.5f;
+        for (int row = 2; row <= 3; ++row)
+        {
+            float red = 0.2f;
+            float redStep = 0.1f;
+            for (int column = columnRange.getStart(); column < columnRange.getEnd(); column += 1)
+            {
+                {
+                    auto topLeft = mesh->getVertex(row, column);
+                    topLeft->southeastColor = juce::Colour::fromFloatRGBA(red, 0.0f, 0.0f, alpha);
+
+                    auto topRight = mesh->getVertex(row, column + 1);
+                    topRight->southwestColor = juce::Colour::fromFloatRGBA(red + redStep, 0.0f, 0.0f, alpha);
+
+                    auto bottomLeft = mesh->getVertex(row + 1, column);
+                    bottomLeft->northeastColor = juce::Colour::fromFloatRGBA(red, 0.0f, 0.0f, alpha);
+
+                    auto bottomRight = mesh->getVertex(row + 1, column + 1);
+                    bottomRight->northwestColor = juce::Colour::fromFloatRGBA(red + redStep, 0.0f, 0.0f, alpha);
+
+                    red += redStep;
+                }
+
+                //             {
+                //                 auto vertex = mesh->getVertex(row + 1, column);
+                //                 vertex->setColor(juce::Colours::lightgrey);
+                //             }
+            }
+        }
+    }
+#endif
+
+
+#if 0
+    for (int row = 0; row < numRows - 1; ++row)
     {
         auto topLine = lines[row];
         auto bottomLine = lines[row + 1];
@@ -81,7 +197,7 @@ BottleDemo::BottleDemo()
             auto bottomPoint = bottomLine.getPointAlongLineProportionally(x);
             auto topPoint = topLine.getPointAlongLineProportionally(x);
 
-            auto grey = std::sin(x * juce::MathConstants<float>::pi);
+            auto grey = std::sin((x + 0.5f) * juce::MathConstants<float>::pi * 0.75f);
             grey = juce::jlimit(0.0f, 1.0f, grey);
             auto topColor = juce::Colour::greyLevel(grey * 0.5f);
             auto bottomColor = topColor;
@@ -93,6 +209,11 @@ BottleDemo::BottleDemo()
                 bottomColor = juce::Colours::blue;
             }
 #endif
+            if (row == 3 && column >= 24 && column <= 28)
+            {
+                topColor = juce::Colours::darkred;
+                bottomColor = juce::Colours::lightgrey;
+            }
 
             //mesh->configureVertex(row, column, topPoint, topColor);
             //mesh->configureVertex(row + 1, column, bottomPoint, bottomColor);
@@ -135,6 +256,7 @@ BottleDemo::BottleDemo()
             }
         }
     }
+#endif
 
 
 #if 0
@@ -193,11 +315,88 @@ void BottleDemo::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::white);
 
-    mesh->draw(meshImage, transform, juce::Colours::white);
-    g.drawImageAt(meshImage, 0, 0);
+    mesh->draw(meshImage, transform, juce::Colours::transparentBlack);
 
-    effect.applyEffect(meshImage, effectImage, 1.0f, 1.0f);
-    g.drawImageAt(effectImage, 0, 0);
+
+    //effect.setProperty(mescal::SpotSpecularLightingProperty::lightPosition, mescal::Point3D{ 100.0f, 100.0f, 100.0f });
+    //effect.setProperty(mescal::SpotSpecularLightingProperty::focusPointPosition, mescal::Point3D{ 100.0f, 100.0f, 000.0f });
+
+    //effect.setProperty(mescal::SpotSpecularLightingProperty::surfaceScale, 100.0f);
+    //effect.setProperty(mescal::SpotSpecularLightingProperty::lightColor, mescal::RGBColor{ 0.0f, 1.0f, 0.5f });
+    juce::Rectangle<int> clipR{ 0, 115, 40, 260 };
+    clipR = clipR.transformedBy(transform);
+    //g.drawImageAt(meshImage, 0, 0);
+
+    g.setColour(juce::Colours::black);
+        //g.strokePath(outline, juce::PathStrokeType{ 1.0f });
+
+    auto center = outline.getBounds().getCentre();
+    std::vector<juce::Point<float>> points;
+    juce::PathFlatteningIterator it{ outline, {}, 20.0f };
+    while (it.next())
+    {
+        points.emplace_back(juce::Point<float>{ it.x2, it.y2 });
+    }
+
+    std::sort(points.begin(), points.end(), [&](juce::Point<float> const& p1, juce::Point<float> const& p2)
+        {
+            //auto distance1 = p1.getDistanceFrom(center);
+            //auto distance2 = p2.getDistanceFrom(center);
+            auto angle1 = center.getAngleToPoint(p1);
+            auto angle2 = center.getAngleToPoint(p2);
+            return angle1 < angle2;
+        });
+
+    std::vector<juce::Point<float>> innerPoints;
+
+    float startAngle = -juce::MathConstants<float>::twoPi;
+    float angleStep = juce::MathConstants<float>::twoPi / 32;
+    size_t index = 0;
+    size_t segmentIndex = 0;
+    while (startAngle <= juce::MathConstants<float>::twoPi && index < points.size())
+    {
+        auto angle = center.getAngleToPoint(points[index]);
+        if (angle >= startAngle + angleStep)
+        {
+            float distance = 1000000.0f;
+            juce::Point<float> p;
+            for (size_t i = segmentIndex; i <= index; ++i)
+            {
+                auto d = center.getDistanceFrom(points[i]);
+                if (d < distance)
+                {
+                    distance = d;
+                    p = points[i];
+                }
+            }
+
+            innerPoints.emplace_back(p);
+
+            DBG((innerPoints.size() - 1) << " { " << p.x << ", " << p.y << "},");
+
+            g.setColour(juce::Colours::black);
+            //g.fillEllipse(juce::Rectangle<float>{ 5.0f, 5.0f }.withCentre(p));
+
+            startAngle += angleStep;
+            segmentIndex = index + 1;
+        }
+
+        index++;
+    }
+
+    snifter->drawAt(g, 0.0f, 0.0f, 1.0f);
+    g.setColour(juce::Colours::coral);
+    g.fillEllipse(50.0f, 50.0f, 200.0f, 200.0f);
+    snifterForeground->drawAt(g, 0.0f, 0.0f, 1.0f);
+
+
+    for (auto const& p : snifterBowlPoints)
+    {
+        g.setColour(juce::Colours::hotpink);
+
+        g.fillEllipse(juce::Rectangle<float>{ 5.0f, 5.0f }.withCentre(p));
+        //g.drawText(p.toInt().toString(), juce::Rectangle<float>{ 100.0f, 20.0f }.withCentre(p * 2.0f), juce::Justification::centredLeft);
+    }
 
 #if 0
     for (auto const& halfedge : mesh->getHalfedges())
@@ -285,9 +484,6 @@ void BottleDemo::resized()
 
     meshImage = juce::Image{ juce::Image::ARGB, getHeight() / 4, getHeight(), true };
     effectImage = juce::Image{ juce::Image::ARGB, getHeight() / 4, getHeight(), true };
-
-    effect.setProperty(mescal::SpotSpecularLightingProperty::lightPosition, mescal::Point3D{ 0.0f, 0.0f, 100.0f });
-    effect.setProperty(mescal::SpotSpecularLightingProperty::focusPointPosition, mescal::Point3D{ 200.0f, 400.0f, 0.0f });
 }
 
 juce::Path BottleDemo::splitPath(juce::Path const& p)
