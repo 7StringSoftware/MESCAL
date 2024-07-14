@@ -38,6 +38,8 @@ namespace mescal
 
         void draw(juce::Image destinationImage, const std::vector<Sprite>& sprites, bool clearImage)
         {
+            jassert(atlas.isValid());
+
             if (sprites.size() == 0)
                 return;
 
@@ -92,8 +94,16 @@ namespace mescal
                 ++sourceRectangle;
             }
 
-            spriteBatch->AddSprites((uint32_t)sprites.size(),
-                destinationRectangles.getData(),sourceRectangles.getData());
+            if (spriteBatch->GetSpriteCount() != 0)
+            {
+                spriteBatch->SetSprites(0, (uint32_t)sprites.size(),
+                    destinationRectangles.getData(), sourceRectangles.getData());
+            }
+            else
+            {
+                spriteBatch->AddSprites((uint32_t)sprites.size(),
+                    destinationRectangles.getData(), sourceRectangles.getData());
+            }
 
             if (deviceContext && destinationImage.isValid() && spriteBatch)
             {
