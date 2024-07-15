@@ -72,8 +72,9 @@ private:
     mescal::Effect effect{ mescal::Effect::Type::gaussianBlur };
     juce::AffineTransform transform;
     juce::Image meshImage;
-    juce::Image effectImage;
+    juce::Image effectInputImage, effectOutputImage;
     std::unique_ptr<juce::Drawable> snifter = juce::Drawable::createFromImageData(BinaryData::Snifter_background_svg, BinaryData::Snifter_background_svgSize);
+    std::unique_ptr<juce::Drawable> snifterOutline = juce::Drawable::createFromImageData(BinaryData::Snifter_outline_svg, BinaryData::Snifter_outline_svgSize);
     std::unique_ptr<juce::Drawable> snifterForeground = juce::Drawable::createFromImageData(BinaryData::Snifter_foreground_svg, BinaryData::Snifter_foreground_svgSize);
 
     juce::Path splitPath(juce::Path const& p);

@@ -386,11 +386,19 @@ void BottleDemo::paint(juce::Graphics& g)
         index++;
     }
 #endif
-// 
+//
     auto transform = juce::AffineTransform::scale(2.0f).translated(400.0f, 0.0f);
     snifter->draw(g, 1.0f, transform);
-    liquidFun.paint(g, transform);;
-    snifterForeground->draw(g, 0.4f, transform);
+    {
+        juce::Graphics ig{ effectInputImage };
+        ig.setColour(juce::Colours::transparentBlack);
+        ig.getInternalContext().fillRect(ig.getClipBounds(), true);
+        liquidFun.paint(ig, transform);;
+        snifterForeground->draw(ig, 0.95f, transform);
+    }
+    effect.applyEffect(effectInputImage, effectOutputImage, 1.0f, 1.0f);
+    g.drawImageAt(effectOutputImage, 0, 0);
+    snifterOutline->draw(g, 1.0f, transform);
 
 #if 0
     for (auto const& halfedge : mesh->getHalfedges())
@@ -477,7 +485,8 @@ void BottleDemo::resized()
     transform = juce::AffineTransform::scale(scale * 0.8f).translated(50.0f, 50.0f);
 
     meshImage = juce::Image{ juce::Image::ARGB, getHeight() / 4, getHeight(), true };
-    effectImage = juce::Image{ juce::Image::ARGB, getHeight() / 4, getHeight(), true };
+    effectInputImage = juce::Image{ juce::Image::ARGB, getWidth(), getHeight(), true};
+    effectOutputImage = juce::Image{ juce::Image::ARGB, getWidth(), getHeight(), true };
 }
 
 juce::Path BottleDemo::splitPath(juce::Path const& p)

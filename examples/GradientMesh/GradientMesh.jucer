@@ -9,6 +9,8 @@
               file="Source/Assets/Snifter_background.svg"/>
         <FILE id="ypVTtS" name="Snifter_foreground.svg" compile="0" resource="1"
               file="Source/Assets/Snifter_foreground.svg"/>
+        <FILE id="tHMqPX" name="Snifter_outline.svg" compile="0" resource="1"
+              file="Source/Assets/Snifter_outline.svg"/>
         <FILE id="SmVNva" name="TrashcanButton-Transparent.svg" compile="0"
               resource="1" file="Source/Assets/TrashcanButton-Transparent.svg"/>
       </GROUP>

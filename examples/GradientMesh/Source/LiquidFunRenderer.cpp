@@ -94,6 +94,7 @@ void LiquidFunRenderer::DrawParticles(const b2Vec2* centers, float32 radius, con
 
     radius *= 1.3f;
 
+#if 0
     for (int index = 0; index < count; ++index)
     {
         auto& sprite = sprites[index];
@@ -105,8 +106,9 @@ void LiquidFunRenderer::DrawParticles(const b2Vec2* centers, float32 radius, con
     spriteBatch.setAtlas(particleImage);
     spriteBatch.draw(outputImage, sprites, true);
     graphics->drawImageAt(outputImage, 0, 0);
+#endif
 
-#if 0
+#if 1
     juce::Rectangle<float> particleArea{ radius * 10.0f, radius * 10.0f };
     particleArea.setCentre(0.0f, 0.0f);
     auto transformedParticleArea = particleArea.transformedBy(transform);
@@ -154,11 +156,11 @@ void LiquidFunRenderer::DrawParticles(const b2Vec2* centers, float32 radius, con
         else
 #endif
         {
-            //graphics->setColour(juce::Colours::cyan);
+            graphics->setColour(juce::Colours::goldenrod);
         }
 
-        graphics->setTiledImageFill(meshImage, 0, 0, 1.0f);
-        graphics->fillEllipse(particleArea);
+        // graphics->setTiledImageFill(meshImage, 0, 0, 1.0f);
+        graphics->drawEllipse(particleArea, 1.0f);
 #endif
 
         ++centers;
