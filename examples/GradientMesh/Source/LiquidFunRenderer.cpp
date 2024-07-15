@@ -32,9 +32,13 @@ LiquidFunRenderer::LiquidFunRenderer() noexcept   : graphics (nullptr)
 {
     SetFlags (e_shapeBit | e_particleBit);
 
+    juce::ColourGradient radialGradient{ juce::Colours::lightgoldenrodyellow, particleImage.getBounds().getCentre().toFloat(),
+        juce::Colours::goldenrod, { 0.0f, particleImage.getHeight() * 0.5f },
+        true };
+
     {
         Graphics g{ particleImage };
-        g.setColour(juce::Colours::darkgoldenrod);
+        g.setGradientFill(radialGradient);
         //g.drawEllipse(particleImage.getBounds().reduced(2).toFloat(), 1.0f);
         g.fillEllipse(particleImage.getBounds().reduced(2).toFloat());
     }
@@ -99,8 +103,8 @@ void LiquidFunRenderer::DrawParticles(const b2Vec2* centers, float32 radius, con
     }
 
     spriteBatch.setAtlas(particleImage);
-    spriteBatch.draw(meshImage, sprites, false);
-    graphics->drawImageAt(meshImage, 0, 0);
+    spriteBatch.draw(outputImage, sprites, true);
+    graphics->drawImageAt(outputImage, 0, 0);
 
 #if 0
     juce::Rectangle<float> particleArea{ radius * 10.0f, radius * 10.0f };
@@ -190,7 +194,7 @@ void LiquidFunRenderer::DrawPolygon (const b2Vec2* vertices, int32 vertexCount, 
 
 void LiquidFunRenderer::DrawSolidPolygon (const b2Vec2* vertices, int32 vertexCount, const b2Color& color)
 {
-#if 1
+#if 0
     graphics->setColour (getColour (color).withAlpha(0.5f));
 
     Path p1, p2;

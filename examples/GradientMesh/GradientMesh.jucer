@@ -5,19 +5,12 @@
   <MAINGROUP id="fTgw8y" name="MESCAL demo">
     <GROUP id="{07B94160-CF67-DC8B-7081-698B080E7B38}" name="Source">
       <GROUP id="{D78BC46E-82DA-99F8-8906-D8CAC837949D}" name="Assets">
+        <FILE id="MH951E" name="Snifter_background.svg" compile="0" resource="1"
+              file="Source/Assets/Snifter_background.svg"/>
         <FILE id="ypVTtS" name="Snifter_foreground.svg" compile="0" resource="1"
               file="Source/Assets/Snifter_foreground.svg"/>
-        <FILE id="kBaSAd" name="Snifter_Glass_(Brandy).svg" compile="0" resource="1"
-              file="Source/Assets/Snifter_Glass_(Brandy).svg"/>
-        <FILE id="iEzpIt" name="Snifter_bowl.svg" compile="0" resource="1"
-              file="Source/Assets/Snifter_bowl.svg"/>
-        <FILE id="bhMtTm" name="Wine_bottle_body_top.svg" compile="0" resource="1"
-              file="Source/Assets/Wine_bottle_body_top.svg"/>
         <FILE id="SmVNva" name="TrashcanButton-Transparent.svg" compile="0"
               resource="1" file="Source/Assets/TrashcanButton-Transparent.svg"/>
-        <FILE id="KAsBI2" name="Wine_bottle_body.svg" compile="0" resource="1"
-              file="Source/Assets/Wine_bottle_body.svg"/>
-        <FILE id="CjH0Z7" name="Wine_bottle.svg" compile="0" resource="1" file="Source/Assets/Wine_bottle.svg"/>
       </GROUP>
       <GROUP id="{1A05B7D7-4DAF-D246-7CA0-0DB8E0EC7BE7}" name="Demos">
         <FILE id="lyST9H" name="BottleDemo.cpp" compile="1" resource="0" file="Source/BottleDemo.cpp"/>

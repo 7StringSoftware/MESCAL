@@ -84,10 +84,11 @@ public:
 protected:
     Graphics* graphics;
     AffineTransform transform;
-    Image particleImage{ Image::ARGB, 10, 10, true };
+    Image particleImage{ Image::ARGB, 16, 16, true };
     mescal::GradientMesh mesh{ 2, 2 };
     mescal::SpriteBatch spriteBatch;
     std::vector<mescal::Sprite> sprites;
+    juce::Image outputImage{ Image::ARGB, 1000, 1000, true };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LiquidFunRenderer)
 };

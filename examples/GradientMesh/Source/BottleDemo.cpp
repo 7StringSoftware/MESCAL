@@ -13,9 +13,10 @@ body top
 
 */
 
-
 BottleDemo::BottleDemo()
 {
+    liquidFun.createWorld();
+
     std::array<juce::Line<float>, 3> const lines
     {
         juce::Line<float>
@@ -314,6 +315,7 @@ BottleDemo::~BottleDemo()
 void BottleDemo::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::white);
+#if 0
 
     mesh->draw(meshImage, transform, juce::Colours::transparentBlack);
 
@@ -383,20 +385,12 @@ void BottleDemo::paint(juce::Graphics& g)
 
         index++;
     }
-
-    snifter->drawAt(g, 0.0f, 0.0f, 1.0f);
-    g.setColour(juce::Colours::coral);
-    g.fillEllipse(50.0f, 50.0f, 200.0f, 200.0f);
-    snifterForeground->drawAt(g, 0.0f, 0.0f, 1.0f);
-
-
-    for (auto const& p : snifterBowlPoints)
-    {
-        g.setColour(juce::Colours::hotpink);
-
-        g.fillEllipse(juce::Rectangle<float>{ 5.0f, 5.0f }.withCentre(p));
-        //g.drawText(p.toInt().toString(), juce::Rectangle<float>{ 100.0f, 20.0f }.withCentre(p * 2.0f), juce::Justification::centredLeft);
-    }
+#endif
+// 
+    auto transform = juce::AffineTransform::scale(2.0f).translated(400.0f, 0.0f);
+    snifter->draw(g, 1.0f, transform);
+    liquidFun.paint(g, transform);;
+    snifterForeground->draw(g, 0.4f, transform);
 
 #if 0
     for (auto const& halfedge : mesh->getHalfedges())
@@ -525,4 +519,65 @@ juce::Path BottleDemo::splitPath(juce::Path const& p)
     }
 
     return juce::Path{ p };
+}
+
+void BottleDemo::LiquidFun::createWorld()
+{
+    auto snifterBowlCenter = juce::Point<float>{};
+    for (auto const& p : snifterBowlPoints)
+    {
+        snifterBowlCenter += p;
+    }
+
+    snifterBowlCenter /= (float)snifterBowlPoints.size();
+    auto flip = juce::AffineTransform::verticalFlip(snifterBowlCenter.getY() * 2.0f).translated(0.0f, -40.0f);
+
+    auto it = snifterBowlPoints.begin();
+    auto lastPoint = it->transformedBy(flip);;
+    while (it != snifterBowlPoints.end())
+    {
+        auto p = it->transformedBy(flip);
+        juce::Line<float> line{ lastPoint, p };
+
+        b2BodyDef groundBodyDef;
+        auto lineCenter = line.getPointAlongLineProportionally(0.5f);
+        auto groundBody = world.CreateBody(&groundBodyDef);
+        b2PolygonShape groundBox;
+        groundBox.SetAsBox(line.getLength() * 0.5f, 0.5f, { lineCenter.x, lineCenter.y }, line.getAngle() + juce::MathConstants<float>::halfPi);
+        groundBody->CreateFixture(&groundBox, 0.0f);
+
+        lastPoint = p;
+        ++it;
+    }
+
+    const b2ParticleSystemDef particleSystemDef;
+    particleSystem = world.CreateParticleSystem(&particleSystemDef);
+    particleSystem->SetRadius(3.0f);
+
+    juce::Random random{};
+    for (int i = 0; i < 2000; ++i)
+    {
+        b2ParticleDef pd;
+        pd.flags = b2_viscousParticle;
+        pd.position.Set(150.0f + random.nextFloat() * 10.0f - 5.0f, 150.0f + (float)i * 3.0f);
+        pd.velocity.Set(random.nextFloat() * 10.0f - 5.0f, -40.0f);
+        particleSystem->CreateParticle(pd);
+    }
+}
+
+void BottleDemo::LiquidFun::step(double msec)
+{
+    world.Step((float)(msec * 0.001f),
+        8,
+        3,
+        3);
+}
+
+void BottleDemo::LiquidFun::paint(juce::Graphics& g, juce::AffineTransform const &transform)
+{
+    Rectangle<float> boxWorldArea{ 0.0f, 0.0f, 300, 300.0f };
+    renderer.render(g,
+        world,
+        boxWorldArea,
+        juce::Rectangle<float>{ 0.0f, 0.0f, 300.0f, 300.0f }.transformedBy(transform));
 }
