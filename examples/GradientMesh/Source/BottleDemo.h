@@ -72,9 +72,10 @@ private:
     };
 
     juce::Rectangle<int> animationArea, snifterArea;
-    mescal::Effect effect{ mescal::Effect::Type::gaussianBlur };
+    mescal::Effect blurEffect{ mescal::Effect::Type::gaussianBlur };
+    mescal::EffectChain shadowEffectChain;
     juce::AffineTransform snifterBackgroundTransform, snifterForegroundTransform, liquidFunTransform;
-    juce::Image effectInputImage, effectOutputImage;
+    juce::Image snifterImage, liquidImage, effectOutputImage;
     std::unique_ptr<juce::Drawable> snifter = juce::Drawable::createFromImageData(BinaryData::Snifter_background_svg, BinaryData::Snifter_background_svgSize);
     std::unique_ptr<juce::Drawable> snifterOutline = juce::Drawable::createFromImageData(BinaryData::Snifter_outline_svg, BinaryData::Snifter_outline_svgSize);
     std::unique_ptr<juce::Drawable> snifterForeground = juce::Drawable::createFromImageData(BinaryData::Snifter_foreground_svg, BinaryData::Snifter_foreground_svgSize);

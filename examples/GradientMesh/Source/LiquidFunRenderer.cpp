@@ -94,7 +94,6 @@ void LiquidFunRenderer::DrawParticles(const b2Vec2* centers, float32 radius, con
 
     radius *= 1.3f;
 
-#if 1
     for (int index = 0; index < count; ++index)
     {
         auto& sprite = sprites[index];
@@ -110,66 +109,7 @@ void LiquidFunRenderer::DrawParticles(const b2Vec2* centers, float32 radius, con
 
     graphics->setColour(juce::Colours::black);
     graphics->drawImageAt(outputImage, 0, 0, false);
-#endif
 
-#if 0
-    juce::Rectangle<float> particleArea{ radius * 10.0f, radius * 10.0f };
-    particleArea.setCentre(0.0f, 0.0f);
-    auto transformedParticleArea = particleArea.transformedBy(transform);
-
-    if (! centers)
-    {
-        return;
-    }
-
-    //auto imageScaleTransform = AffineTransform::scale(2.0f * transformedParticleArea.getWidth() / (float)particleImage.getWidth());
-
-    //Graphics::ScopedSaveState state{ *graphics };
-    //graphics->addTransform(transform);
-
-
-    for (int index = 0; index < count; ++index)
-    {
-#if 0
-        if (colors)
-        {
-            graphics->setColour(juce::Colour{ colors[index].r, colors[index].g, colors[index].b, colors[index].a });
-        }
-        else
-        {
-            graphics->setColour(juce::Colours::lightseagreen);
-        }
-
-        Point<float> p{ centers->x, centers->y };
-        graphics->fillEllipse(r.withCentre(p).transformedBy(transform));
-#else
-        Point<float> p{ centers->x, centers->y };
-        p.applyTransform(transform);
-        particleArea.setCentre(p.x, p.y);
-
-        //p = p.transformedBy(transform);
-        //graphics->drawImageTransformed(particleImage, imageScaleTransform.translated(particleArea.getCentre()));
-            //.followedBy(imageTransform));
-
-#if 0
-        if (colors)
-        {
-            auto const& b2Color = colors[count];
-            graphics->setColour(juce::Colour{ b2Color.r, b2Color.g, b2Color.b, b2Color.a });
-        }
-        else
-#endif
-        {
-            graphics->setColour(juce::Colours::lightskyblue);
-        }
-
-        // graphics->setTiledImageFill(meshImage, 0, 0, 1.0f);
-        graphics->fillEllipse(particleArea);
-#endif
-
-        ++centers;
-    }
-#endif
 }
 
 void LiquidFunRenderer::DrawPoint(const b2Vec2& p, float32 size, const b2Color& color)

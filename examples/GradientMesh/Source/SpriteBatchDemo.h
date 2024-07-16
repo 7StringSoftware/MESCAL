@@ -17,7 +17,7 @@ private:
     juce::Image logoImage;
     juce::Image spriteBatchImage;
     juce::Image effectOutputImage;
-    mescal::Effect effect{ mescal::Effect::Type::gaussianBlur };
+    mescal::Effect blurEffect{ mescal::Effect::Type::gaussianBlur };
 
     float opacity = 0.0f;
 

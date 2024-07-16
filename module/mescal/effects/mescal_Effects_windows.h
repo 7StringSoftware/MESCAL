@@ -41,6 +41,26 @@ enum SpotSpecularLightingProperty
     scaleMode
 };
 
+enum PerspectiveTransform3DProperty
+{
+    interpolationMode,
+
+    borderMode,
+
+    depth,
+
+    perspectiveOrigin,
+
+    localOffset,
+
+    globalOffset,
+
+    rotationOrigin,
+
+    rotation
+};
+
+
 struct RGBColor
 {
     static RGBColor fromColour(juce::Colour colour)
@@ -64,14 +84,17 @@ public:
 		gaussianBlur,
 		spotSpecularLighting,
 		spotDiffuseLighting,
+        shadow,
+        perspectiveTransform3D,
 		numEffectTypes
 	};
 
     Effect(Type effectType_);
+    Effect(const Effect& other);
     ~Effect() override;
 
 	void applyEffect(juce::Image& sourceImage, juce::Graphics& destContext, float scaleFactor, float alpha) override;
-	void applyEffect(juce::Image& sourceImage, juce::Image& outputImage, float scaleFactor, float alpha);
+	void applyEffect(juce::Image& sourceImage, juce::Image& outputImage, float scaleFactor, float alpha, bool clearDestination);
 
     using PropertyValue = std::variant<float, juce::Point<float>, juce::Colour, RGBColor, Point3D>;
 
@@ -82,9 +105,24 @@ public:
 	Type const effectType;
 
 protected:
+    friend class EffectChain;
+
     struct Pimpl;
 	std::unique_ptr<Pimpl> pimpl;
 };
+
+class EffectChain
+{
+public:
+    void addEffect(Effect::Type effectType);
+    void applyEffects(juce::Image& sourceImage, juce::Image& outputImage, float scaleFactor, float alpha, bool clearDestination);
+
+    auto& getEffect(size_t index) noexcept { return effects[index]; }
+
+protected:
+    std::vector<Effect> effects;
+};
+
 #if 0
 
 class GaussianBlur : public Effect
