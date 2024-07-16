@@ -48,7 +48,7 @@ void BottleDemo::paint(juce::Graphics& g)
         snifterGraphics.setColour(juce::Colours::black);
         snifter->draw(snifterGraphics, 1.0f, snifterForegroundTransform);
         snifterGraphics.drawImageAt(liquidImage, 0, 0);
-        snifterOutline->draw(g, 1.0f, snifterForegroundTransform);
+        snifterOutline->draw(snifterGraphics, 1.0f, snifterForegroundTransform);
     }
 
     {
@@ -60,11 +60,13 @@ void BottleDemo::paint(juce::Graphics& g)
     effect.setProperty(mescal::PerspectiveTransform3DProperty::rotation, mescal::Point3D{ -40.0f, 0.0f, 0.0f });
     //effect.setProperty(mescal::PerspectiveTransform3DProperty::globalOffset, mescal::Point3D{ 0.0f, 20.0f, 30.0f });
     //effect.setProperty(mescal::PerspectiveTransform3DProperty::localOffset, mescal::Point3D{ 100.0f, 200.0f, 300.0f });
-    effect.setProperty(mescal::PerspectiveTransform3DProperty::rotationOrigin, mescal::Point3D{ (float)snifterImage.getWidth(), (float)snifterImage.getHeight(), 0.0f});
+    effect.setProperty(mescal::PerspectiveTransform3DProperty::perspectiveOrigin, juce::Point<float>{ (float)snifterImage.getWidth() * 0.02f, (float)snifterImage.getHeight() * 0.1f });
+    effect.setProperty(mescal::PerspectiveTransform3DProperty::rotationOrigin, mescal::Point3D{ (float)snifterImage.getWidth(), (float)snifterImage.getHeight(), 50.0f});
     shadowEffectChain.applyEffects(snifterImage, effectOutputImage, 1.0f, 1.0f, true);
 
-    g.drawImageAt(effectOutputImage, 0, 0);
-    g.drawImageAt(snifterImage, 0, 0);
+    int x = getWidth() - snifterImage.getWidth();
+    g.drawImageAt(effectOutputImage, x, 0);
+    g.drawImageAt(snifterImage, x, 0);
 
 }
 

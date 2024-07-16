@@ -32,8 +32,8 @@ LiquidFunRenderer::LiquidFunRenderer() noexcept   : graphics (nullptr)
 {
     SetFlags (e_shapeBit | e_particleBit);
 
-    juce::ColourGradient radialGradient{ juce::Colour{ 0xffc0451d }, particleImage.getBounds().getCentre().toFloat(),
-        juce::Colour{ 0xff801c02 }, {0.0f, particleImage.getHeight() * 0.5f},
+    juce::ColourGradient radialGradient{ juce::Colours::lightskyblue, particleImage.getBounds().getCentre().toFloat(),
+        juce::Colours::aliceblue, {0.0f, particleImage.getHeight() * 0.5f},
         true };
 
     {
