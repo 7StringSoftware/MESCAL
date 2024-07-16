@@ -32,8 +32,8 @@ LiquidFunRenderer::LiquidFunRenderer() noexcept   : graphics (nullptr)
 {
     SetFlags (e_shapeBit | e_particleBit);
 
-    juce::ColourGradient radialGradient{ juce::Colours::lightgoldenrodyellow, particleImage.getBounds().getCentre().toFloat(),
-        juce::Colours::goldenrod, { 0.0f, particleImage.getHeight() * 0.5f },
+    juce::ColourGradient radialGradient{ juce::Colour{ 0xffc0451d }, particleImage.getBounds().getCentre().toFloat(),
+        juce::Colour{ 0xff801c02 }, {0.0f, particleImage.getHeight() * 0.5f},
         true };
 
     {
@@ -51,7 +51,7 @@ void LiquidFunRenderer::resize(juce::Rectangle<int> r)
     mesh.configureVertex(1, 0, r.getBottomLeft().toFloat(), juce::Colours::darkblue);
     mesh.configureVertex(1, 1, r.getBottomRight().toFloat(), juce::Colours::blue);
 
-    meshImage = juce::Image{ juce::Image::ARGB, r.getWidth(), r.getHeight(), true };
+    outputImage = juce::Image{ juce::Image::ARGB, r.getWidth(), r.getHeight(), true };
     //mesh.draw(meshImage, {});
 }
 
@@ -94,7 +94,7 @@ void LiquidFunRenderer::DrawParticles(const b2Vec2* centers, float32 radius, con
 
     radius *= 1.3f;
 
-#if 0
+#if 1
     for (int index = 0; index < count; ++index)
     {
         auto& sprite = sprites[index];
@@ -104,11 +104,15 @@ void LiquidFunRenderer::DrawParticles(const b2Vec2* centers, float32 radius, con
     }
 
     spriteBatch.setAtlas(particleImage);
+    graphics->setColour(juce::Colours::transparentBlack);
+    graphics->getInternalContext().fillRect(outputImage.getBounds(), true);
     spriteBatch.draw(outputImage, sprites, true);
-    graphics->drawImageAt(outputImage, 0, 0);
+
+    graphics->setColour(juce::Colours::black);
+    graphics->drawImageAt(outputImage, 0, 0, false);
 #endif
 
-#if 1
+#if 0
     juce::Rectangle<float> particleArea{ radius * 10.0f, radius * 10.0f };
     particleArea.setCentre(0.0f, 0.0f);
     auto transformedParticleArea = particleArea.transformedBy(transform);
@@ -156,11 +160,11 @@ void LiquidFunRenderer::DrawParticles(const b2Vec2* centers, float32 radius, con
         else
 #endif
         {
-            graphics->setColour(juce::Colours::goldenrod);
+            graphics->setColour(juce::Colours::lightskyblue);
         }
 
         // graphics->setTiledImageFill(meshImage, 0, 0, 1.0f);
-        graphics->drawEllipse(particleArea, 1.0f);
+        graphics->fillEllipse(particleArea);
 #endif
 
         ++centers;
@@ -196,7 +200,7 @@ void LiquidFunRenderer::DrawPolygon (const b2Vec2* vertices, int32 vertexCount, 
 
 void LiquidFunRenderer::DrawSolidPolygon (const b2Vec2* vertices, int32 vertexCount, const b2Color& color)
 {
-#if 0
+#if 1
     graphics->setColour (getColour (color).withAlpha(0.5f));
 
     Path p1, p2;

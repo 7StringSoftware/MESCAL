@@ -19,10 +19,13 @@ private:
         void createWorld();
         void step(double msec);
         void paint(juce::Graphics& g, juce::AffineTransform const& transform);
+        void resize(juce::Rectangle<int> size);
 
         b2World world{ { 0.0f, -50.0f } };
         b2ParticleSystem* particleSystem = nullptr;
         LiquidFunRenderer renderer;
+        juce::Rectangle<float> snifterBowlBoxWorldArea;
+        juce::Rectangle<int> paintArea;
 
         static std::array<juce::Point<float>, 21> constexpr snifterBowlPoints
         {
@@ -68,14 +71,11 @@ private:
         }
     };
 
-    std::unique_ptr<mescal::GradientMesh> mesh;
+    juce::Rectangle<int> animationArea, snifterArea;
     mescal::Effect effect{ mescal::Effect::Type::gaussianBlur };
-    juce::AffineTransform transform;
-    juce::Image meshImage;
+    juce::AffineTransform snifterBackgroundTransform, snifterForegroundTransform, liquidFunTransform;
     juce::Image effectInputImage, effectOutputImage;
     std::unique_ptr<juce::Drawable> snifter = juce::Drawable::createFromImageData(BinaryData::Snifter_background_svg, BinaryData::Snifter_background_svgSize);
     std::unique_ptr<juce::Drawable> snifterOutline = juce::Drawable::createFromImageData(BinaryData::Snifter_outline_svg, BinaryData::Snifter_outline_svgSize);
     std::unique_ptr<juce::Drawable> snifterForeground = juce::Drawable::createFromImageData(BinaryData::Snifter_foreground_svg, BinaryData::Snifter_foreground_svgSize);
-
-    juce::Path splitPath(juce::Path const& p);
 };

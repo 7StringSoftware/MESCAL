@@ -17,6 +17,7 @@ BottleDemo::BottleDemo()
 {
     liquidFun.createWorld();
 
+#if 0
     std::array<juce::Line<float>, 3> const lines
     {
         juce::Line<float>
@@ -146,6 +147,7 @@ BottleDemo::BottleDemo()
 
         topLine = bottomLine;
     }
+#endif
 
 
 
@@ -315,234 +317,53 @@ BottleDemo::~BottleDemo()
 void BottleDemo::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::white);
-#if 0
 
-    mesh->draw(meshImage, transform, juce::Colours::transparentBlack);
-
-
-    //effect.setProperty(mescal::SpotSpecularLightingProperty::lightPosition, mescal::Point3D{ 100.0f, 100.0f, 100.0f });
-    //effect.setProperty(mescal::SpotSpecularLightingProperty::focusPointPosition, mescal::Point3D{ 100.0f, 100.0f, 000.0f });
-
-    //effect.setProperty(mescal::SpotSpecularLightingProperty::surfaceScale, 100.0f);
-    //effect.setProperty(mescal::SpotSpecularLightingProperty::lightColor, mescal::RGBColor{ 0.0f, 1.0f, 0.5f });
-    juce::Rectangle<int> clipR{ 0, 115, 40, 260 };
-    clipR = clipR.transformedBy(transform);
-    //g.drawImageAt(meshImage, 0, 0);
-
-    g.setColour(juce::Colours::black);
-        //g.strokePath(outline, juce::PathStrokeType{ 1.0f });
-
-    auto center = outline.getBounds().getCentre();
-    std::vector<juce::Point<float>> points;
-    juce::PathFlatteningIterator it{ outline, {}, 20.0f };
-    while (it.next())
-    {
-        points.emplace_back(juce::Point<float>{ it.x2, it.y2 });
-    }
-
-    std::sort(points.begin(), points.end(), [&](juce::Point<float> const& p1, juce::Point<float> const& p2)
-        {
-            //auto distance1 = p1.getDistanceFrom(center);
-            //auto distance2 = p2.getDistanceFrom(center);
-            auto angle1 = center.getAngleToPoint(p1);
-            auto angle2 = center.getAngleToPoint(p2);
-            return angle1 < angle2;
-        });
-
-    std::vector<juce::Point<float>> innerPoints;
-
-    float startAngle = -juce::MathConstants<float>::twoPi;
-    float angleStep = juce::MathConstants<float>::twoPi / 32;
-    size_t index = 0;
-    size_t segmentIndex = 0;
-    while (startAngle <= juce::MathConstants<float>::twoPi && index < points.size())
-    {
-        auto angle = center.getAngleToPoint(points[index]);
-        if (angle >= startAngle + angleStep)
-        {
-            float distance = 1000000.0f;
-            juce::Point<float> p;
-            for (size_t i = segmentIndex; i <= index; ++i)
-            {
-                auto d = center.getDistanceFrom(points[i]);
-                if (d < distance)
-                {
-                    distance = d;
-                    p = points[i];
-                }
-            }
-
-            innerPoints.emplace_back(p);
-
-            DBG((innerPoints.size() - 1) << " { " << p.x << ", " << p.y << "},");
-
-            g.setColour(juce::Colours::black);
-            //g.fillEllipse(juce::Rectangle<float>{ 5.0f, 5.0f }.withCentre(p));
-
-            startAngle += angleStep;
-            segmentIndex = index + 1;
-        }
-
-        index++;
-    }
-#endif
-//
-    auto transform = juce::AffineTransform::scale(2.0f).translated(400.0f, 0.0f);
-    snifter->draw(g, 1.0f, transform);
+    snifter->draw(g, 1.0f, snifterBackgroundTransform);
     {
         juce::Graphics ig{ effectInputImage };
-        ig.setColour(juce::Colours::transparentBlack);
-        ig.getInternalContext().fillRect(ig.getClipBounds(), true);
-        liquidFun.paint(ig, transform);;
-        snifterForeground->draw(ig, 0.95f, transform);
+        liquidFun.paint(ig, liquidFunTransform);
+        g.setColour(juce::Colours::black);
+        snifterForeground->draw(ig, 0.8f, snifterForegroundTransform);
     }
     effect.applyEffect(effectInputImage, effectOutputImage, 1.0f, 1.0f);
-    g.drawImageAt(effectOutputImage, 0, 0);
-    snifterOutline->draw(g, 1.0f, transform);
-
-#if 0
-    for (auto const& halfedge : mesh->getHalfedges())
-    {
-        juce::Line<float> line{ halfedge->tail.lock()->position, halfedge->head.lock()->position };
-        line = { line.getStart().transformedBy(pathTransform), line.getEnd().transformedBy(pathTransform) };
-        g.setColour(juce::Colours::purple);
-        g.drawArrow(line.withShortenedStart(5.0f).withShortenedEnd(5.0f), 2.0f, 12.0f, 12.0f);
-    }
-#endif
-
-#if 0
-    for (auto const& vertex : mesh->getVertices())
-    {
-        g.setColour(juce::Colours::hotpink);
-        g.fillEllipse(juce::Rectangle<float>{ 5.0f, 5.0f }.withCentre(vertex->position));
-        continue;
-
-        g.setColour(juce::Colours::black);
-
-        std::array<juce::Colour, 4> colors
-        {
-            juce::Colours::red, juce::Colours::blue, juce::Colours::yellow, juce::Colours::green
-        };
-
-        std::array<std::weak_ptr<mescal::GradientMesh::Halfedge>, 4> halfedges
-        {
-            vertex->northHalfedge, vertex->eastHalfedge, vertex->southHalfedge, vertex->westHalfedge
-        };
-
-        for (int i = 0; i < 4; ++i)
-        {
-            if (auto halfedge = halfedges[i].lock())
-            {
-                juce::Line<float> line{ halfedge->tail.lock()->position, halfedge->head.lock()->position };
-                line = { line.getStart().transformedBy({}), line.getEnd().transformedBy({}) };
-
-                auto angle = line.getAngle();
-                angle += juce::MathConstants<float>::halfPi;
-
-                line.withShortenedStart(5.0f).withShortenedEnd(5.0f);
-                line = juce::Line<float>{ line.getStart().getPointOnCircumference(5.0f, angle), line.getEnd().getPointOnCircumference(5.0f, angle) };
-
-                g.setColour(colors[i]);
-                g.drawArrow(line, 2.0f, 12.0f, 12.0f);
-            }
-        }
-    }
-#endif
+    g.drawImageAt(effectOutputImage, animationArea.getX(), animationArea.getY());
+    snifterOutline->draw(g, 1.0f, snifterBackgroundTransform);
 }
 
 void BottleDemo::resized()
 {
-#if 0
-    mesh = std::make_unique<mescal::GradientMesh>(8, 8);
-    std::array<juce::Colour, 8> colors
-    {
-        juce::Colours::darkgreen,
-        juce::Colours::green,
-        juce::Colours::limegreen,
-        juce::Colours::green,
-        juce::Colours::green,
-        juce::Colours::darkgreen,
-        juce::Colours::darkgreen,
-        juce::Colours::darkgrey
-    };
-    std::array<float, 8> shade
-    {
-        0.0f, 0.0f, 0.2f, 0.4f, 1.0f, 1.0f, 1.0f, 0.0f
-    };
-    auto bounds = transformedBottlePath.getBounds();
-    float xStep = bounds.getWidth() / (float)(mesh->getNumColumns() - 1);
-    float yStep = bounds.getHeight() / (float)(mesh->getNumRows() - 1);
-    mesh->configureVertices([=](int row, int column, std::shared_ptr<mescal::GradientMesh::Vertex> vertex)
-        {
-            juce::Point<float> p{ (float)column * xStep, (float)row * yStep };
-            vertex->position = p;
+    auto drawableSize = snifter->getBounds();
 
-            vertex->setColor(colors[column].withAlpha(shade[row]));
-        });
-#endif
+    animationArea = getLocalBounds().removeFromRight(getWidth() / 3).withTrimmedBottom(50).translated(-50, 0);
+    snifterArea = juce::Rectangle<int>{ animationArea }.removeFromBottom(getHeight() * 2 / 3);
 
-    float scale = (float)juce::jmin(getWidth(), getHeight()) / 400.0f;
-    transform = juce::AffineTransform::scale(scale * 0.8f).translated(50.0f, 50.0f);
+    float yOffset = snifterArea.getY() - animationArea.getY();
+    snifterBackgroundTransform = juce::RectanglePlacement{}.getTransformToFit(drawableSize.toFloat(), snifterArea.toFloat());
+    snifterForegroundTransform = juce::RectanglePlacement{}.getTransformToFit(drawableSize.toFloat(), snifterArea.withX(0.0f).withY(yOffset).toFloat());
+    liquidFunTransform = snifterForegroundTransform;
 
-    meshImage = juce::Image{ juce::Image::ARGB, getHeight() / 4, getHeight(), true };
-    effectInputImage = juce::Image{ juce::Image::ARGB, getWidth(), getHeight(), true};
-    effectOutputImage = juce::Image{ juce::Image::ARGB, getWidth(), getHeight(), true };
-}
+    effectInputImage = juce::Image{ juce::Image::ARGB, animationArea.getWidth(), animationArea.getHeight(), true};
+    effectOutputImage = juce::Image{ juce::Image::ARGB, animationArea.getWidth(), animationArea.getHeight(), true };
 
-juce::Path BottleDemo::splitPath(juce::Path const& p)
-{
-    juce::Path::Iterator it{ p };
-
-    while (it.next())
-    {
-        switch (it.elementType)
-        {
-        case Path::Iterator::startNewSubPath:
-        {
-            break;
-        }
-
-        case Path::Iterator::lineTo:
-        {
-            DBG("lineTo " << it.x1 << ", " << it.y1);
-            break;
-        }
-
-        case Path::Iterator::quadraticTo:
-        {
-            DBG("quadraticTo " << it.x1 << ", " << it.y1);
-            break;
-        }
-
-        case Path::Iterator::cubicTo:
-        {
-            DBG("cubicTo " << it.x1 << ", " << it.y1 << "   " << it.x2 << ", " << it.y2 << "  " << it.x3 << ", " << it.y3);
-            break;
-        }
-
-        case Path::Iterator::closePath:
-        {
-            break;
-        }
-        }
-    }
-
-    return juce::Path{ p };
+    liquidFun.resize(effectInputImage.getBounds());
 }
 
 void BottleDemo::LiquidFun::createWorld()
 {
-    auto snifterBowlCenter = juce::Point<float>{};
+    float minY = 1000.0f, minX = 1000.0f, maxY = 0.0f, maxX = 0.0f;
     for (auto const& p : snifterBowlPoints)
     {
-        snifterBowlCenter += p;
+        minY = juce::jmin(minY, p.getY());
+        minX = juce::jmin(minX, p.getX());
+        maxY = juce::jmax(maxY, p.getY());
+        maxX = juce::jmax(maxX, p.getX());
     }
 
-    snifterBowlCenter /= (float)snifterBowlPoints.size();
-    auto flip = juce::AffineTransform::verticalFlip(snifterBowlCenter.getY() * 2.0f).translated(0.0f, -40.0f);
+    snifterBowlBoxWorldArea = juce::Rectangle<float>{ minX, minY, maxX - minX, maxY - minY };
+    auto flip = juce::AffineTransform::verticalFlip(snifterBowlBoxWorldArea.getHeight());
 
     auto it = snifterBowlPoints.begin();
-    auto lastPoint = it->transformedBy(flip);;
+    auto lastPoint = it->transformedBy(flip);
     while (it != snifterBowlPoints.end())
     {
         auto p = it->transformedBy(flip);
@@ -567,8 +388,8 @@ void BottleDemo::LiquidFun::createWorld()
     for (int i = 0; i < 2000; ++i)
     {
         b2ParticleDef pd;
-        pd.flags = b2_viscousParticle;
-        pd.position.Set(150.0f + random.nextFloat() * 10.0f - 5.0f, 150.0f + (float)i * 3.0f);
+        pd.flags = b2_waterParticle;
+        pd.position.Set(150.0f + random.nextFloat() * 5.0f - 2.5f, 150.0f + (float)i * 3.0f);
         pd.velocity.Set(random.nextFloat() * 10.0f - 5.0f, -40.0f);
         particleSystem->CreateParticle(pd);
     }
@@ -584,9 +405,15 @@ void BottleDemo::LiquidFun::step(double msec)
 
 void BottleDemo::LiquidFun::paint(juce::Graphics& g, juce::AffineTransform const &transform)
 {
-    Rectangle<float> boxWorldArea{ 0.0f, 0.0f, 300, 300.0f };
     renderer.render(g,
         world,
-        boxWorldArea,
-        juce::Rectangle<float>{ 0.0f, 0.0f, 300.0f, 300.0f }.transformedBy(transform));
+        snifterBowlBoxWorldArea,
+        snifterBowlBoxWorldArea.transformedBy(transform));
+}
+
+void BottleDemo::LiquidFun::resize(juce::Rectangle<int> size)
+{
+    paintArea = size;
+
+    renderer.resize(size);
 }
