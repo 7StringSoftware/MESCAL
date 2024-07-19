@@ -46,10 +46,10 @@ LiquidFunRenderer::LiquidFunRenderer() noexcept   : graphics (nullptr)
 
 void LiquidFunRenderer::resize(juce::Rectangle<int> r)
 {
-    mesh.configureVertex(0, 0, r.getTopLeft().toFloat(), juce::Colours::deepskyblue);
-    mesh.configureVertex(0, 1, r.getTopRight().toFloat(), juce::Colours::cyan);
-    mesh.configureVertex(1, 0, r.getBottomLeft().toFloat(), juce::Colours::darkblue);
-    mesh.configureVertex(1, 1, r.getBottomRight().toFloat(), juce::Colours::blue);
+    mesh.getVertex(0,0)->configure(r.getTopLeft().toFloat(), juce::Colours::deepskyblue);
+    mesh.getVertex(1, 0)->configure(r.getTopRight().toFloat(), juce::Colours::lightskyblue);
+    mesh.getVertex(1, 0)->configure(r.getBottomLeft().toFloat(), juce::Colours::darkblue);
+    mesh.getVertex(1, 1)->configure(r.getBottomRight().toFloat(), juce::Colours::darkcyan);
 
     outputImage = juce::Image{ juce::Image::ARGB, r.getWidth(), r.getHeight(), true };
     //mesh.draw(meshImage, {});

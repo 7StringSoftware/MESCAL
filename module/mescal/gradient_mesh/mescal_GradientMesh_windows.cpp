@@ -61,11 +61,10 @@ namespace mescal
             {
                 auto x = column * columnWidth;
                 auto y = row * rowHeight;
-                vertices.push_back(std::make_shared<Vertex>(juce::Point<float>{x, y}));
+                vertices.push_back(std::make_shared<Vertex>(row, column, juce::Point<float>{x, y}));
             }
         }
 
-#if 0
         for (int row = 0; row < numRows_ - 1; row += 2)
         {
             //
@@ -92,7 +91,6 @@ namespace mescal
                 head->eastHalfedge = halfedge->twin;
             }
         }
-#endif
 
         for (int column = 0; column < numColumns_ - 1; column += 2)
         {
@@ -122,90 +120,8 @@ namespace mescal
         }
     }
 
-#if 0
-    GradientMesh GradientMesh::fromPath(const juce::Path& path)
-    {
-        GradientMesh mesh;
-        std::unordered_map<juce::Point<float>, std::shared_ptr<Vertex>> vertexMap;
-        std::shared_ptr<Vertex> subpathStart;
-        std::shared_ptr<Vertex> previousVertex;
-
-        auto addMappedVertex = [&](juce::Point<float> point) -> std::shared_ptr<Vertex>
-            {
-                auto newVertex = std::make_shared<Vertex>(point);
-                auto storedVertex = vertexMap[point];
-                if (newVertex == storedVertex)
-                {
-                    return storedVertex;
-                }
-
-                mesh.vertices.push_back(newVertex);
-                vertexMap[point] = newVertex;
-                return newVertex;
-            };
-
-        juce::Path::Iterator it{ path };
-        while (it.next())
-        {
-            switch (it.elementType)
-            {
-            case Path::Iterator::startNewSubPath:
-            {
-                subpathStart = addMappedVertex({ it.x1, it.y1 });
-                previousVertex = subpathStart;
-                break;
-            }
-
-            case Path::Iterator::lineTo:
-            {
-                auto vertex = addMappedVertex({ it.x1, it.y1 });
-                auto halfedge = mesh.addHalfedge(previousVertex, vertex);
-
-                previousVertex = vertex;
-                break;
-            }
-
-            case Path::Iterator::quadraticTo:
-            {
-                //
-                // GradientMesh edges need to be straight lines or cubic splines
-                //
-                jassertfalse;
-                break;
-            }
-
-            case Path::Iterator::cubicTo:
-            {
-                auto vertex = addMappedVertex({ it.x3, it.y3 });
-                previousVertex = vertex;
-                break;
-            }
-
-            case Path::Iterator::closePath:
-            {
-                if (previousVertex.get() != subpathStart.get())
-                {
-                }
-
-                subpathStart = {};
-                break;
-            }
-            }
-        }
-
-        return mesh;
-    }
-#endif
-
     GradientMesh::~GradientMesh()
     {
-    }
-
-    std::shared_ptr<GradientMesh::Vertex> GradientMesh::addVertex(juce::Point<float> point)
-    {
-        auto vertex = std::make_shared<Vertex>(point);
-        vertices.push_back(vertex);
-        return vertex;
     }
 
     std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head)
@@ -232,33 +148,13 @@ namespace mescal
         jassertfalse;
     }
 
-    void GradientMesh::setVertexColor(int row, int column, juce::Colour color)
-    {
-        vertices[row * numColumns + column]->setColor(color);
-    }
-
-    void GradientMesh::configureVertex(int row, int column, juce::Point<float> position, juce::Colour color)
-    {
-        auto& vertex = vertices[row * numColumns + column];
-        vertex->position = position;
-        vertex->setColor(color);
-    }
-
-    void GradientMesh::configureVertices(std::function<void(int row, int column, std::shared_ptr<Vertex> vertex)> callback)
+    void GradientMesh::configureVertices(std::function<void(std::shared_ptr<Vertex> vertex)> callback)
     {
         jassert(callback);
 
-        int row = 0;
-        int column = 0;
         for (auto& vertex : vertices)
         {
-            callback(row, column, vertex);
-            ++column;
-            if (column >= numColumns)
-            {
-                column = 0;
-                ++row;
-            }
+            callback(vertex);
         }
     }
 
@@ -298,7 +194,7 @@ namespace mescal
     {
         auto vertexToPOINT_2F = [&](int row, int column)
             {
-                auto& vertex = vertices[row * numColumns + column];
+                auto vertex = getVertex(row, column);
                 auto transformedPoint = vertex->position.transformedBy(transform);
                 return D2D1_POINT_2F{ transformedPoint.x, transformedPoint.y };
             };
@@ -407,7 +303,7 @@ namespace mescal
         brightness = juce::jlimit(0.0f, 1.0f, brightness);
 
         if (saturation <= 0)
-            return { brightness, brightness, brightness, alpha };
+            return Color128{ brightness, brightness, brightness, alpha };
 
         saturation = juce::jmin(1.0f, saturation);
         hue = ((hue - std::floor(hue)) * 360.0f) / 60.0f;

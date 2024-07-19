@@ -16,7 +16,7 @@ GradientMeshDemo::GradientMeshDemo() :
     logoImage = juce::Image{ juce::Image::ARGB, 1536, 768, true };
     {
         juce::Graphics g{ logoImage };
-        g.setColour(juce::Colours::black);
+        g.setColour(juce::Colours::white);
         g.setFont(juce::FontOptions{ 400.0f, juce::Font::bold });
         g.drawText("MESCAL", logoImage.getBounds(), juce::Justification::centred);
     }
@@ -37,13 +37,13 @@ void GradientMeshDemo::paint(juce::Graphics& g)
 
     switch (backgroundCombo.getSelectedId())
     {
-        case gradientMeshBackground:
-            paintMesh(g);
-            break;
+    case gradientMeshBackground:
+        paintMesh(g);
+        break;
 
-        case snowfallBackground:
-            paintSnowfall(g);
-            break;
+    case snowfallBackground:
+        paintSnowfall(g);
+        break;
     }
 
     juce::Point<float> offset
@@ -52,7 +52,7 @@ void GradientMeshDemo::paint(juce::Graphics& g)
         ((float)getHeight() - logoImage.getHeight()) * 0.5f
     };
     g.addTransform(juce::AffineTransform::translation(offset));
-    glowEffect.setGlowProperties(50.0f, juce::Colours::white);
+    glowEffect.setGlowProperties(50.0f, juce::Colours::black);
     glowEffect.applyEffect(logoImage, g, 1.0f, gradientOpacity);
 }
 
@@ -74,11 +74,11 @@ void GradientMeshDemo::paintMesh(juce::Graphics& g)
     auto center = getLocalBounds().getCentre().toFloat();
     float columnWidth = (float)getWidth() / (float)(mesh.getNumColumns() - 1);
     float rowHeight = (float)getHeight() / (float)(mesh.getNumRows() - 3);
-    mesh.configureVertices([=](int row, int column, std::shared_ptr<mescal::GradientMesh::Vertex> vertex)
+    mesh.configureVertices([=](std::shared_ptr<mescal::GradientMesh::Vertex> vertex)
         {
-            float x = column * columnWidth;
+            float x = vertex->column * columnWidth;
             float offset = std::sin(x / (float)getWidth() * juce::MathConstants<float>::twoPi * 2.0f) * 25.0f;
-            float y = row * rowHeight + offset;
+            float y = vertex->row * rowHeight + offset;
             juce::Point<float> p{ x, y };
             auto distance = p.getDistanceFrom(mousePos);
 
@@ -87,13 +87,13 @@ void GradientMeshDemo::paintMesh(juce::Graphics& g)
             vertex->position = mousePos.getPointOnCircumference(distance, angle);
 
             float phase = (0.25f * (x / (float)getWidth()) * juce::MathConstants<float>::twoPi) + 0.0125f * timestamp * juce::MathConstants<float>::twoPi;
-            if (row > mesh.getNumRows() / 2)
+            if (vertex->row > mesh.getNumRows() / 2)
             {
                 phase += juce::MathConstants<float>::pi;
             }
 
             auto hue = std::sin(phase) * 0.5f + 0.5f;
-            vertex->setColor(juce::Colour::fromHSV(hue, y / (float)getHeight(), 1.0f, gradientOpacity));
+            vertex->setColors(juce::Colour::fromHSV(hue, y / (float)getHeight(), 1.0f, gradientOpacity));
         });
 
     mesh.draw(meshImage, {});
@@ -138,21 +138,6 @@ void GradientMeshDemo::paintMeshWireframe(juce::Graphics& g)
             g.drawArrow(line.withShortenedStart(5.0f).withShortenedEnd(5.0f), 2.0f, 12.0f, 12.0f);
         }
     }
-
-#if 0
-    if (selectedVertex)
-    {
-        if (auto halfedge = selectedVertex->halfedge.lock())
-        {
-            g.setColour(juce::Colours::white);
-
-            auto tail = halfedge->tail.lock();
-            auto head = halfedge->head.lock();
-            if (tail && head)
-                g.drawArrow({ tail->position, head->position }, 4.0f, 14.0f, 12.0f);
-        }
-    }
-#endif
 }
 
 void GradientMeshDemo::paintSnowfall(juce::Graphics& g)

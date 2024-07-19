@@ -78,10 +78,23 @@
 
 struct Color128
 {
-    float red;
-    float green;
-    float blue;
-    float alpha;
+    Color128() {}
+    Color128(juce::Colour colour) :
+        red(colour.getFloatRed()),
+        green(colour.getFloatGreen()),
+        blue(colour.getFloatBlue()),
+        alpha(colour.getFloatAlpha())
+    {
+    }
+    Color128(float red_, float green_, float blue_, float alpha_) :
+        red(red_), green(green_), blue(blue_), alpha(alpha_)
+    {
+    }
+
+    float red = 0.0f;
+    float green = 0.0f;
+    float blue = 0.0f;
+    float alpha = 0.0f;
 
     juce::Colour toColour() const noexcept
     {
@@ -101,7 +114,8 @@ public:
     struct Halfedge;
     struct Vertex
     {
-        Vertex(juce::Point<float> position_) :
+        Vertex(int row_, int column_, juce::Point<float> position_) :
+            row(row_), column(column_),
             position(position_)
         {
         }
@@ -111,7 +125,13 @@ public:
             return juce::approximatelyEqual(position.x, other.position.x) && juce::approximatelyEqual(position.y, other.position.y);
         }
 
-        void setColor(juce::Colour color)
+        void configure(juce::Point<float> position_, juce::Colour color)
+        {
+            position = position_;
+            setColors(color);
+        }
+
+        void setColors(juce::Colour color)
         {
             northwestColor = color;
             southwestColor = color;
@@ -119,9 +139,10 @@ public:
             northeastColor = color;
         }
 
+        int const row, column;
         juce::Point<float> position;
         std::weak_ptr<Halfedge> northHalfedge, eastHalfedge, southHalfedge, westHalfedge;
-        
+
         juce::Colour northwestColor;
         juce::Colour southwestColor;
         juce::Colour southeastColor;
@@ -148,17 +169,13 @@ public:
         return numColumns;
     }
 
-    std::shared_ptr<Vertex> addVertex(juce::Point<float> point);
-    std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head);
     const auto& getVertices() const { return vertices; }
     const auto& getHalfedges() const { return halfedges; }
-
-    void applyTransform(juce::AffineTransform const& transform);
-    void setVertexColor(int row, int column, juce::Colour color);
-    void configureVertex(int row, int column, juce::Point<float> position, juce::Colour color);
-    void configureVertices(std::function<void(int row, int column, std::shared_ptr<Vertex> vertex)> callback);
     std::shared_ptr<Vertex> getVertex(int row, int column);
     std::shared_ptr<Halfedge> getHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head);
+
+    void applyTransform(juce::AffineTransform const& transform);
+    void configureVertices(std::function<void(std::shared_ptr<Vertex> vertex)> callback);
 
     void draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor = juce::Colours::transparentBlack);
 
@@ -169,6 +186,8 @@ private:
     int const numColumns;
     std::vector<std::shared_ptr<Vertex>> vertices;
     std::vector<std::shared_ptr<Halfedge>> halfedges;
+
+    std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head);
 
     struct Pimpl;
     std::unique_ptr<Pimpl> pimpl;
