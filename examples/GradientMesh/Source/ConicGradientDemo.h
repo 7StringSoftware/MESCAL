@@ -12,8 +12,10 @@ public:
     void resized() override;
 
 private:
-    mescal::ConicGradient conicGradient;
+    juce::Rectangle<int> conicGradientBounds;
+
     juce::Image image;
+    mescal::ConicGradient conicGradient;
 
     void updateConicGradient();
     void paintMesh(juce::Graphics& g);

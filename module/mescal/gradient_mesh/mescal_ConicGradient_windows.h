@@ -7,14 +7,30 @@ public:
     ~ConicGradient();
 
     void setBounds(juce::Rectangle<float> bounds_);
-    void setColourGradient(juce::ColourGradient gradient_);
     juce::Rectangle<float> getBounds() const noexcept;
 
-    void draw(int numSegments, juce::Image image, juce::AffineTransform transform);
+    struct Stop
+    {
+        float angle;
+        juce::Colour color;
+    };
+
+    void addStop(float angle, juce::Colour color);
+    void addStops(juce::Span<Stop> newStops);
+
+    void draw(juce::Image image, juce::AffineTransform transform);
 
 private:
-    juce::ColourGradient gradient;
     juce::Rectangle<float> bounds;
+
+    struct Stop128
+    {
+        float angle;
+        mescal::Color128 color;
+    };
+    std::vector<Stop128> stops;
+
+    void sortStops();
 
     struct Pimpl;
     std::unique_ptr<Pimpl> pimpl;
