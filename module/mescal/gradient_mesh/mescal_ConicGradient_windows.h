@@ -15,6 +15,7 @@ public:
         juce::Colour color;
     };
 
+    void clearStops();
     void addStop(float angle, juce::Colour color);
     void addStops(juce::Span<Stop> newStops);
 

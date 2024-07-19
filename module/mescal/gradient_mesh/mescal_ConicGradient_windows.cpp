@@ -143,6 +143,12 @@ namespace mescal
     {
     }
 
+
+    void ConicGradient::clearStops()
+    {
+        stops.clear();
+    }
+
     void ConicGradient::addStop(float angle, juce::Colour color)
     {
         stops.emplace_back(Stop128{ angle, Color128{ color } });
