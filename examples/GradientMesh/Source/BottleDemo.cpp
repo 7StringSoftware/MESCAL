@@ -15,6 +15,8 @@ body top
 
 BottleDemo::BottleDemo()
 {
+    setOpaque(true);
+
     shadowEffectChain.addEffect(mescal::Effect::Type::shadow);
     shadowEffectChain.addEffect(mescal::Effect::Type::perspectiveTransform3D);
 
@@ -31,6 +33,9 @@ void BottleDemo::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::white);
 
+    liquidFun.paint(g, {});
+
+#if 0
     {
         juce::Graphics ig{ liquidImage };
         ig.setColour(juce::Colours::transparentBlack);
@@ -57,16 +62,17 @@ void BottleDemo::paint(juce::Graphics& g)
     }
 
     auto& effect = shadowEffectChain.getEffect(1);
-    effect.setProperty(mescal::PerspectiveTransform3DProperty::rotation, mescal::Point3D{ -40.0f, 0.0f, 0.0f });
+    effect.setProperty(mescal::PerspectiveTransform3DProperty::rotation, mescal::Point3D{ -40.0f, 30.0f, 0.0f });
     //effect.setProperty(mescal::PerspectiveTransform3DProperty::globalOffset, mescal::Point3D{ 0.0f, 20.0f, 30.0f });
     //effect.setProperty(mescal::PerspectiveTransform3DProperty::localOffset, mescal::Point3D{ 100.0f, 200.0f, 300.0f });
     effect.setProperty(mescal::PerspectiveTransform3DProperty::perspectiveOrigin, juce::Point<float>{ (float)snifterImage.getWidth() * 0.02f, (float)snifterImage.getHeight() * 0.1f });
-    effect.setProperty(mescal::PerspectiveTransform3DProperty::rotationOrigin, mescal::Point3D{ (float)snifterImage.getWidth(), (float)snifterImage.getHeight(), 50.0f});
+    effect.setProperty(mescal::PerspectiveTransform3DProperty::rotationOrigin, mescal::Point3D{ (float)snifterImage.getWidth(), (float)snifterImage.getHeight(), 50.0f });
     shadowEffectChain.applyEffects(snifterImage, effectOutputImage, 1.0f, 1.0f, true);
 
     int x = getWidth() - snifterImage.getWidth();
     g.drawImageAt(effectOutputImage, x, 0);
     g.drawImageAt(snifterImage, x, 0);
+#endif
 
 }
 
@@ -83,14 +89,15 @@ void BottleDemo::resized()
     liquidFunTransform = snifterForegroundTransform;
 
     snifterImage = juce::Image{ juce::Image::ARGB, animationArea.getWidth(), animationArea.getHeight(), true };
-    liquidImage = juce::Image{ juce::Image::ARGB, animationArea.getWidth(), animationArea.getHeight(), true};
+    liquidImage = juce::Image{ juce::Image::ARGB, animationArea.getWidth(), animationArea.getHeight(), true };
     effectOutputImage = juce::Image{ juce::Image::ARGB, getWidth(), animationArea.getHeight(), true };
 
-    liquidFun.resize(liquidImage.getBounds());
+    liquidFun.resize(getLocalBounds());
 }
 
 void BottleDemo::LiquidFun::createWorld()
 {
+#if 0
     float minY = 1000.0f, minX = 1000.0f, maxY = 0.0f, maxX = 0.0f;
     for (auto const& p : snifterBowlPoints)
     {
@@ -120,18 +127,45 @@ void BottleDemo::LiquidFun::createWorld()
         lastPoint = p;
         ++it;
     }
+#endif
+
+    float boxEdgeWidth = 10.0f;
+    boxWorldArea = juce::Rectangle<float>{ -boxEdgeWidth, -boxEdgeWidth, 1000.0f + 2.0f * boxEdgeWidth, 1000.0f + 2.0f * boxEdgeWidth};
+    std::array<juce::Line<float>, 4> lines
+    {
+        juce::Line<float>{ boxWorldArea.getTopLeft(), boxWorldArea.getTopRight() },
+        { boxWorldArea.getTopRight(), boxWorldArea.getBottomRight() },
+        { boxWorldArea.getBottomRight(), boxWorldArea.getBottomLeft() },
+        { boxWorldArea.getBottomLeft(), boxWorldArea.getTopLeft() }
+    };
+
+    juce::AffineTransform flip = juce::AffineTransform::verticalFlip(boxWorldArea.getHeight());
+
+    for (auto const& line : lines)
+    {
+        auto p1 = line.getStart().transformedBy(flip);
+        auto p2 = line.getEnd().transformedBy(flip);
+
+        b2BodyDef groundBodyDef;
+        auto lineCenter = line.getPointAlongLineProportionally(0.5f);
+        auto groundBody = world.CreateBody(&groundBodyDef);
+        b2PolygonShape groundBox;
+        groundBox.SetAsBox(line.getLength() * 0.5f, 0.5f, { lineCenter.x, lineCenter.y }, line.getAngle() + juce::MathConstants<float>::halfPi);
+        groundBody->CreateFixture(&groundBox, 0.0f);
+    }
 
     const b2ParticleSystemDef particleSystemDef;
     particleSystem = world.CreateParticleSystem(&particleSystemDef);
-    particleSystem->SetRadius(3.0f);
+    particleSystem->SetRadius(2.0f);
 
     juce::Random random{};
-    for (int i = 0; i < 2000; ++i)
+    auto center = boxWorldArea.getCentre().transformedBy(flip);
+    for (int i = 0; i < 10000; ++i)
     {
         b2ParticleDef pd;
         pd.flags = b2_waterParticle;
-        pd.position.Set(150.0f + random.nextFloat() * 5.0f - 2.5f, 150.0f + (float)i * 3.0f);
-        pd.velocity.Set(random.nextFloat() * 10.0f - 5.0f, -40.0f);
+        pd.position.Set(center.x, center.y);
+        pd.velocity.Set(random.nextFloat() * 10.0f, random.nextFloat() * 10.0f);
         particleSystem->CreateParticle(pd);
     }
 }
@@ -144,12 +178,12 @@ void BottleDemo::LiquidFun::step(double msec)
         3);
 }
 
-void BottleDemo::LiquidFun::paint(juce::Graphics& g, juce::AffineTransform const &transform)
+void BottleDemo::LiquidFun::paint(juce::Graphics& g, juce::AffineTransform const& transform)
 {
     renderer.render(g,
         world,
-        snifterBowlBoxWorldArea,
-        snifterBowlBoxWorldArea.transformedBy(transform));
+        boxWorldArea,
+        g.getClipBounds().toFloat());
 }
 
 void BottleDemo::LiquidFun::resize(juce::Rectangle<int> size)

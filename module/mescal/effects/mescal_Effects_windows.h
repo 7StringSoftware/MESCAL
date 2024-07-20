@@ -1,6 +1,14 @@
 #pragma once
 
-enum SpotSpecularLightingProperty
+enum class GaussianBlurProperty
+{
+    standardDeviation,
+    optimization,
+    borderMode,
+    numProperties
+};
+
+enum class SpotSpecularLightingProperty
 {
     // Light position in image coordinates
     // Default value: x:0.0f, y:0.0f, z:0.0f
@@ -31,17 +39,19 @@ enum SpotSpecularLightingProperty
     surfaceScale,
 
     // Light color (RBG value)
-    // Default value is ffffff
+    // Default value is solid white (0xffffff)
     lightColor,
 
     // Kernel unit length
     kernelUnitLength,
 
     // Scale mode 0-5
-    scaleMode
+    scaleMode,
+
+    numProperties
 };
 
-enum PerspectiveTransform3DProperty
+enum class PerspectiveTransform3DProperty
 {
     interpolationMode,
 
@@ -57,7 +67,9 @@ enum PerspectiveTransform3DProperty
 
     rotationOrigin,
 
-    rotation
+    rotation,
+
+    numProperties
 };
 
 
@@ -93,14 +105,24 @@ public:
     Effect(const Effect& other);
     ~Effect() override;
 
+    juce::String getName() const noexcept;
+
 	void applyEffect(juce::Image& sourceImage, juce::Graphics& destContext, float scaleFactor, float alpha) override;
 	void applyEffect(juce::Image& sourceImage, juce::Image& outputImage, float scaleFactor, float alpha, bool clearDestination);
 
-    using PropertyValue = std::variant<float, juce::Point<float>, juce::Colour, RGBColor, Point3D>;
+    using PropertyValue = std::variant<int, float, juce::Point<float>, juce::Colour, RGBColor, Point3D>;
+
+    struct PropertyInfo
+    {
+        juce::String name;
+        PropertyValue defaultValue;
+        std::optional<std::variant<juce::Range<int>, juce::Range<float>, juce::StringArray>> range;
+    };
 
     size_t  getNumProperties() const noexcept;
-    void setProperty(int index, const PropertyValue& value);
-    const PropertyValue& getProperty(int index);
+    void setPropertyValue(int index, const PropertyValue& value);
+    const PropertyValue& getPropertyValue(int index);
+    PropertyInfo getPropertyInfo(int index);
 
 	Type const effectType;
 

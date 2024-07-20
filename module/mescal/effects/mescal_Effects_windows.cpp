@@ -6,23 +6,6 @@ namespace mescal
         Pimpl(Type effectType_) :
             effectType(effectType_)
         {
-#if 0
-            switch (effectType)
-            {
-            case Effect::Type::spotSpecularLighting:
-            {
-                propertyValues.emplace_back(Point3D{ 0.0f, 0.0f, 100.0f }); // lightPosition
-                propertyValues.emplace_back(Point3D{ 0.0f, 0.0f, 0.0f }); // focusPointPosition
-                propertyValues.emplace_back(1.0f); // focus
-                propertyValues.emplace_back(90.0f); // limitingConeAngle
-                propertyValues.emplace_back(1.0f); // specularExponent
-                propertyValues.emplace_back(1.0f); // specularConstant
-                propertyValues.emplace_back(1.0f); // surfaceScale
-                propertyValues.emplace_back(RGBColor{ 1.0f, 1.0f, 1.0f }); // lightColor
-                break;
-            }
-            }
-#endif
         }
 
         ~Pimpl()
@@ -80,7 +63,6 @@ namespace mescal
             {
             case 0: // float
             {
-                DBG("setProperty " << index << " " << std::get<float>(value));
                 d2dEffect->SetValue(index, std::get<float>(value));
                 break;
             }
@@ -138,7 +120,7 @@ namespace mescal
             &CLSID_D2D13DPerspectiveTransform
         };
 
-        std::map<uint32_t, PropertyValue> propertyValues;
+        std::vector<PropertyValue> propertyValues;
     };
 
 
@@ -152,23 +134,42 @@ namespace mescal
         effectType(other.effectType),
         pimpl(std::make_unique<Pimpl>(other.effectType))
     {
+        for (size_t index = 0; index < getNumProperties(); ++index)
+        {
+            auto value = getPropertyInfo(index).defaultValue;
+            pimpl->propertyValues.emplace_back(value);
+        }
     }
 
     Effect::~Effect()
     {
     }
 
-    size_t Effect::getNumProperties() const noexcept
+    juce::String Effect::getName() const noexcept
     {
-        return pimpl->propertyValues.size();
+        return "Effect";
     }
 
-    void Effect::setProperty(int index, const PropertyValue& value)
+    size_t Effect::getNumProperties() const noexcept
+    {
+        static constexpr std::array<size_t, (size_t)Type::numEffectTypes> numProperties
+        {
+            (size_t)mescal::GaussianBlurProperty::numProperties, // gaussianBlur,
+            (size_t)mescal::SpotSpecularLightingProperty::numProperties,
+            0, 
+            0,
+            0
+        };
+
+        return numProperties[(size_t)effectType];
+    }
+
+    void Effect::setPropertyValue(int index, const PropertyValue& value)
     {
         pimpl->setProperty(index, value);
     }
 
-    const Effect::PropertyValue& Effect::getProperty(int index)
+    const Effect::PropertyValue& Effect::getPropertyValue(int index)
     {
         return pimpl->propertyValues[index];
     }
@@ -202,9 +203,11 @@ namespace mescal
 
         pimpl->d2dEffect->SetInput(0, sourcePixelData->getAdapterD2D1Bitmap());
 
+        uint32_t propertyIndex = 0;
         for (auto const& value : pimpl->propertyValues)
         {
-            pimpl->setProperty(value.first, value.second);
+            pimpl->setProperty(propertyIndex, value);
+            propertyIndex++;
         }
 
         pimpl->deviceContext->SetTarget(outputPixelData->getAdapterD2D1Bitmap());
@@ -250,9 +253,11 @@ namespace mescal
                 }
             }
 
-            for (auto const& value : effect.pimpl->propertyValues)
+            uint32_t propertyIndex = 0;
+            for (auto const& value : pimpl->propertyValues)
             {
-                effect.pimpl->setProperty(value.first, value.second);
+                pimpl->setProperty(propertyIndex, value);
+                propertyIndex++;
             }
 
             effect.pimpl->d2dEffect->SetInputEffect(0, previousEffect.get());

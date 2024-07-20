@@ -1,3 +1,4 @@
+#if 0
 #include "SpotSpecularLightingControlComponent.h"
 
 SpotSpecularLightingControlComponent::SpotSpecularLightingControlComponent(mescal::Effect* const effect_) :
@@ -99,13 +100,21 @@ void SpotSpecularLightingControlComponent::resized()
 {
     {
         auto position = effect->getProperty(lightPosition.propertyIndex);
-        lightPosition.setSize(250, 250);
-        lightPosition.setPosition3D(std::get<mescal::Point3D>(position));
+
+        if (std::holds_alternative<mescal::Point3D>(position))
+        {
+            lightPosition.setSize(250, 250);
+            lightPosition.setPosition3D(std::get<mescal::Point3D>(position));
+        }
     }
     {
         auto position = effect->getProperty(focusPointPosition.propertyIndex);
-        focusPointPosition.setSize(250, 250);
-        focusPointPosition.setPosition3D(std::get<mescal::Point3D>(position));
+
+        if (std::holds_alternative<mescal::Point3D>(position))
+        {
+            focusPointPosition.setSize(250, 250);
+            focusPointPosition.setPosition3D(std::get<mescal::Point3D>(position));
+        }
     }
 
     std::array<juce::Slider*, 5> sliders{ &focusSlider, &coneAngleSlider, &specularExponentSlider, &specularConstantSlider, &surfaceScaleSlider };
@@ -230,3 +239,4 @@ void SpotSpecularLightingControlComponent::DragArrow::mouseDrag(const juce::Mous
 {
     dragger.dragComponent(getParentComponent(), event.getEventRelativeTo(getParentComponent()), nullptr);
 }
+#endif

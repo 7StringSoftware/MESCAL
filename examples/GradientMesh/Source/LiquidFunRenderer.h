@@ -84,6 +84,7 @@ public:
 protected:
     Graphics* graphics;
     AffineTransform transform;
+    static constexpr int spriteSize = 16;
     Image particleImage{ Image::ARGB, 16, 16, true };
     mescal::GradientMesh mesh{ 2, 2 };
     mescal::SpriteBatch spriteBatch;

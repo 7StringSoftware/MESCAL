@@ -24,7 +24,7 @@ private:
         b2World world{ { 0.0f, -50.0f } };
         b2ParticleSystem* particleSystem = nullptr;
         LiquidFunRenderer renderer;
-        juce::Rectangle<float> snifterBowlBoxWorldArea;
+        juce::Rectangle<float> boxWorldArea;
         juce::Rectangle<int> paintArea;
 
         static std::array<juce::Point<float>, 21> constexpr snifterBowlPoints

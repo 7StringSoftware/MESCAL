@@ -53,7 +53,6 @@ public:
             if (auto display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay())
             {
                 setBounds (display->userArea.reduced (100));
-                mainComponent.initEffect();
             }
 
             setVisible (true);

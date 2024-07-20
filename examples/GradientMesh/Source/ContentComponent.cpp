@@ -6,9 +6,11 @@
 
 ContentComponent::ContentComponent()
 {
-    //demoComponent = std::make_unique<GradientMeshDemo>();
+    setOpaque(true);
+
+    demoComponent = std::make_unique<GradientMeshDemo>();
     //demoComponent = std::make_unique<SpriteBatchDemo>();
-    demoComponent = std::make_unique<BottleDemo>();
+    //demoComponent = std::make_unique<BottleDemo>();
     //demoComponent = std::make_unique<ConicGradientDemo>();
     addAndMakeVisible(demoComponent.get());
     setSize(2048, 1024);

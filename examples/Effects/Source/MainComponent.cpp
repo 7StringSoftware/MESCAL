@@ -1,18 +1,23 @@
 #include "MainComponent.h"
 
-MainComponent::MainComponent() : displayComponent(*this),
-spotSpecularLightingControlComponent(effect.get())
+MainComponent::MainComponent()
 {
-    addAndMakeVisible(displayComponent);
-    addAndMakeVisible(spotSpecularLightingControlComponent);
+    sourceImages.emplace_back(juce::ImageFileFormat::loadFrom(BinaryData::VanGoghstarry_night_jpg, BinaryData::VanGoghstarry_night_jpgSize));
 
-    spotSpecularLightingControlComponent.onEffectChange = [this]
-        {
-            updateEffect();
-        };
+    juce::Rectangle<int> maxBounds;
+    for (auto const& sourceImage : sourceImages)
+    {
+        maxBounds = maxBounds.getUnion(sourceImage.getBounds());
+    }
+
+    outputImage = juce::Image{ juce::Image::ARGB, maxBounds.getWidth(), maxBounds.getHeight(), true };
+
+    addAndMakeVisible(propertyPanel);
 
     setSize(1024, 1024);
     setRepaintsOnMouseActivity(true);
+
+    updateEffect();
 
     setOpaque(true);
 }
@@ -21,87 +26,96 @@ MainComponent::~MainComponent()
 {
 }
 
-void MainComponent::initEffect()
-{
-    spotSpecularLightingControlComponent.initEffect();
-}
-
 void MainComponent::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::black);
+
+    if (sourceImages.size() == 0)
+        return;
+
+    juce::Rectangle<int> imageArea{ 0, 0, propertyPanel.getX(), getHeight() };
+    int height = getHeight() / sourceImages.size();
+    auto sourceImageArea = imageArea.withWidth(imageArea.getWidth() / 2);
+    for (auto& image : sourceImages)
+    {
+        g.drawImage(image, sourceImageArea.removeFromTop(height).toFloat());
+    }
+
+    if (outputImage.isValid())
+    {
+        juce::Rectangle<int> outputImageArea{ sourceImageArea.getRight(), 0, propertyPanel.getX() - sourceImageArea.getRight(), getHeight() };
+        g.drawImage(outputImage, outputImageArea.toFloat());
+    }
 }
 
 void MainComponent::resized()
 {
-    int controlH = 50;
-    displayComponent.setBounds(getLocalBounds().withTrimmedBottom(controlH));
-    spotSpecularLightingControlComponent.setBounds(getLocalBounds());
+    propertyPanel.setBounds(getLocalBounds().removeFromRight(300).reduced(10));
+}
 
-    auto area = displayComponent.getLocalBounds().reduced(6);
+void MainComponent::buildPropertyPanel()
+{
+    propertyPanel.clear();
+    valueMap.clear();
 
-    input = juce::Image{ juce::Image::PixelFormat::ARGB, area.getWidth(), area.getHeight(), true };
-    //input = juce::ImageFileFormat::loadFrom(BinaryData::A_Sunday_on_La_Grande_Jatte_Georges_Seurat_1884_jpg, BinaryData::A_Sunday_on_La_Grande_Jatte_Georges_Seurat_1884_jpgSize);
-#if 1
+    juce::Array<juce::PropertyComponent*> propertyComponents;
 
+    for (int propertyIndex = 0; propertyIndex < effect->getNumProperties(); ++propertyIndex)
     {
-        juce::Graphics g{ input };
+        auto propertyInfo = effect->getPropertyInfo(propertyIndex);
 
-        g.fillCheckerBoard(getLocalBounds().toFloat(), 20.0f, 20.0f, juce::Colours::darkgrey, juce::Colours::lightgrey.withAlpha(0.1f));
+        if (!propertyInfo.range.has_value())
+            continue;
 
-#if 0
+        switch (propertyInfo.range->index())
         {
-            g.setColour(juce::Colours::darkseagreen.withAlpha(1.0f));
-            juce::Path path;
-            path.addStar(input.getBounds().getCentre().toFloat(), 8, 100.0f, 200.0f);
-            g.fillPath(path);
+        case 0: // Range<int>
+        {
+            break;
         }
 
-        g.setColour(juce::Colours::darkslateblue.withAlpha(1.0f));
-        g.fillEllipse(100.0f, 100.0f, 200.0f, 200.0f);
-
-        g.setColour(juce::Colours::orchid);
-        g.fillRoundedRectangle(juce::Rectangle<float>{ 30.0f, 25.0f, 125.0f, 200.0f }, 30.0f);
-
+        case 1: // Range<float>
         {
-            g.setColour(juce::Colours::coral);
-            juce::Path path;
-            path.addCentredArc(getWidth() * 0.15f, getHeight() * 0.45f, 125.0f, 125.0f, 0.0f, 0.35f * juce::MathConstants<float>::pi, 1.15f * juce::MathConstants<float>::pi, true);
-            g.strokePath(path, juce::PathStrokeType{ 30.0f });
+            auto range = std::get<juce::Range<float>>(*propertyInfo.range);
+            valueMap[propertyIndex] = std::get<float>(propertyInfo.defaultValue);
+            propertyComponents.add(new juce::SliderPropertyComponent{ valueMap[propertyIndex], propertyInfo.name, range.getStart(), range.getEnd(), range.getLength() * 0.001f });
+            break;
         }
-#endif
+
+        case 2: // StringArray
+        {
+            auto strings = std::get<juce::StringArray>(*propertyInfo.range);
+            valueMap[propertyIndex] = std::get<int>(propertyInfo.defaultValue);
+
+            juce::Array<juce::var> varArray;
+            for (auto const& string : strings)
+            {
+                varArray.add(varArray.size());
+            }
+            propertyComponents.add(new juce::ChoicePropertyComponent{ valueMap[propertyIndex], propertyInfo.name, strings, varArray });
+            break;
+        }
+
+        default:
+        {
+            valueMap[propertyIndex] = propertyInfo.name;;
+            propertyComponents.add(new juce::TextPropertyComponent{ valueMap[propertyIndex], propertyInfo.name, propertyInfo.name.length() , false });
+            break;
+        }
+        }
     }
-#endif
 
-    applyEffect();
+    propertyPanel.addSection(effect->getName(), propertyComponents);
 }
 
 void MainComponent::updateEffect()
 {
+    buildPropertyPanel();
     applyEffect();
     repaint();
 }
 
 void MainComponent::applyEffect()
 {
-    if (input.isNull() || input.getBounds().isEmpty())
-    {
-        return;
-    }
-
-    if (output.isNull() || output.getWidth() != input.getWidth() || output.getHeight() != input.getHeight())
-    {
-        output = juce::Image{ juce::Image::PixelFormat::ARGB, input.getWidth(), input.getHeight(), true };
-    }
-
-    effect->applyEffect(input, output, 1.0f, 1.0f);
-}
-
-void MainComponent::DisplayComponent::paint(juce::Graphics& g)
-{
-    g.drawImageWithin(owner.input, 0, 0, getWidth(), getHeight(), juce::RectanglePlacement::centred, false);
-    g.drawImageWithin(owner.output, 0, 0, getWidth(), getHeight(), juce::RectanglePlacement::centred, false);
-    //int x = (getWidth() - owner.input.getWidth()) / 2;
-    //int y = (getHeight() - owner.input.getHeight()) / 2;
-    //g.drawImageAt(owner.input, x, y);
-    //g.drawImageAt(owner.output, x, y);
+    effect->applyEffect(sourceImages.front(), outputImage, 1.0f, 1.0f, true);
 }
