@@ -46,7 +46,6 @@ namespace mescal
             jassert(stops.size() >= 2);
             auto patches = std::vector<D2D1_GRADIENT_MESH_PATCH>{ stops.size() - 1 };
 
-            constexpr float circleApproximationConstant = (-4.0f + 4.0f * juce::MathConstants<float>::sqrt2) / 3.0f;
             float radiusX = owner.bounds.getWidth() * 0.5f;
             float radiusY = owner.bounds.getHeight() * 0.5f;
             juce::Point<float> center{ 0.0f, 0.0f };
@@ -65,15 +64,15 @@ namespace mescal
                 patch.point33 = toPOINT_2F({ owner.bounds.getCentre() });
                 patch.point30 = patch.point33;
 
-                patch.color00 = { stop.color.red, stop.color.green, stop.color.blue, stop.color.alpha };
-                patch.color03 = { nextStop.color.red, nextStop.color.green, nextStop.color.blue, nextStop.color.alpha };
+                patch.color00 = { stop.color128.red, stop.color128.green, stop.color128.blue, stop.color128.alpha };
+                patch.color03 = { nextStop.color128.red, nextStop.color128.green, nextStop.color128.blue, nextStop.color128.alpha };
                 patch.color33 = patch.color03;
                 patch.color30 = patch.color00;
 
                 auto arcAngle = nextStop.angle - stop.angle;
-                auto normalizedArcAngle = arcAngle / juce::MathConstants<float>::halfPi;
-                auto cp0 = p1.getPointOnCircumference(circleApproximationConstant * normalizedArcAngle, stop.angle + juce::MathConstants<float>::halfPi);
-                auto cp1 = p2.getPointOnCircumference(circleApproximationConstant * normalizedArcAngle, nextStop.angle - juce::MathConstants<float>::halfPi);
+                auto controlPointDistance = 4.0f * std::tan(arcAngle * 0.25f) / 3.0f;
+                auto cp0 = p1.getPointOnCircumference(controlPointDistance, stop.angle + juce::MathConstants<float>::halfPi);
+                auto cp1 = p2.getPointOnCircumference(controlPointDistance, nextStop.angle - juce::MathConstants<float>::halfPi);
 
                 patch.point01 = toPOINT_2F(cp0.transformedBy(transform));
                 patch.point02 = toPOINT_2F(cp1.transformedBy(transform));
@@ -143,15 +142,14 @@ namespace mescal
     {
     }
 
-
     void ConicGradient::clearStops()
     {
         stops.clear();
     }
 
-    void ConicGradient::addStop(float angle, juce::Colour color)
+    void ConicGradient::addStop(float angle, Color128 color128)
     {
-        stops.emplace_back(Stop128{ angle, Color128{ color } });
+        stops.emplace_back(Stop128{ angle, color128 });
         sortStops();
     }
 
@@ -159,7 +157,7 @@ namespace mescal
     {
         for (auto const& newStop : newStops)
         {
-            stops.emplace_back(Stop128{ newStop.angle, Color128{ newStop.color } });
+            stops.emplace_back(Stop128{ newStop.angle, Color128{ newStop.color128 } });
         }
         sortStops();
     }
@@ -185,6 +183,11 @@ namespace mescal
         {
             return lhs.angle < rhs.angle;
         });
+    }
+
+    void ConicGradient::setStopAngle(size_t index, float angle)
+    {
+        stops[index].angle = angle;
     }
 
 } // namespace mescal

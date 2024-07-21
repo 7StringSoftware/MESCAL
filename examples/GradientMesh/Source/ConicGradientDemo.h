@@ -6,19 +6,40 @@ class ConicGradientDemo : public juce::Component
 {
 public:
     ConicGradientDemo();
-    ~ConicGradientDemo() override;
 
     void paint(juce::Graphics&) override;
     void resized() override;
 
+
 private:
     juce::Rectangle<int> conicGradientBounds;
-
     juce::Image image;
     mescal::ConicGradient conicGradient;
 
+    struct ArcSlider : public juce::Component
+    {
+        ArcSlider(ConicGradientDemo& owner_, size_t index_);
+
+        void setAngle(float angle);
+        void paint(juce::Graphics& g) override;
+        void resized() override;
+        void mouseDown(const juce::MouseEvent& e) override;
+        void mouseDrag(const juce::MouseEvent& e) override;
+
+        ConicGradientDemo& owner;
+        size_t index;
+        float dragRadius = 0.0f;
+        float mouseDragStartAngle = 0.0f;
+        float startAngle = 0.0f;
+        juce::Range<float> arcRange;
+        std::function<void(size_t, float)> onChange;
+    };
+
+    std::vector <std::unique_ptr<ArcSlider>> sliders;
+
     void updateConicGradient();
-    void paintMesh(juce::Graphics& g);
+    void updateSliders();
+    void paintConicGradient(juce::Graphics& g);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ConicGradientDemo)
 };
