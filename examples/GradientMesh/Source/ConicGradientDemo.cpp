@@ -192,7 +192,7 @@ void ConicGradientDemo::paintConicGradient(juce::Graphics& g)
     if (conicGradientBounds.isEmpty())
         return;
 
-    if (image.isNull() || image.getWidth() != getWidth() || image.getHeight() != getHeight())
+    if (image.isNull() || image.getWidth() != conicGradientBounds.getWidth() || image.getHeight() != conicGradientBounds.getHeight())
         image = juce::Image(juce::Image::ARGB, conicGradientBounds.getWidth(), conicGradientBounds.getHeight(), true);
 
     conicGradient.draw(image, {});
