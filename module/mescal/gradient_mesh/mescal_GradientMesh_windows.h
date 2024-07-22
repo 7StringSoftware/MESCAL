@@ -134,20 +134,21 @@ public:
 
         void setColors(juce::Colour color)
         {
-            northwestColor = color;
-            southwestColor = color;
-            southeastColor = color;
-            northeastColor = color;
+            Color128 color128{ color };
+            northwestColor = color128;
+            southwestColor = color128;
+            southeastColor = color128;
+            northeastColor = color128;
         }
 
         int const row, column;
         juce::Point<float> position;
         std::weak_ptr<Halfedge> northHalfedge, eastHalfedge, southHalfedge, westHalfedge;
 
-        juce::Colour northwestColor;
-        juce::Colour southwestColor;
-        juce::Colour southeastColor;
-        juce::Colour northeastColor;
+        Color128 northwestColor;
+        Color128 southwestColor;
+        Color128 southeastColor;
+        Color128 northeastColor;
     };
 
     struct Halfedge

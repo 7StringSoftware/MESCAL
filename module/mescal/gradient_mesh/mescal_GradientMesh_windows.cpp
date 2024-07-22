@@ -205,6 +205,11 @@ namespace mescal
                 return D2D1_POINT_2F{ p.x, p.y };
             };
 
+        auto toCOLOR_F = [](Color128 color)
+            {
+                return D2D1::ColorF(color.red, color.green, color.blue, color.alpha);
+            };
+
         std::vector<D2D1_GRADIENT_MESH_PATCH> d2dPatches;
         d2dPatches.reserve(numRows * numColumns);
         for (int row = 0; row < numRows - 1; ++row)
@@ -265,10 +270,10 @@ namespace mescal
                         d2dPatch.leftEdgeMode = D2D1_PATCH_EDGE_MODE_ANTIALIASED;
                 }
 
-                d2dPatch.color00 = juce::D2DUtilities::toCOLOR_F(northwestVertex->southeastColor);
-                d2dPatch.color03 = juce::D2DUtilities::toCOLOR_F(northeastVertex->southwestColor);
-                d2dPatch.color30 = juce::D2DUtilities::toCOLOR_F(southwestVertex->northeastColor);
-                d2dPatch.color33 = juce::D2DUtilities::toCOLOR_F(southeastVertex->northwestColor);
+                d2dPatch.color00 = toCOLOR_F(northwestVertex->southeastColor);
+                d2dPatch.color03 = toCOLOR_F(northeastVertex->southwestColor);
+                d2dPatch.color30 = toCOLOR_F(southwestVertex->northeastColor);
+                d2dPatch.color33 = toCOLOR_F(southeastVertex->northwestColor);
             }
         }
 
