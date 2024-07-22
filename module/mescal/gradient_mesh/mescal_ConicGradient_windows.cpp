@@ -36,7 +36,7 @@ namespace mescal
             }
         }
 
-        void draw(juce::Span<Stop128> stops, juce::Image image, juce::AffineTransform transform)
+        void draw(juce::Span<Stop> stops, juce::Image image, juce::AffineTransform transform)
         {
             auto toPOINT_2F = [](juce::Point<float> p)
                 {
@@ -149,7 +149,7 @@ namespace mescal
 
     void ConicGradient::addStop(float angle, Color128 color128)
     {
-        stops.emplace_back(Stop128{ angle, color128 });
+        stops.emplace_back(Stop{ angle, color128 });
         sortStops();
     }
 
@@ -157,7 +157,7 @@ namespace mescal
     {
         for (auto const& newStop : newStops)
         {
-            stops.emplace_back(Stop128{ newStop.angle, Color128{ newStop.color128 } });
+            stops.emplace_back(Stop{ newStop.angle, Color128{ newStop.color128 } });
         }
         sortStops();
     }
@@ -180,9 +180,9 @@ namespace mescal
     void ConicGradient::sortStops()
     {
         std::sort(stops.begin(), stops.end(), [](auto const& lhs, auto const& rhs)
-        {
-            return lhs.angle < rhs.angle;
-        });
+            {
+                return lhs.angle < rhs.angle;
+            });
     }
 
     void ConicGradient::setStopAngle(size_t index, float angle)

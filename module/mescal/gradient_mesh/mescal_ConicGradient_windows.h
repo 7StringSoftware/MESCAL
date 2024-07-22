@@ -12,24 +12,24 @@ public:
     struct Stop
     {
         float angle;
-        juce::Colour color;
+        mescal::Color128 color128;
     };
 
     void clearStops();
-    void addStop(float angle, juce::Colour color);
+    void addStop(float angle, Color128 color128);
     void addStops(juce::Span<Stop> newStops);
+    auto const& getStops() const noexcept
+    {
+        return stops;
+    }
+    void setStopAngle(size_t index, float angle);
 
     void draw(juce::Image image, juce::AffineTransform transform);
 
 private:
     juce::Rectangle<float> bounds;
 
-    struct Stop128
-    {
-        float angle;
-        mescal::Color128 color;
-    };
-    std::vector<Stop128> stops;
+    std::vector<Stop> stops;
 
     void sortStops();
 

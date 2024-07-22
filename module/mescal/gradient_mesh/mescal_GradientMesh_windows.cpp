@@ -318,6 +318,12 @@ namespace mescal
         return                 Color128{ brightness, x, brightness * (1.0f - saturation * f), alpha, };
     }
 
+    Color128 Color128::grayLevel(float level) noexcept
+    {
+        return Color128{ level, level, level, 1.0f };
+    }
+
+
 #if 0
     void GradientMesh::makeConicGradient(juce::Rectangle<float> bounds)
     {

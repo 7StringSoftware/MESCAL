@@ -102,6 +102,7 @@ struct Color128
     }
 
     static Color128 fromHSV(float hue, float saturation, float value, float alpha) noexcept;
+    static Color128 grayLevel(float level) noexcept;
 };
 
 class GradientMesh
