@@ -14,24 +14,30 @@ static float normalizeAngle(float angle)
 
 ConicGradientDemo::ConicGradientDemo()
 {
-    setGradientStops(royGBiv);
-
-    createSliders();
-    updateSliders();
-
     presetCombo.addItem("Roy G. Biv", royGBiv);
     presetCombo.addItem("HSV", hsv);
     presetCombo.addItem("Grayscale", grayscale);
     addAndMakeVisible(presetCombo);
     presetCombo.onChange = [this]()
-    {
-        setGradientStops(static_cast<PresetType>(presetCombo.getSelectedId()));
-        createSliders();
-        resized();
-        updateSliders();
-        repaint();
-    };
+        {
+            setGradientStops(static_cast<PresetType>(presetCombo.getSelectedId()), static_cast<Direction>(directionCombo.getSelectedId()));
+            createSliders();
+            resized();
+            updateSliders();
+            repaint();
+        };
     presetCombo.setSelectedId(royGBiv, juce::dontSendNotification);
+
+    directionCombo.addItem("Clockwise", clockwise);
+    directionCombo.addItem("Counterclockwise", counterclockwise);
+    addAndMakeVisible(directionCombo);
+    directionCombo.onChange = presetCombo.onChange;
+    directionCombo.setSelectedId(clockwise, juce::dontSendNotification);
+
+    setGradientStops(royGBiv, clockwise);
+
+    createSliders();
+    updateSliders();
 }
 
 void ConicGradientDemo::createSliders()
@@ -84,10 +90,13 @@ void ConicGradientDemo::resized()
     int w = 200;
     int h = 34;
     presetCombo.setBounds(getWidth() - w - 10, 10, w, h);
+    directionCombo.setBounds(presetCombo.getBounds().translated(0, h + 10));
 }
 
-void ConicGradientDemo::setGradientStops(PresetType presetType)
+void ConicGradientDemo::setGradientStops(PresetType presetType, Direction direction)
 {
+    float sign = direction == clockwise ? 1.0f : -1.0f;
+
     conicGradient.clearStops();
 
     switch (presetType)
@@ -107,14 +116,14 @@ void ConicGradientDemo::setGradientStops(PresetType presetType)
 
         float startAngle = 0.0f;
         float angle = startAngle;
-        float angleStep = -juce::MathConstants<float>::twoPi / (float)(colors.size() - 1);
+        float angleStep = sign * juce::MathConstants<float>::twoPi / (float)(colors.size() - 1);
         for (auto& color128 : colors)
         {
             conicGradient.addStop(angle, color128);
             angle += angleStep;
         }
 
-        conicGradient.setStopAngle(colors.size() - 1, -(startAngle + juce::MathConstants<float>::twoPi));
+        conicGradient.setStopAngle(colors.size() - 1, sign * (startAngle + juce::MathConstants<float>::twoPi));
         break;
     };
 
@@ -122,7 +131,7 @@ void ConicGradientDemo::setGradientStops(PresetType presetType)
     {
         for (float hue = 0.0f; hue <= 1.0f; hue += 0.0625f)
         {
-            conicGradient.addStop(hue * juce::MathConstants<float>::twoPi, mescal::Color128::fromHSV(hue, 1.0f, 1.0f, 1.0f));
+            conicGradient.addStop(sign * hue * juce::MathConstants<float>::twoPi, mescal::Color128::fromHSV(hue, 1.0f, 1.0f, 1.0f));
         }
         break;
     }
@@ -131,11 +140,11 @@ void ConicGradientDemo::setGradientStops(PresetType presetType)
     {
         for (float level = 0.0f; level <= 1.0f; level += 0.25f)
         {
-            conicGradient.addStop(level * juce::MathConstants<float>::twoPi, mescal::Color128::grayLevel(level));
+            conicGradient.addStop(sign * level * juce::MathConstants<float>::twoPi, mescal::Color128::grayLevel(level));
         }
         break;
     }
-}
+    }
 }
 
 void ConicGradientDemo::updateSliders()

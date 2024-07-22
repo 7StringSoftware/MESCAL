@@ -18,6 +18,7 @@ private:
     juce::Image image;
     mescal::ConicGradient conicGradient;
     juce::ComboBox presetCombo;
+    juce::ComboBox directionCombo;
 
     enum PresetType
     {
@@ -26,7 +27,13 @@ private:
         grayscale
     };
 
-    void setGradientStops(PresetType presetType);
+    enum Direction
+    {
+        clockwise = 1,
+        counterclockwise
+    };
+
+    void setGradientStops(PresetType presetType, Direction direction);
 
     struct ArcSlider : public juce::Component
     {
