@@ -7,6 +7,8 @@ class ConicGradientDemo : public juce::Component
 public:
     ConicGradientDemo();
 
+    void createSliders();
+
     void paint(juce::Graphics&) override;
     void resized() override;
 
@@ -15,6 +17,16 @@ private:
     juce::Rectangle<int> conicGradientBounds;
     juce::Image image;
     mescal::ConicGradient conicGradient;
+    juce::ComboBox presetCombo;
+
+    enum PresetType
+    {
+        royGBiv = 1,
+        hsv,
+        grayscale
+    };
+
+    void setGradientStops(PresetType presetType);
 
     struct ArcSlider : public juce::Component
     {
@@ -22,7 +34,6 @@ private:
 
         void setAngle(float angle);
         void paint(juce::Graphics& g) override;
-        void resized() override;
         void mouseDown(const juce::MouseEvent& e) override;
         void mouseDrag(const juce::MouseEvent& e) override;
 
@@ -37,7 +48,6 @@ private:
 
     std::vector <std::unique_ptr<ArcSlider>> sliders;
 
-    void updateConicGradient();
     void updateSliders();
     void paintConicGradient(juce::Graphics& g);
 

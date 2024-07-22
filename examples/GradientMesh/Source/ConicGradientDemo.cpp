@@ -14,7 +14,29 @@ static float normalizeAngle(float angle)
 
 ConicGradientDemo::ConicGradientDemo()
 {
-    updateConicGradient();
+    setGradientStops(royGBiv);
+
+    createSliders();
+    updateSliders();
+
+    presetCombo.addItem("Roy G. Biv", royGBiv);
+    presetCombo.addItem("HSV", hsv);
+    presetCombo.addItem("Grayscale", grayscale);
+    addAndMakeVisible(presetCombo);
+    presetCombo.onChange = [this]()
+    {
+        setGradientStops(static_cast<PresetType>(presetCombo.getSelectedId()));
+        createSliders();
+        resized();
+        updateSliders();
+        repaint();
+    };
+    presetCombo.setSelectedId(royGBiv, juce::dontSendNotification);
+}
+
+void ConicGradientDemo::createSliders()
+{
+    sliders.clear();
 
     auto const& stops = conicGradient.getStops();
     for (size_t index = 0; index < stops.size(); ++index)
@@ -33,8 +55,6 @@ ConicGradientDemo::ConicGradientDemo()
 
         sliders.push_back(std::move(slider));
     }
-
-    updateSliders();
 }
 
 void ConicGradientDemo::paint(juce::Graphics& g)
@@ -60,33 +80,62 @@ void ConicGradientDemo::resized()
     }
 
     updateSliders();
+
+    int w = 200;
+    int h = 34;
+    presetCombo.setBounds(getWidth() - w - 10, 10, w, h);
 }
 
-void ConicGradientDemo::updateConicGradient()
+void ConicGradientDemo::setGradientStops(PresetType presetType)
 {
-    std::array<juce::Colour, 7> colors
-    {
-        juce::Colours::red,
-        juce::Colours::orange,
-        juce::Colours::yellow,
-        juce::Colours::green,
-        juce::Colours::blue,
-        juce::Colours::indigo,
-        juce::Colours::violet
-    };
-
     conicGradient.clearStops();
 
-    float angle = juce::MathConstants<float>::twoPi * 0.0f;
-    float angleStep = juce::MathConstants<float>::twoPi / (float)(colors.size() - 1);
-    //float gray = 0.0f;
-    for (auto& color128 : colors)
+    switch (presetType)
     {
-        //conicGradient.addStop(angle, { gray, gray, gray, 1.0f });
-        //gray += 1.0f / (float)(colors.size() - 1);
-        conicGradient.addStop(angle, color128);
-        angle += angleStep;
+    case royGBiv:
+    {
+        std::array<juce::Colour, 7> colors
+        {
+            juce::Colours::red,
+            juce::Colours::orange,
+            juce::Colours::yellow,
+            juce::Colours::green,
+            juce::Colours::blue,
+            juce::Colours::indigo,
+            juce::Colours::violet
+        };
+
+        float startAngle = 0.0f;
+        float angle = startAngle;
+        float angleStep = -juce::MathConstants<float>::twoPi / (float)(colors.size() - 1);
+        for (auto& color128 : colors)
+        {
+            conicGradient.addStop(angle, color128);
+            angle += angleStep;
+        }
+
+        conicGradient.setStopAngle(colors.size() - 1, -(startAngle + juce::MathConstants<float>::twoPi));
+        break;
+    };
+
+    case hsv:
+    {
+        for (float hue = 0.0f; hue <= 1.0f; hue += 0.0625f)
+        {
+            conicGradient.addStop(hue * juce::MathConstants<float>::twoPi, mescal::Color128::fromHSV(hue, 1.0f, 1.0f, 1.0f));
+        }
+        break;
     }
+
+    case grayscale:
+    {
+        for (float level = 0.0f; level <= 1.0f; level += 0.25f)
+        {
+            conicGradient.addStop(level * juce::MathConstants<float>::twoPi, mescal::Color128::grayLevel(level));
+        }
+        break;
+    }
+}
 }
 
 void ConicGradientDemo::updateSliders()
@@ -145,6 +194,7 @@ ConicGradientDemo::ArcSlider::ArcSlider(ConicGradientDemo& owner_, size_t index_
     owner(owner_),
     index(index_)
 {
+    setRepaintsOnMouseActivity(true);
     setSize(30, 30);
 }
 
@@ -167,17 +217,13 @@ void ConicGradientDemo::ArcSlider::setAngle(float newAngle)
 
 void ConicGradientDemo::ArcSlider::paint(juce::Graphics& g)
 {
+    float reduction = isMouseOver() || isMouseButtonDown(false) ? 0.0f : 4.0f;
     auto const& stop = owner.conicGradient.getStops()[index];
     auto c = stop.color128.toColour();
     g.setColour(c.contrasting());
-    g.fillEllipse(getLocalBounds().toFloat());
+    g.fillEllipse(getLocalBounds().toFloat().reduced(reduction));
     g.setColour(c);
-    g.fillEllipse(getLocalBounds().toFloat().reduced(2.0f));
-}
-
-void ConicGradientDemo::ArcSlider::resized()
-{
-
+    g.fillEllipse(getLocalBounds().toFloat().reduced(reduction + 2.0f));
 }
 
 void ConicGradientDemo::ArcSlider::mouseDown(const juce::MouseEvent& e)
