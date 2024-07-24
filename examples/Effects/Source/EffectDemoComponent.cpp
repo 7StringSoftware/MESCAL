@@ -21,10 +21,17 @@ void EffectDemoComponent::paint(juce::Graphics& g)
     {
         g.drawImage(image, sourceImageArea.removeFromTop(height).toFloat());
     }
+
+    effect->applyEffect(sourceImages.front(), outputImage, 1.0f, 1.0f, true);
+
+    auto outputImageArea = imageArea.removeFromRight(getWidth() / 2);
+    //g.drawImageAt(outputImage, outputImageArea.getX(), outputImageArea.getY());
 }
 
 void EffectDemoComponent::resized()
 {
     propertyPanel.setBounds(getLocalBounds().removeFromRight(250));
+
+    outputImage = juce::Image{ juce::Image::ARGB, getWidth() / 2, getHeight(), true };
 }
 

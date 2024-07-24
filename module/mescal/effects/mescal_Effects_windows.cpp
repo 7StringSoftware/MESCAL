@@ -12,40 +12,33 @@ namespace mescal
         {
         }
 
-        void createResources(juce::Image& sourceImage, juce::Image& destinationImage)
+        void createResources()
         {
-            if (!adapter || !deviceContext)
-            {
-                if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(sourceImage.getPixelData()))
-                {
-                    if (adapter = pixelData->getAdapter())
-                    {
-                        winrt::com_ptr<ID2D1DeviceContext1> deviceContext1;
-                        if (const auto hr = adapter->direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS,
-                            deviceContext1.put());
-                            FAILED(hr))
-                        {
-                            jassertfalse;
-                            return;
-                        }
+            juce::SharedResourcePointer<juce::DirectX> directX;
 
-                        deviceContext = deviceContext1.as<ID2D1DeviceContext2>();
-                    }
-                }
+            if (!adapter)
+            {
+                adapter = directX->adapters.getDefaultAdapter();
             }
 
-            createEffect();
-
-            outputPixelData = dynamic_cast<juce::Direct2DPixelData*>(destinationImage.getPixelData());
-
-            jassert(outputPixelData && deviceContext);
-        }
-
-        void createEffect()
-        {
-            if (!d2dEffect)
+            if (adapter && !deviceContext)
             {
-                if (auto hr = deviceContext->CreateEffect(*effectGuids[(size_t)effectType], d2dEffect.put()); FAILED(hr))
+                winrt::com_ptr<ID2D1DeviceContext1> deviceContext1;
+                if (const auto hr = adapter->direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS,
+                    deviceContext1.put());
+                    FAILED(hr))
+                {
+                    jassertfalse;
+                    return;
+                }
+
+                deviceContext = deviceContext1.as<ID2D1DeviceContext2>();
+            }
+
+            if (deviceContext && !d2dEffect)
+            {
+                if (const auto hr = deviceContext->CreateEffect(*effectGuids[(size_t)effectType], d2dEffect.put());
+                    FAILED(hr))
                 {
                     jassertfalse;
                 }
@@ -55,53 +48,60 @@ namespace mescal
         void setProperty(int index, const PropertyValue& value)
         {
             if (!d2dEffect)
+                createResources();
+
+            if (!d2dEffect)
                 return;
 
+            if (propertyValues.size() <= index)
+                propertyValues = std::vector<PropertyValue>(d2dEffect->GetPropertyCount());
+               
             propertyValues[index] = value;
 
-            switch (value.index())
+            if (std::holds_alternative<int>(value))
             {
-            case 0: // float
+                d2dEffect->SetValue(index, std::get<int>(value));
+                DBG("setProperty " << index << " (int) " << std::get<int>(value));
+            }
+            else if (std::holds_alternative<float>(value))
             {
                 d2dEffect->SetValue(index, std::get<float>(value));
-                break;
+                DBG("setProperty " << index << " (float) " << std::get<float>(value));
             }
-
-            case 1: // juce::Point<float>
+            else if (std::holds_alternative<juce::Point<float>>(value))
             {
                 auto point = std::get<juce::Point<float>>(value);
-                D2D1_VECTOR_2F v2{ point.x, point.y };
-                d2dEffect->SetValue(index, v2);
-                break;
+                d2dEffect->SetValue(index, D2D1_VECTOR_2F{ point.x, point.y });
+                DBG("setProperty " << index << " Point<float> " << point.toString());
             }
-
-            case 2:
+            else if (std::holds_alternative<juce::Colour>(value))
             {
                 auto color = std::get<juce::Colour>(value);
-                D2D1_VECTOR_4F v{ color.getFloatRed(), color.getFloatGreen(), color.getFloatBlue(), color.getFloatAlpha() };
-                d2dEffect->SetValue(index, v);
-                break;
+                d2dEffect->SetValue(index, D2D1_VECTOR_4F{ color.getFloatRed(), color.getFloatGreen(), color.getFloatBlue(), color.getFloatAlpha() });
+                DBG("setProperty " << index << " Colour " << color.toString());
             }
-
-            case 3: // RGBColor
+            else if (std::holds_alternative<RGBColor>(value))
             {
                 auto rgbColor = std::get<RGBColor>(value);
                 d2dEffect->SetValue(index, D2D1_VECTOR_3F{ rgbColor.r, rgbColor.g, rgbColor.b });
-
-                DBG("setProperty " << index << " " << rgbColor.r << "," << rgbColor.g << "," << rgbColor.b);
-                break;
+                DBG("setProperty " << index << " RGBColor " << rgbColor.r << " " << rgbColor.g << " " << rgbColor.b);
             }
-
-            case 4: // Point3D
+            else if (std::holds_alternative<Point3D>(value))
             {
                 auto point3D = std::get<Point3D>(value);
-                D2D1_VECTOR_3F v3{ point3D.x, point3D.y, point3D.z };
-                d2dEffect->SetValue(index, v3);
+                d2dEffect->SetValue(index, D2D1_VECTOR_3F{ point3D.x, point3D.y, point3D.z });
+                DBG("setProperty " << index << " Point3D " << point3D.x << "',  " << point3D.y << " " << point3D.z);
 
-                DBG("setProperty " << index << " " << point3D.x << "," << point3D.y << "," << point3D.z);
-                break;
             }
-
+            else if (std::holds_alternative<Vector3>(value))
+            {
+                auto vector3 = std::get<Vector3>(value);
+                d2dEffect->SetValue(index, D2D1_VECTOR_3F{ vector3[0], vector3[1], vector3[2] });
+                DBG("setProperty " << index << " Vector3 " << vector3[0] << ", " << vector3[1] << ", " << vector3[2]);
+            }
+            else
+            {
+                jassertfalse;
             }
         }
 
@@ -109,7 +109,6 @@ namespace mescal
         juce::DxgiAdapter::Ptr adapter;
         winrt::com_ptr<ID2D1DeviceContext2> deviceContext;
         winrt::com_ptr<ID2D1Effect> d2dEffect;
-        juce::Direct2DPixelData::Ptr outputPixelData;
 
         static constexpr std::array<GUID const* const, (size_t)Type::numEffectTypes> effectGuids
         {
@@ -134,6 +133,8 @@ namespace mescal
         effectType(other.effectType),
         pimpl(std::make_unique<Pimpl>(other.effectType))
     {
+        pimpl->createResources();
+
         for (size_t index = 0; index < getNumProperties(); ++index)
         {
             auto value = getPropertyInfo(index).defaultValue;
@@ -152,16 +153,12 @@ namespace mescal
 
     size_t Effect::getNumProperties() const noexcept
     {
-        static constexpr std::array<size_t, (size_t)Type::numEffectTypes> numProperties
-        {
-            (size_t)mescal::GaussianBlurProperty::numProperties, // gaussianBlur,
-            (size_t)mescal::SpotSpecularLightingProperty::numProperties,
-            0, 
-            0,
-            0
-        };
+        pimpl->createResources();
 
-        return numProperties[(size_t)effectType];
+        if (pimpl->d2dEffect)
+            return pimpl->d2dEffect->GetPropertyCount();
+
+        return 0;
     }
 
     void Effect::setPropertyValue(int index, const PropertyValue& value)
@@ -189,13 +186,13 @@ namespace mescal
             return;
         }
 
-        pimpl->createResources(sourceImage, outputImage);
+        pimpl->createResources();
         if (!pimpl->deviceContext || !pimpl->adapter || !pimpl->adapter->dxgiAdapter || !pimpl->d2dEffect)
         {
             return;
         }
 
-        auto& outputPixelData = pimpl->outputPixelData;
+        juce::Direct2DPixelData::Ptr outputPixelData = dynamic_cast<juce::Direct2DPixelData*>(outputImage.getPixelData());
         if (!outputPixelData || outputPixelData->width < sourceImage.getWidth() || outputPixelData->height < sourceImage.getHeight())
         {
             outputPixelData = juce::Direct2DPixelData::make(juce::Image::ARGB, sourceImage.getWidth(), sourceImage.getHeight(), true, pimpl->adapter);
@@ -233,7 +230,7 @@ namespace mescal
 
         auto& firstEffect = effects.front();
         auto& pimpl = firstEffect.pimpl;
-        pimpl->createResources(sourceImage, outputImage);
+        pimpl->createResources();
         if (!pimpl->deviceContext || !pimpl->adapter || !pimpl->adapter->dxgiAdapter || !pimpl->d2dEffect)
         {
             return;

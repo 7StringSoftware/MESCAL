@@ -19,12 +19,6 @@
         <FILE id="zE2KJI" name="RippleEffect.hlsl" compile="0" resource="0"
               file="Source/RippleEffect.hlsl"/>
       </GROUP>
-      <GROUP id="{B0EEC4CB-78B8-A0CD-B9D0-25768C77B9A3}" name="Effect UI">
-        <FILE id="wEcTt8" name="SpotSpecularLightingControlComponent.cpp" compile="1"
-              resource="0" file="Source/SpotSpecularLightingControlComponent.cpp"/>
-        <FILE id="zviEU4" name="SpotSpecularLightingControlComponent.h" compile="0"
-              resource="0" file="Source/SpotSpecularLightingControlComponent.h"/>
-      </GROUP>
       <FILE id="pzOnFB" name="EffectDemoComponent.cpp" compile="1" resource="0"
             file="Source/EffectDemoComponent.cpp"/>
       <FILE id="OvlHdk" name="EffectDemoComponent.h" compile="0" resource="0"
@@ -37,6 +31,8 @@
       <FILE id="Gc4QFf" name="MainComponent.cpp" compile="1" resource="0"
             file="Source/MainComponent.cpp"/>
       <FILE id="z8zkXI" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
+      <FILE id="T9kDWI" name="PropertyComponents.h" compile="0" resource="0"
+            file="Source/PropertyComponents.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

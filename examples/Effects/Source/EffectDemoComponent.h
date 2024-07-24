@@ -15,4 +15,5 @@ private:
     juce::PropertyPanel propertyPanel;
 
     std::vector<juce::Image> sourceImages;
+    juce::Image outputImage;
 };
