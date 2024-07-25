@@ -3,14 +3,14 @@
 class EffectPropertyValueComponent : public juce::PropertyComponent
 {
 public:
-    EffectPropertyValueComponent(juce::String propertyName_, int propertyIndex_, mescal::Effect::PropertyValue propertyValue_) :
+    EffectPropertyValueComponent(juce::String propertyName_, size_t propertyIndex_, mescal::Effect::PropertyValue propertyValue_) :
         PropertyComponent(propertyName_),
         propertyIndex(propertyIndex_),
         propertyValue(propertyValue_)
     {
     }
 
-    int const propertyIndex;
+    size_t const propertyIndex;
     mescal::Effect::PropertyValue propertyValue;
     std::function<void()> onChange;
 
@@ -24,7 +24,7 @@ class MultiSliderPropertyComponent : public EffectPropertyValueComponent
 {
 public:
     MultiSliderPropertyComponent(const juce::String& propertyName_,
-        int propertyIndex_,
+        size_t propertyIndex_,
         mescal::Effect::PropertyValue propertyValue_,
         juce::StringArray const& sliderNames_,
         juce::Range<float> sliderRange_) :

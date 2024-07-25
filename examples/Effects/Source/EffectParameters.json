@@ -1,0 +1,110 @@
+{
+  "Effects" :
+    [
+    {
+      "Name": "Gaussian Blur",
+      "GUID": "0x1feb6d69, 0x2fe6, 0x4ac9, 0x8c, 0x58, 0x1d, 0x7f, 0x93, 0xe7, 0xa6, 0xa5",
+      "Properties": [
+        {
+          "Name": "Standard deviation",
+          "Type": "Float",
+          "DefaultValue": 3.0,
+          "Range": {
+            "Min": 0.0,
+            "Max": 100.0
+          }
+        },
+        {
+          "Name": "Optimization mode",
+          "Type": "Enum",
+          "DefaultValue": 1,
+          "Values": [ "Speed", "Balanced", "Quality" ]
+        },
+        {
+          "name": "Border mode",
+          "Type": "Enum",
+          "DefaultValue": 1,
+          "Values": [ "Soft", "Hard" ]
+        }
+      ]
+    },
+
+    {
+      "Name": "Spot Specular Lighting",
+      "GUID": "0xedae421e, 0x7654, 0x4a37, 0x9d, 0xb8, 0x71, 0xac, 0xc1, 0xbe, 0xb3, 0xc1",
+      "Properties": [
+        {
+          "Name": "Light position",
+          "Type": "Point3D",
+          "DefaultValue": [ 0.0, 0.0, 0.0 ],
+        },
+        {
+          "Name": "Focus point position",
+          "Type": "Point3D",
+          "DefaultValue": [ 0.0, 0.0, 0.0 ]
+        },
+        {
+          "Name": "Focus",
+          "Type": "Float",
+          "DefaultValue": 1.0,
+          "Range": {
+            "Min": 0.0,
+            "Max": 100.0
+          }
+        },
+        {
+          "Name": "Limiting cone angle",
+          "Type": "Float",
+          "DefaultValue": 90.0,
+          "Range": {
+            "Min": 0.0,
+            "Max": 90.0
+          }
+        },
+        {
+          "Name": "Specular exponent",
+          "Type": "Float",
+          "DefaultValue": 1.0,
+          "Range": {
+            "Min": 0.0,
+            "Max": 128.0
+          }
+        },
+        {
+          "Name": "Specular constant",
+          "Type": "Float",
+          "DefaultValue": 1.0,
+          "Range": {
+            "Min": 0.0,
+            "Max": 10000.0
+          }
+        },
+        {
+          "Name": "Surface scale",
+          "Type": "Float",
+          "DefaultValue": 1.0,
+          "Range": {
+            "Min": 0.0,
+            "Max": 10000.0
+          }
+        },
+        {
+          "Name": "Light color",
+          "Type": "Color",
+          "DefaultValue": [ 1.0, 1.0, 1.0 ]
+        },
+        {
+          "Name": "Kernel unit length",
+          "Type": "Vector2",
+          "DefaultValue": [ 1.0, 1.0 ]
+        },
+        {
+          "Name": "Scale mode",
+          "Type": "enum",
+          "DefaultValue": 1,
+          "Values": [ "Nearest neighbor", "Linear", "Cubic", "Multi-sample linear", "Anisotropic", "High-quality cubic" ]
+        }
+      ]
+    }
+  ]
+}

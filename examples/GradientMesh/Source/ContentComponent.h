@@ -10,6 +10,7 @@ public:
     ~ContentComponent() override = default;
 
     void resized() override;
+    void paint(juce::Graphics&) override {}
 
 private:
     std::unique_ptr<juce::Component> demoComponent;

@@ -40,5 +40,5 @@
 #include "gradient_mesh/mescal_ConicGradient_windows.cpp"
 #include "sprite_batch/mescal_SpriteBatch_windows.cpp"
 #include "effects/mescal_Effects_windows.cpp"
-#include "effects/mescal_EffectPropertyInfo_windows.cpp"
+#include "effects/mescal_EffectProperties_windows.cpp"
 //#include "effects/mescal_CustomEffect_windows.cpp"

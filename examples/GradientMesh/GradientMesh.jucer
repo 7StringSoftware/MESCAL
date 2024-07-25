@@ -25,6 +25,10 @@
               file="Source/GradientMeshDemo.cpp"/>
         <FILE id="TtcuWW" name="GradientMeshDemo.h" compile="0" resource="0"
               file="Source/GradientMeshDemo.h"/>
+        <FILE id="jNHqhE" name="GradientMeshEditor.cpp" compile="1" resource="0"
+              file="Source/GradientMeshEditor.cpp"/>
+        <FILE id="JkJ1s5" name="GradientMeshEditor.h" compile="0" resource="0"
+              file="Source/GradientMeshEditor.h"/>
         <FILE id="qdr3LL" name="SpriteBatchDemo.cpp" compile="1" resource="0"
               file="Source/SpriteBatchDemo.cpp"/>
         <FILE id="AzWtGk" name="SpriteBatchDemo.h" compile="0" resource="0"

@@ -50,13 +50,8 @@ namespace mescal
             if (!d2dEffect)
                 createResources();
 
-            if (!d2dEffect)
+            if (!d2dEffect || properties.size() < index)
                 return;
-
-            if (propertyValues.size() <= index)
-                propertyValues = std::vector<PropertyValue>(d2dEffect->GetPropertyCount());
-               
-            propertyValues[index] = value;
 
             if (std::holds_alternative<int>(value))
             {
@@ -119,7 +114,7 @@ namespace mescal
             &CLSID_D2D13DPerspectiveTransform
         };
 
-        std::vector<PropertyValue> propertyValues;
+        std::vector <Effect::Property> properties;
     };
 
 
@@ -127,6 +122,9 @@ namespace mescal
         effectType(effectType_),
         pimpl(std::make_unique<Pimpl>(effectType_))
     {
+        pimpl->createResources();
+
+        initProperties();
     }
 
     Effect::Effect(const Effect& other) :
@@ -135,11 +133,7 @@ namespace mescal
     {
         pimpl->createResources();
 
-        for (size_t index = 0; index < getNumProperties(); ++index)
-        {
-            auto value = getPropertyInfo(index).defaultValue;
-            pimpl->propertyValues.emplace_back(value);
-        }
+        initProperties();
     }
 
     Effect::~Effect()
@@ -151,24 +145,14 @@ namespace mescal
         return "Effect";
     }
 
-    size_t Effect::getNumProperties() const noexcept
+    const std::vector<Effect::Property>& Effect::getProperties() const noexcept
     {
-        pimpl->createResources();
-
-        if (pimpl->d2dEffect)
-            return pimpl->d2dEffect->GetPropertyCount();
-
-        return 0;
+        return pimpl->properties;
     }
 
     void Effect::setPropertyValue(int index, const PropertyValue& value)
     {
         pimpl->setProperty(index, value);
-    }
-
-    const Effect::PropertyValue& Effect::getPropertyValue(int index)
-    {
-        return pimpl->propertyValues[index];
     }
 
     void Effect::applyEffect(juce::Image& sourceImage, juce::Graphics& destContext, float scaleFactor, float alpha)
@@ -199,13 +183,6 @@ namespace mescal
         }
 
         pimpl->d2dEffect->SetInput(0, sourcePixelData->getAdapterD2D1Bitmap());
-
-        uint32_t propertyIndex = 0;
-        for (auto const& value : pimpl->propertyValues)
-        {
-            pimpl->setProperty(propertyIndex, value);
-            propertyIndex++;
-        }
 
         pimpl->deviceContext->SetTarget(outputPixelData->getAdapterD2D1Bitmap());
         pimpl->deviceContext->BeginDraw();
@@ -248,13 +225,6 @@ namespace mescal
                 {
                     jassertfalse;
                 }
-            }
-
-            uint32_t propertyIndex = 0;
-            for (auto const& value : pimpl->propertyValues)
-            {
-                pimpl->setProperty(propertyIndex, value);
-                propertyIndex++;
             }
 
             effect.pimpl->d2dEffect->SetInputEffect(0, previousEffect.get());

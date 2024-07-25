@@ -13,7 +13,8 @@ public:
     void resized() override;
 
 private:
-    std::unique_ptr<mescal::Effect> effect = std::make_unique<mescal::Effect>(mescal::Effect::Type::shadow);
+    mescal::JSONObject effectProperties;
+    std::unique_ptr<mescal::Effect> effect = std::make_unique<mescal::Effect>(mescal::Effect::Type::gaussianBlur);
     juce::PropertyPanel propertyPanel;
 
     std::vector<juce::Image> sourceImages;
