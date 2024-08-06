@@ -88,6 +88,12 @@ namespace mescal
                 DBG("setProperty " << index << " Point3D " << point3D.x << "',  " << point3D.y << " " << point3D.z);
 
             }
+            else if (std::holds_alternative<Vector2>(value))
+            {
+                auto vector2 = std::get<Vector2>(value);
+                d2dEffect->SetValue(index, D2D1_VECTOR_2F{ vector2[0], vector2[1] });
+                DBG("setProperty " << index << " Vector2 " << vector2[0] << ", " << vector2[1]);
+            }
             else if (std::holds_alternative<Vector3>(value))
             {
                 auto vector3 = std::get<Vector3>(value);
