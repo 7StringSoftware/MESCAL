@@ -31,7 +31,6 @@ GradientMeshEditor::GradientMeshEditor()
                 }
             };
     }
-
 }
 
 void GradientMeshEditor::paint(juce::Graphics& g)
@@ -246,6 +245,25 @@ void GradientMeshEditor::VertexComponent::mouseDrag(const juce::MouseEvent& e)
     dragger.dragComponent(this, e, nullptr);
     if (onChange)
         onChange(*this);
+}
+
+void GradientMeshEditor::VertexComponent::mouseUp(const juce::MouseEvent& e)
+{
+    if (!e.mouseWasDraggedSinceMouseDown())
+    {
+        if (auto v = vertex.lock())
+        {
+            auto content = std::make_unique<ColorCalloutContent>(v->color.toColour());
+            content->setSize(200, 200);
+            content->onChange = [=](juce::Colour color)
+                {
+                    v->color = mescal::Color128{ color };
+                    if (onChange)
+                        onChange(*this);
+                };
+            juce::CallOutBox::launchAsynchronously(std::move(content), getScreenBounds(), nullptr);
+        }
+    }
 }
 
 void GradientMeshEditor::VertexComponent::paint(juce::Graphics& g)

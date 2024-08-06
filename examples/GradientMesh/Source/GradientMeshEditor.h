@@ -27,6 +27,7 @@ private:
     {
         void mouseDown(const juce::MouseEvent& e) override;
         void mouseDrag(const juce::MouseEvent& e) override;
+        void mouseUp(const juce::MouseEvent& e) override;
         void paint(juce::Graphics& g) override;
 
         juce::ComponentDragger dragger;
@@ -46,6 +47,31 @@ private:
         juce::Path path;
         bool selected = false;
         std::function<void(PatchComponent*)> onSelect;
+    };
+
+    struct ColorCalloutContent : public juce::ChangeListener, public juce::Component
+    {
+        ColorCalloutContent(juce::Colour color) :
+            colorSelector(juce::ColourSelector::showColourAtTop | juce::ColourSelector::showSliders | juce::ColourSelector::showColourspace)
+        {
+            colorSelector.setCurrentColour(color);
+            colorSelector.addChangeListener(this);
+            addAndMakeVisible(colorSelector);
+        }
+
+        void resized() override
+        {
+            colorSelector.setBounds(getLocalBounds());
+        }
+
+        void changeListenerCallback(juce::ChangeBroadcaster*) override
+        {
+            if (onChange)
+                onChange(colorSelector.getCurrentColour());
+        }
+
+        juce::ColourSelector colorSelector;
+        std::function<void(juce::Colour)> onChange;
     };
 
     int numRows = 4;
