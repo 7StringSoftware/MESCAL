@@ -108,14 +108,19 @@ struct Color128
 class GradientMesh
 {
 public:
-    GradientMesh(int numRows_, int numColumns_);
+    GradientMesh(int numRows_, int numColumns_, std::optional<juce::Rectangle<float>> bounds = {});
     GradientMesh() = default;
     ~GradientMesh();
 
-    struct Halfedge;
+    enum class Placement
+    {
+        top, left, bottom, right
+    };
+
     struct Vertex
     {
-        Vertex(int row_, int column_, juce::Point<float> position_) :
+        Vertex(GradientMesh& owner_, int row_, int column_, juce::Point<float> position_) :
+            owner(owner_),
             row(row_), column(column_),
             position(position_)
         {
@@ -126,39 +131,23 @@ public:
             return juce::approximatelyEqual(position.x, other.position.x) && juce::approximatelyEqual(position.y, other.position.y);
         }
 
-        void configure(juce::Point<float> position_, juce::Colour color)
-        {
-            position = position_;
-            setColors(color);
-        }
+        std::shared_ptr<Vertex> getAdjacentVertex(Placement placement) const;
 
-        void setColors(juce::Colour color)
-        {
-            Color128 color128{ color };
-            northwestColor = color128;
-            southwestColor = color128;
-            southeastColor = color128;
-            northeastColor = color128;
-        }
-
+        GradientMesh& owner;
         int const row, column;
         juce::Point<float> position;
-        std::weak_ptr<Halfedge> northHalfedge, eastHalfedge, southHalfedge, westHalfedge;
+        Color128 color;
 
-        Color128 northwestColor;
-        Color128 southwestColor;
-        Color128 southeastColor;
-        Color128 northeastColor;
-    };
+        struct BezierControlPoints
+        {
+            std::optional<juce::Point<float>> topControlPoint;
+            std::optional<juce::Point<float>> leftControlPoint;
+            std::optional<juce::Point<float>> bottomControlPoint;
+            std::optional<juce::Point<float>> rightControlPoint;
 
-    struct Halfedge
-    {
-        std::weak_ptr<Vertex> tail, head;
-        std::weak_ptr<Halfedge> twin;
-
-        std::optional<std::pair<juce::Point<float>, juce::Point<float>>> bezierControlPoints;
-
-        bool antialiasing = false;
+            std::optional<juce::Point<float>> getControlPoint(Placement placement) const;
+            void setControlPoint(Placement placement, juce::Point<float> point);
+        } bezier;
     };
 
     int getNumRows() const
@@ -171,25 +160,26 @@ public:
         return numColumns;
     }
 
-    const auto& getVertices() const { return vertices; }
-    const auto& getHalfedges() const { return halfedges; }
+    static Placement opposite(Placement placement)
+    {
+        return static_cast<Placement>((static_cast<int>(placement) + 2) % 4);
+    }
+
     std::shared_ptr<Vertex> getVertex(int row, int column);
-    std::shared_ptr<Halfedge> getHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head);
+    auto const& getVertices() const
+    {
+        return vertices;
+    }
 
     void applyTransform(juce::AffineTransform const& transform);
-    void configureVertices(std::function<void(std::shared_ptr<Vertex> vertex)> callback);
 
     void draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor = juce::Colours::transparentBlack);
-
-    void makeConicGradient(juce::Rectangle<float> bounds);
 
 private:
     int const numRows;
     int const numColumns;
-    std::vector<std::shared_ptr<Vertex>> vertices;
-    std::vector<std::shared_ptr<Halfedge>> halfedges;
 
-    std::shared_ptr<Halfedge> addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head);
+    std::vector<std::shared_ptr<Vertex>> vertices;
 
     struct Pimpl;
     std::unique_ptr<Pimpl> pimpl;

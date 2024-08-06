@@ -42,7 +42,7 @@ namespace mescal
     };
 
 
-    GradientMesh::GradientMesh(int numRows_, int numColumns_) :
+    GradientMesh::GradientMesh(int numRows_, int numColumns_, std::optional<juce::Rectangle<float>> bounds) :
         pimpl(std::make_unique<Pimpl>(*this)),
         numRows(numRows_),
         numColumns(numColumns_)
@@ -53,69 +53,25 @@ namespace mescal
         float rowHeight = 1.0f;
         float columnWidth = 1.0f;
         auto numVertices = numRows_ * numColumns_;
+        vertices.clear();
         vertices.reserve(numVertices);
+        float startX = 0.0f, startY = 0.0f;
+
+        if (bounds.has_value())
+        {
+            startX = bounds->getX();
+            startY = bounds->getY();
+            rowHeight = bounds->getHeight() / (numRows_ - 1);
+            columnWidth = bounds->getWidth() / (numColumns_ - 1);
+        }
 
         for (int row = 0; row < numRows_; ++row)
         {
             for (int column = 0; column < numColumns_; ++column)
             {
-                auto x = column * columnWidth;
-                auto y = row * rowHeight;
-                vertices.push_back(std::make_shared<Vertex>(row, column, juce::Point<float>{x, y}));
-            }
-        }
-
-        for (int row = 0; row < numRows_ - 1; row += 2)
-        {
-            //
-            // Move right to left across this row and add halfedges
-            //
-            for (int column = numColumns_ - 1; column >= 1; --column)
-            {
-                auto tail = vertices[row * numColumns_ + column];
-                auto head = vertices[row * numColumns_ + column - 1];
-                auto halfedge = addHalfedge(tail, head);
-                tail->eastHalfedge = halfedge;
-                head->westHalfedge = halfedge->twin;
-            }
-
-            //
-            // Left to right across next row; add halfedges
-            //
-            for (int column = 0; column < numColumns_ - 1; ++column)
-            {
-                auto tail = vertices[(row + 1) * numColumns_ + column];
-                auto head = vertices[(row + 1) * numColumns_ + column + 1];
-                auto halfedge = addHalfedge(tail, head);
-                tail->westHalfedge = halfedge;
-                head->eastHalfedge = halfedge->twin;
-            }
-        }
-
-        for (int column = 0; column < numColumns_ - 1; column += 2)
-        {
-            //
-            // Add halfedges top to bottom
-            //
-            for (int row = 0; row < numRows_ - 1; ++row)
-            {
-                auto tail = vertices[row * numColumns_ + column];
-                auto head = vertices[(row + 1) * numColumns_ + column];
-                auto halfedge = addHalfedge(tail, head);
-                tail->southHalfedge = halfedge;
-                head->northHalfedge = halfedge->twin;
-            }
-
-            //
-            // Add halfedges bottom to top for the next column
-            //
-            for (int row = numRows_ - 1; row >= 1; --row)
-            {
-                auto tail = vertices[row * numColumns_ + column + 1];
-                auto head = vertices[(row - 1) * numColumns_ + column + 1];
-                auto halfedge = addHalfedge(tail, head);
-                tail->northHalfedge = halfedge;
-                head->southHalfedge = halfedge->twin;
+                auto x = column * columnWidth + startX;
+                auto y = row * rowHeight + startY;
+                vertices.push_back(std::make_shared<Vertex>(*this, row, column, juce::Point<float>{x, y}));
             }
         }
     }
@@ -124,70 +80,85 @@ namespace mescal
     {
     }
 
-    std::shared_ptr<GradientMesh::Halfedge> GradientMesh::addHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head)
-    {
-        auto halfedge = std::make_shared<Halfedge>();
-        halfedge->tail = tail;
-        halfedge->head = head;
-
-        auto twin = std::make_shared<Halfedge>();
-        twin->tail = head;
-        twin->head = tail;
-
-        halfedge->twin = twin;
-        twin->twin = halfedge;
-
-        halfedges.push_back(halfedge);
-        halfedges.push_back(twin);
-
-        return halfedge;
-    }
-
     void GradientMesh::applyTransform([[maybe_unused]] juce::AffineTransform const& transform)
     {
         jassertfalse;
     }
 
-    void GradientMesh::configureVertices(std::function<void(std::shared_ptr<Vertex> vertex)> callback)
-    {
-        jassert(callback);
-
-        for (auto& vertex : vertices)
-        {
-            callback(vertex);
-        }
-    }
-
     std::shared_ptr<GradientMesh::Vertex> GradientMesh::getVertex(int row, int column)
     {
+        if (row < 0 || row >= numRows || column < 0 || column >= numColumns)
+            return {};
+
         return vertices[row * numColumns + column];
     }
 
-    std::shared_ptr<GradientMesh::Halfedge> GradientMesh::getHalfedge(std::shared_ptr<Vertex> tail, std::shared_ptr<Vertex> head)
+    std::shared_ptr<GradientMesh::Vertex> GradientMesh::Vertex::getAdjacentVertex(Placement placement) const
     {
-        if (!tail || !head)
+        switch (placement)
         {
-            return {};
+        case Placement::top:
+            return owner.getVertex(row - 1, column);
+
+        case Placement::left:
+            return owner.getVertex(row, column - 1);
+
+        case Placement::bottom:
+            return owner.getVertex(row + 1, column);
+
+        case Placement::right:
+            return owner.getVertex(row, column + 1);
         }
 
-        std::array<std::weak_ptr<Halfedge>, 4> tailHalfedges
-        {
-            tail->northHalfedge,
-            tail->westHalfedge,
-            tail->southHalfedge,
-            tail->eastHalfedge
-        };
-
-        for (auto& tailHalfedge : tailHalfedges)
-        {
-            if (auto halfedgeLock = tailHalfedge.lock())
-            {
-                if (halfedgeLock->head.lock() == head)
-                    return tailHalfedge.lock();
-            }
-        }
-
+        jassertfalse;
         return {};
+    }
+
+    std::optional<juce::Point<float>> GradientMesh::Vertex::BezierControlPoints::getControlPoint(Placement placement) const
+    {
+        switch (placement)
+        {
+        case Placement::top:
+            return topControlPoint;
+
+        case Placement::left:
+            return leftControlPoint;
+
+        case Placement::bottom:
+            return bottomControlPoint;
+
+        case Placement::right:
+            return rightControlPoint;
+        }
+
+        jassertfalse;
+        return {};
+    }
+
+    void GradientMesh::Vertex::BezierControlPoints::setControlPoint(Placement placement, juce::Point<float> point)
+    {
+        switch (placement)
+        {
+        case Placement::top:
+            topControlPoint = point;
+            break;
+
+        case Placement::left:
+            leftControlPoint = point;
+            break;
+
+        case Placement::bottom:
+            bottomControlPoint = point;
+            break;
+
+        case Placement::right:
+            rightControlPoint = point;
+            break;
+
+        default:
+            jassertfalse;
+            break;
+        }
     }
 
     void GradientMesh::draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor)
@@ -197,6 +168,20 @@ namespace mescal
                 auto vertex = getVertex(row, column);
                 auto transformedPoint = vertex->position.transformedBy(transform);
                 return D2D1_POINT_2F{ transformedPoint.x, transformedPoint.y };
+            };
+
+        auto bezierToPOINT_2F = [&](std::shared_ptr<Vertex> vertex, Placement placement, D2D1_POINT_2F& point2F)
+            {
+                auto controlPoint = vertex->bezier.getControlPoint(placement);
+                if (controlPoint.has_value())
+                {
+                    auto transformedPoint = controlPoint.value().transformedBy(transform);
+                    point2F = D2D1_POINT_2F{ transformedPoint.x, transformedPoint.y };
+                }
+                else
+                {
+                    point2F = D2D1_POINT_2F{ vertex->position.x, vertex->position.y };
+                }
             };
 
         auto pointToPOINT_2F = [&](juce::Point<float> p)
@@ -218,62 +203,39 @@ namespace mescal
             {
                 d2dPatches.emplace_back(D2D1_GRADIENT_MESH_PATCH{});
                 auto& d2dPatch = d2dPatches.back();
+                auto vertex = getVertex(row, column);
 
-                d2dPatch.point00 = vertexToPOINT_2F(row, column);
-                d2dPatch.point03 = vertexToPOINT_2F(row, column + 1);
-                d2dPatch.point30 = vertexToPOINT_2F(row + 1, column);
-                d2dPatch.point33 = vertexToPOINT_2F(row + 1, column + 1);
+                auto topLeft = getVertex(row, column);
+                auto topRight = getVertex(row, column + 1);
+                auto bottomRight = getVertex(row + 1, column + 1);
+                auto bottomLeft = getVertex(row + 1, column);
 
-                d2dPatch.point01 = d2dPatch.point00;
-                d2dPatch.point02 = d2dPatch.point03;
+                d2dPatch.point00 = pointToPOINT_2F(topLeft->position);
+                d2dPatch.point03 = pointToPOINT_2F(topRight->position);
+                d2dPatch.point30 = pointToPOINT_2F(bottomLeft->position);
+                d2dPatch.point33 = pointToPOINT_2F(bottomRight->position);
 
-                d2dPatch.point10 = d2dPatch.point00;
-                d2dPatch.point20 = d2dPatch.point30;
+                bezierToPOINT_2F(topLeft, Placement::right, d2dPatch.point01);
+                bezierToPOINT_2F(topLeft, Placement::bottom, d2dPatch.point10);
 
-                d2dPatch.point31 = d2dPatch.point30;
-                d2dPatch.point32 = d2dPatch.point33;
+                bezierToPOINT_2F(topRight, Placement::left, d2dPatch.point02);
+                bezierToPOINT_2F(topRight, Placement::bottom, d2dPatch.point13);
 
-                d2dPatch.point13 = d2dPatch.point03;
-                d2dPatch.point23 = d2dPatch.point33;
+                bezierToPOINT_2F(bottomLeft, Placement::top, d2dPatch.point20);
+                bezierToPOINT_2F(bottomLeft, Placement::right, d2dPatch.point31);
+
+                bezierToPOINT_2F(bottomRight, Placement::top, d2dPatch.point23);
+                bezierToPOINT_2F(bottomRight, Placement::left, d2dPatch.point32);
 
                 d2dPatch.point11 = d2dPatch.point00;
                 d2dPatch.point12 = d2dPatch.point03;
                 d2dPatch.point21 = d2dPatch.point30;
                 d2dPatch.point22 = d2dPatch.point33;
 
-                auto northwestVertex = getVertex(row, column);
-                auto southwestVertex = getVertex(row + 1, column);
-                auto northeastVertex = getVertex(row, column + 1);
-                auto southeastVertex = getVertex(row + 1, column + 1);
-
-                if (auto eastHalfedge = getHalfedge(northeastVertex, southeastVertex))
-                {
-                    if (eastHalfedge->bezierControlPoints.has_value())
-                    {
-                        d2dPatch.point13 = pointToPOINT_2F(eastHalfedge->bezierControlPoints->first);
-                        d2dPatch.point23 = pointToPOINT_2F(eastHalfedge->bezierControlPoints->second);
-                    }
-
-                    if (eastHalfedge->antialiasing)
-                        d2dPatch.rightEdgeMode = D2D1_PATCH_EDGE_MODE_ANTIALIASED;
-                }
-
-                if (auto westHalfedge = getHalfedge(northwestVertex, southwestVertex))
-                {
-                    if (westHalfedge->bezierControlPoints.has_value())
-                    {
-                        d2dPatch.point10 = pointToPOINT_2F(westHalfedge->bezierControlPoints->first);
-                        d2dPatch.point20 = pointToPOINT_2F(westHalfedge->bezierControlPoints->second);
-                    }
-
-                    if (westHalfedge->antialiasing)
-                        d2dPatch.leftEdgeMode = D2D1_PATCH_EDGE_MODE_ANTIALIASED;
-                }
-
-                d2dPatch.color00 = toCOLOR_F(northwestVertex->southeastColor);
-                d2dPatch.color03 = toCOLOR_F(northeastVertex->southwestColor);
-                d2dPatch.color30 = toCOLOR_F(southwestVertex->northeastColor);
-                d2dPatch.color33 = toCOLOR_F(southeastVertex->northwestColor);
+                d2dPatch.color00 = toCOLOR_F(topLeft->color);
+                d2dPatch.color03 = toCOLOR_F(topRight->color);
+                d2dPatch.color30 = toCOLOR_F(bottomLeft->color);
+                d2dPatch.color33 = toCOLOR_F(bottomRight->color);
             }
         }
 
@@ -362,7 +324,7 @@ namespace mescal
         */
 
 
-}
+    }
 #endif
 
 
