@@ -1,6 +1,5 @@
 {
-  "Effects" :
-    [
+  "Effects": [
     {
       "Name": "Gaussian Blur",
       "GUID": "0x1feb6d69, 0x2fe6, 0x4ac9, 0x8c, 0x58, 0x1d, 0x7f, 0x93, 0xe7, 0xa6, 0xa5",
@@ -21,7 +20,7 @@
           "Values": [ "Speed", "Balanced", "Quality" ]
         },
         {
-          "name": "Border mode",
+          "Name": "Border mode",
           "Type": "Enum",
           "DefaultValue": 1,
           "Values": [ "Soft", "Hard" ]
@@ -91,7 +90,11 @@
         {
           "Name": "Light color",
           "Type": "Color",
-          "DefaultValue": [ 1.0, 1.0, 1.0 ]
+          "DefaultValue": {
+            "Red": 1.0,
+            "Green": 1.0,
+            "Blue": 1.0
+          }
         },
         {
           "Name": "Kernel unit length",
@@ -100,7 +103,7 @@
         },
         {
           "Name": "Scale mode",
-          "Type": "enum",
+          "Type": "Enum",
           "DefaultValue": 1,
           "Values": [ "Nearest neighbor", "Linear", "Cubic", "Multi-sample linear", "Anisotropic", "High-quality cubic" ]
         }

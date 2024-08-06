@@ -95,6 +95,7 @@ struct Point3D
     float x = 0.0f, y = 0.0f, z = 0.0f;
 };
 
+using Vector2 = std::array<float, 2>;
 using Vector3 = std::array<float, 3>;
 
 class Effect : public juce::ImageEffectFilter
@@ -119,7 +120,7 @@ public:
 	void applyEffect(juce::Image& sourceImage, juce::Graphics& destContext, float scaleFactor, float alpha) override;
 	void applyEffect(juce::Image& sourceImage, juce::Image& outputImage, float scaleFactor, float alpha, bool clearDestination);
 
-    using PropertyValue = std::variant<int, float, juce::Point<float>, juce::Colour, RGBColor, Point3D, Vector3>;
+    using PropertyValue = std::variant<int, float, juce::Point<float>, juce::Colour, RGBColor, Point3D, Vector2, Vector3>;
 
     struct Property
     {

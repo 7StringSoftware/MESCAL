@@ -101,6 +101,11 @@ public:
         return juce::MACAddress{ get<juce::String>(propertyName) };
     }
 
+    template<> float get<float>(const juce::Identifier& propertyName) const
+    {
+        return (float)(double)get<juce::var>(propertyName);
+    }
+
     template<typename T> void set(const juce::Identifier& propertyName, T value)
     {
         if (auto object = jsonVar.getDynamicObject())
@@ -201,6 +206,11 @@ public:
         }
 
         return {};
+    }
+
+    template<> float get<float>(int index) const
+    {
+        return (float)(double)get<juce::var>(index);
     }
 
     template<typename T> void add(T value)

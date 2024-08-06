@@ -12,7 +12,7 @@ public:
 
     size_t const propertyIndex;
     mescal::Effect::PropertyValue propertyValue;
-    std::function<void()> onChange;
+    std::function<void(size_t propertyIndex, const mescal::Effect::PropertyValue& propertyValue)> onChange;
 
     virtual mescal::Effect::PropertyValue getPropertyValue()
     {
@@ -26,20 +26,27 @@ public:
     MultiSliderPropertyComponent(const juce::String& propertyName_,
         size_t propertyIndex_,
         mescal::Effect::PropertyValue propertyValue_,
+        juce::Array<float> const& sliderDefaultValues,
         juce::StringArray const& sliderNames_,
         juce::Range<float> sliderRange_) :
         EffectPropertyValueComponent(propertyName_, propertyIndex_, propertyValue_)
     {
+        int index = 0;
         for (auto const& name : sliderNames_)
         {
             auto slider = std::make_unique<juce::Slider>(juce::Slider::LinearBar, juce::Slider::TextBoxLeft);
             slider->setRange(sliderRange_.getStart(), sliderRange_.getEnd(), 0.01);
-            slider->setValue(0.0f);
+            slider->setValue(sliderDefaultValues[index++]);
             addAndMakeVisible(slider.get());
             slider->onValueChange = [this]
                 {
                     sliderChanged();
                 };
+
+            auto label = std::make_unique<juce::Label>(name, name);
+            addAndMakeVisible(label.get());
+            label->attachToComponent(slider.get(), true);
+            labels.push_back(std::move(label));
 
             sliders.push_back(std::move(slider));
         }
@@ -99,36 +106,39 @@ public:
         }
 
         if (onChange)
-            onChange();
+            onChange(propertyIndex, propertyValue);
     }
 
+    std::vector<std::unique_ptr<juce::Label>> labels;
     std::vector<std::unique_ptr<juce::Slider>> sliders;
 };
 
-class StringArrayPropertyComponent : public EffectPropertyValueComponent
+class EnumPropertyComponent : public EffectPropertyValueComponent
 {
 public:
-    StringArrayPropertyComponent(const juce::String& propertyName,
-        int propertyIndex_,
+    EnumPropertyComponent(const juce::String& propertyName,
+        size_t propertyIndex_,
         mescal::Effect::PropertyValue propertyValue_,
-        juce::StringArray& strings) :
+        mescal::JSONArray const& array) :
         EffectPropertyValueComponent(propertyName,
             propertyIndex_,
             propertyValue_)
     {
         int id = 1;
-        for (auto const& string : strings)
+        for (auto const& v : array)
         {
-            comboBox.addItem(string, id++);
+            comboBox.addItem(v.toString(), id++);
         }
 
-        comboBox.setSelectedId(std::get<int>(propertyValue_));
+        comboBox.setSelectedItemIndex(std::get<int>(propertyValue_), juce::dontSendNotification);
 
         comboBox.onChange = [this]
             {
                 propertyValue = comboBox.getSelectedItemIndex();
-                if (onChange) onChange();
+                if (onChange) onChange(propertyIndex, propertyValue);
             };
+
+        addAndMakeVisible(comboBox);
     }
 
     void refresh() override
