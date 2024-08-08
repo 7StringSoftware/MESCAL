@@ -74,27 +74,28 @@ void GradientMeshDemo::paintMesh(juce::Graphics& g)
     auto center = getLocalBounds().getCentre().toFloat();
     float columnWidth = (float)getWidth() / (float)(mesh.getNumColumns() - 1);
     float rowHeight = (float)getHeight() / (float)(mesh.getNumRows() - 3);
-    mesh.configureVertices([=](std::shared_ptr<mescal::GradientMesh::Vertex> vertex)
+
+    for (auto& vertex : mesh.getVertices())
+    {
+        float x = vertex->column * columnWidth;
+        float offset = std::sin(x / (float)getWidth() * juce::MathConstants<float>::twoPi * 2.0f) * 25.0f;
+        float y = vertex->row * rowHeight + offset;
+        juce::Point<float> p{ x, y };
+        auto distance = p.getDistanceFrom(mousePos);
+
+        auto angle = mousePos.getAngleToPoint(p);
+        distance *= std::pow(1.001f, distance);
+        vertex->position = mousePos.getPointOnCircumference(distance, angle);
+
+        float phase = (0.25f * (x / (float)getWidth()) * juce::MathConstants<float>::twoPi) + 0.0125f * timestamp * juce::MathConstants<float>::twoPi;
+        if (vertex->row > mesh.getNumRows() / 2)
         {
-            float x = vertex->column * columnWidth;
-            float offset = std::sin(x / (float)getWidth() * juce::MathConstants<float>::twoPi * 2.0f) * 25.0f;
-            float y = vertex->row * rowHeight + offset;
-            juce::Point<float> p{ x, y };
-            auto distance = p.getDistanceFrom(mousePos);
+            phase += juce::MathConstants<float>::pi;
+        }
 
-            auto angle = mousePos.getAngleToPoint(p);
-            distance *= std::pow(1.001f, distance);
-            vertex->position = mousePos.getPointOnCircumference(distance, angle);
-
-            float phase = (0.25f * (x / (float)getWidth()) * juce::MathConstants<float>::twoPi) + 0.0125f * timestamp * juce::MathConstants<float>::twoPi;
-            if (vertex->row > mesh.getNumRows() / 2)
-            {
-                phase += juce::MathConstants<float>::pi;
-            }
-
-            auto hue = std::sin(phase) * 0.5f + 0.5f;
-            vertex->setColors(juce::Colour::fromHSV(hue, y / (float)getHeight(), 1.0f, gradientOpacity));
-        });
+        auto hue = std::sin(phase) * 0.5f + 0.5f;
+        vertex->color = mescal::Color128{ juce::Colour::fromHSV(hue, y / (float)getHeight(), 1.0f, gradientOpacity) };
+    }
 
     mesh.draw(meshImage, {});
     g.drawImageAt(meshImage, 0, 0);
@@ -122,20 +123,23 @@ void GradientMeshDemo::paintMeshWireframe(juce::Graphics& g)
         }
     }
 
-    for (auto const& halfedge : mesh.getHalfedges())
+    for (int row = 0; row < mesh.getNumRows() - 1; ++row)
     {
-        auto tail = halfedge->tail.lock();
-        auto head = halfedge->head.lock();
-        if (tail && head)
+        for (int column = 0; column < mesh.getNumColumns() - 1; ++column)
         {
-            auto color = juce::Colours::white.withAlpha(0.5f);
-            if (tail.get() == selectedVertex.get() || head.get() == selectedVertex.get())
-                color = juce::Colours::white;
+            auto vertex = mesh.getVertex(row, column);
+            if (!vertex)
+                continue;
 
-            g.setColour(color);
-            auto angle = tail->position.getAngleToPoint(head->position) + juce::MathConstants<float>::halfPi;
-            juce::Line<float> line{ tail->position.getPointOnCircumference(3.0f, angle), head->position.getPointOnCircumference(3.f, angle) };
-            g.drawArrow(line.withShortenedStart(5.0f).withShortenedEnd(5.0f), 2.0f, 12.0f, 12.0f);
+            if (auto vertexRight = mesh.getVertex(row, column + 1))
+            {
+                g.drawLine({ vertex->position, vertexRight->position }, 2.0f);
+            }
+
+            if (auto vertexDown = mesh.getVertex(row + 1, column))
+            {
+                g.drawLine({ vertex->position, vertexDown->position }, 2.0f);
+            }
         }
     }
 }
