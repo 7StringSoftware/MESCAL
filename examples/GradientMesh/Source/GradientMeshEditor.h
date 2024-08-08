@@ -74,14 +74,15 @@ private:
         std::function<void(juce::Colour)> onChange;
     };
 
-    int numRows = 4;
-    int numColumns = 4;
     std::unique_ptr<mescal::GradientMesh> mesh;
     juce::Image meshImage;
     juce::Rectangle<float> meshBounds;
     std::array<VertexComponent, 4> vertexComponents;
     std::array<BezierControlComponent, 8> bezierControlComponents;
     std::vector<std::unique_ptr<PatchComponent>> patchComponents;
+    juce::Label rowCountLabel{ "Rows", "Rows" }, columnCountLabel{ "Columns", "Columns" };
+    juce::Slider rowCountSlider{ juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft };
+    juce::Slider columnCountSlider{ juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft };
 
     void createMesh();
     void createComponents();

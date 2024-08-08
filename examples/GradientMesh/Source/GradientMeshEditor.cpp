@@ -31,6 +31,28 @@ GradientMeshEditor::GradientMeshEditor()
                 }
             };
     }
+
+    rowCountLabel.attachToComponent(&rowCountSlider, true);
+    addAndMakeVisible(rowCountLabel);
+    addAndMakeVisible(rowCountSlider);
+    rowCountSlider.setRange(juce::Range<double>{ 2.0, 20.0 }, 1.0);
+    rowCountSlider.onValueChange = [this]()
+        {
+            mesh = nullptr;
+            selectPatch(nullptr);
+            createMesh();
+            createComponents();
+            buildPatches();
+            resized();
+        };
+    rowCountSlider.setValue(4.0, juce::dontSendNotification);
+
+    columnCountLabel.attachToComponent(&columnCountSlider, true);
+    addAndMakeVisible(columnCountLabel);
+    addAndMakeVisible(columnCountSlider);
+    columnCountSlider.setRange(juce::Range<double>{ 2.0, 20.0 }, 1.0);
+    columnCountSlider.onValueChange = rowCountSlider.onValueChange;
+    columnCountSlider.setValue(4.0, juce::dontSendNotification);
 }
 
 void GradientMeshEditor::paint(juce::Graphics& g)
@@ -68,6 +90,10 @@ void GradientMeshEditor::resized()
     {
         patchComponent->setBounds(getLocalBounds());
     }
+
+    int sliderWidth = 120;
+    rowCountSlider.setBounds(getWidth() / 2 - sliderWidth - 10, 20, sliderWidth, 30);
+    columnCountSlider.setBounds(getWidth() / 2 + 100, 20, sliderWidth, 30);
 }
 
 void GradientMeshEditor::createMesh()
@@ -77,6 +103,8 @@ void GradientMeshEditor::createMesh()
 
     if (!mesh)
     {
+        int numRows = (int)rowCountSlider.getValue();
+        int numColumns = (int)columnCountSlider.getValue();
         mesh = std::make_unique<mescal::GradientMesh>(numRows, numColumns, getLocalBounds().toFloat().reduced(200));
 
         std::array<mescal::GradientMesh::Placement, 4> placements
@@ -117,6 +145,9 @@ void GradientMeshEditor::createComponents()
 {
     if (mesh)
     {
+        int numRows = (int)rowCountSlider.getValue();
+        int numColumns = (int)columnCountSlider.getValue();
+
         if (patchComponents.size() == (numRows - 1) * (numColumns - 1))
         {
             return;
@@ -167,6 +198,19 @@ void GradientMeshEditor::selectPatch(PatchComponent* patch)
         patchComponent->selected = false;
         patchComponent->toBack();
     }
+
+    for (auto& vertexComponent : vertexComponents)
+    {
+        vertexComponent.setVisible(false);
+    }
+
+    for (auto& bezierControlComponent : bezierControlComponents)
+    {
+        bezierControlComponent.setVisible(false);
+    }
+
+    if (!patch)
+        return;
 
     patch->toFront(true);
     patch->selected = true;
@@ -310,7 +354,7 @@ GradientMeshEditor::PatchComponent::PatchComponent(int row_, int column_) :
 
 bool GradientMeshEditor::PatchComponent::hitTest(int x, int y)
 {
-    return path.contains(juce::Point<float>(x, y));
+    return path.contains(juce::Point<int>(x, y).toFloat());
 }
 
 void GradientMeshEditor::PatchComponent::paint(juce::Graphics& g)
