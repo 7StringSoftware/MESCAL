@@ -3,7 +3,7 @@
 #include <JuceHeader.h>
 #include "PropertyComponents.h"
 
-class MainComponent  : public juce::Component
+class MainComponent  : public juce::Component, public juce::Value::Listener
 {
 public:
     MainComponent();
@@ -11,10 +11,11 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
+    void valueChanged(juce::Value& value) override;
 
 private:
-    mescal::JSONObject effectProperties;
-    std::unique_ptr<mescal::Effect> effect = std::make_unique<mescal::Effect>(mescal::Effect::Type::gaussianBlur);
+    juce::Value effectTypeValue{ (int)mescal::Effect::Type::gaussianBlur + 1 };
+    std::unique_ptr<mescal::Effect> effect;
     juce::PropertyPanel propertyPanel;
 
     std::vector<juce::Image> sourceImages;

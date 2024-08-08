@@ -97,8 +97,109 @@ namespace mescal
         size_t numStrings;
     };
 
+    template <typename T> T blockToValue(juce::MemoryBlock const& block)
+    {
+        return *reinterpret_cast<T const*>(block.getData());
+    };
+
+    template<> juce::String blockToValue<juce::String>(juce::MemoryBlock const& block)
+    {
+        return block.toString();
+    }
+
     void Effect::initProperties()
     {
+        WCHAR nameBuffer[256];
+        juce::MemoryBlock valueBlock{ 1024 };
+
+        auto numProperties = pimpl->d2dEffect->GetPropertyCount();
+        for (uint32_t index = 0; index < numProperties; ++index)
+        {
+            if (auto hr = pimpl->d2dEffect->GetPropertyName(index, nameBuffer, sizeof(nameBuffer) / sizeof(WCHAR)); FAILED(hr))
+            {
+                jassertfalse;
+                continue;
+            }
+
+            D2D1_PROPERTY_TYPE type = pimpl->d2dEffect->GetType(index);
+            auto size = pimpl->d2dEffect->GetValueSize(index);
+
+            jassert(size <= valueBlock.getSize());
+
+            if (auto hr = pimpl->d2dEffect->GetValue(index, (uint8_t*)valueBlock.getData(), size); FAILED(hr))
+            {
+                jassertfalse;
+                continue;
+            }
+
+            auto name = juce::String{ nameBuffer };
+            PropertyValue value;
+            switch (type)
+            {
+            default:
+            {
+                jassertfalse;
+                break;
+            }
+
+            case D2D1_PROPERTY_TYPE_STRING:
+            {
+                value = valueBlock.toString();
+                break;
+            }
+
+            case D2D1_PROPERTY_TYPE_BOOL:
+            {
+                value = blockToValue<bool>(valueBlock);
+                break;
+            }
+
+            case D2D1_PROPERTY_TYPE_UINT32:
+            {
+                value = blockToValue<uint32_t>(valueBlock);
+                break;
+            }
+
+            case D2D1_PROPERTY_TYPE_INT32:
+            {
+                value = blockToValue<int>(valueBlock);
+                break;
+            }
+
+            case D2D1_PROPERTY_TYPE_FLOAT:
+            {
+                value = blockToValue<float>(valueBlock);
+                break;
+            }
+
+            case D2D1_PROPERTY_TYPE_VECTOR2:
+            {
+                value = blockToValue<Vector2>(valueBlock);
+                break;
+            }
+
+            case D2D1_PROPERTY_TYPE_VECTOR3:
+            {
+                value = blockToValue<Vector3>(valueBlock);
+                break;
+            }
+
+            case D2D1_PROPERTY_TYPE_VECTOR4:
+            {
+                value = blockToValue<Vector4>(valueBlock);
+                break;
+            }
+
+            case D2D1_PROPERTY_TYPE_ENUM:
+            {
+                value = blockToValue<uint8_t>(valueBlock);
+                break;
+            }
+            }
+
+            pimpl->properties.emplace_back(Property{ name, value });
+        }
+#if 0
         std::array<std::string_view, 5> stringTable
         {
             "Speed", "Balanced", "Quality",
@@ -131,16 +232,24 @@ namespace mescal
             PropertyInfo{ "Light color", RGBColor{ 1.0f, 1.0f, 1.0f } }
         };
 
+        static constexpr std::array<PropertyInfo, 3> shadowProperties
+        {
+            PropertyInfo{ "Standard deviation", 3.0f, ValueRange<float>{ 0.0f, 100.0f } },
+            PropertyInfo{ "Color", (int)0xff000000, {} },
+            PropertyInfo{ "Optimization mode", 1, ValueRange<int>{ 0, 3 } },
+        };
+
         struct PropertyGroup
         {
             PropertyInfo const* const properties;
             size_t numProperties;
         };
 
-        static constexpr std::array<PropertyGroup, 2> propertyGroups
+        static constexpr std::array<PropertyGroup, 3> propertyGroups
         {
             PropertyGroup{ gaussianBlurProperties.data(), gaussianBlurProperties.size() },
-            PropertyGroup{ spotSpecularLightingProperties.data(), spotSpecularLightingProperties.size() }
+            PropertyGroup{ spotSpecularLightingProperties.data(), spotSpecularLightingProperties.size() },
+            PropertyGroup{ shadowProperties.data(), shadowProperties.size() }
         };
 
         auto const& propertyGroup = propertyGroups[static_cast<int>(effectType)];
@@ -170,6 +279,7 @@ namespace mescal
 
             pimpl->properties.push_back(property);
         }
+#endif
     }
 
 }

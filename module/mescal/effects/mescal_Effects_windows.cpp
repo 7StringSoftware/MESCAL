@@ -47,46 +47,23 @@ namespace mescal
 
         void setProperty(int index, const PropertyValue& value)
         {
+            [[maybe_unused]] HRESULT hr = S_OK;
+
             if (!d2dEffect)
                 createResources();
 
-            if (!d2dEffect || properties.size() < index)
+            if (!d2dEffect)
                 return;
 
             if (std::holds_alternative<int>(value))
             {
-                d2dEffect->SetValue(index, std::get<int>(value));
+                hr = d2dEffect->SetValue(index, std::get<int>(value));
                 DBG("setProperty " << index << " (int) " << std::get<int>(value));
             }
             else if (std::holds_alternative<float>(value))
             {
                 d2dEffect->SetValue(index, std::get<float>(value));
                 DBG("setProperty " << index << " (float) " << std::get<float>(value));
-            }
-            else if (std::holds_alternative<juce::Point<float>>(value))
-            {
-                auto point = std::get<juce::Point<float>>(value);
-                d2dEffect->SetValue(index, D2D1_VECTOR_2F{ point.x, point.y });
-                DBG("setProperty " << index << " Point<float> " << point.toString());
-            }
-            else if (std::holds_alternative<juce::Colour>(value))
-            {
-                auto color = std::get<juce::Colour>(value);
-                d2dEffect->SetValue(index, D2D1_VECTOR_4F{ color.getFloatRed(), color.getFloatGreen(), color.getFloatBlue(), color.getFloatAlpha() });
-                DBG("setProperty " << index << " Colour " << color.toString());
-            }
-            else if (std::holds_alternative<RGBColor>(value))
-            {
-                auto rgbColor = std::get<RGBColor>(value);
-                d2dEffect->SetValue(index, D2D1_VECTOR_3F{ rgbColor.r, rgbColor.g, rgbColor.b });
-                DBG("setProperty " << index << " RGBColor " << rgbColor.r << " " << rgbColor.g << " " << rgbColor.b);
-            }
-            else if (std::holds_alternative<Point3D>(value))
-            {
-                auto point3D = std::get<Point3D>(value);
-                d2dEffect->SetValue(index, D2D1_VECTOR_3F{ point3D.x, point3D.y, point3D.z });
-                DBG("setProperty " << index << " Point3D " << point3D.x << "',  " << point3D.y << " " << point3D.z);
-
             }
             else if (std::holds_alternative<Vector2>(value))
             {
@@ -104,6 +81,8 @@ namespace mescal
             {
                 jassertfalse;
             }
+
+            jassert(SUCCEEDED(hr));
         }
 
         Type effectType;

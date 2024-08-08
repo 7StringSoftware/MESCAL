@@ -36,10 +36,8 @@ static constexpr std::array<PropertyInfoGroup, 2> propertyGroups
     PropertyInfoGroup{ propertyValues2.data(), propertyValues2.size() }
 };
 
-MainComponent::MainComponent() :
-    effectProperties(BinaryData::EffectParameters_json, BinaryData::EffectParameters_jsonSize)
+MainComponent::MainComponent()
 {
-
     //sourceImages.emplace_back(juce::ImageFileFormat::loadFrom(BinaryData::VanGoghstarry_night_jpg, BinaryData::VanGoghstarry_night_jpgSize));
     sourceImages.emplace_back(juce::ImageFileFormat::loadFrom(BinaryData::Piet_Mondriaan_19391942__Composition_10_jpg, BinaryData::Piet_Mondriaan_19391942__Composition_10_jpgSize));
     //sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, 1000, 1000, true });
@@ -66,7 +64,8 @@ MainComponent::MainComponent() :
     setSize(1024, 1024);
     setRepaintsOnMouseActivity(true);
 
-    updateEffectType();
+    valueChanged(effectTypeValue);
+    effectTypeValue.addListener(this);
 
     setOpaque(true);
 }
@@ -105,6 +104,14 @@ void MainComponent::resized()
     propertyPanel.setBounds(getLocalBounds().removeFromRight(300).reduced(10));
 }
 
+void MainComponent::valueChanged(juce::Value& value)
+{
+    effect = nullptr;
+    mescal::Effect::Type effectType = (mescal::Effect::Type)((int)value.getValue() - 1);
+    effect = std::make_unique<mescal::Effect>(effectType);
+    updateEffectType();
+}
+
 void MainComponent::buildPropertyPanel()
 {
     auto getFloatRange = [&](mescal::JSONObject const& propertyObject) -> juce::Range<float>
@@ -126,7 +133,109 @@ void MainComponent::buildPropertyPanel()
     //
     // Effect selection
     //
+    {
+        juce::Array<juce::PropertyComponent*> sectionComponents;
+        juce::StringArray effectNames
+        {
+            "Gaussian blur",
+            "Spot specular lighting",
+            "Shadow",
+            "Spot diffuse lighting",
+            "Perspective transform 3D"
+        };
+        juce::Array<juce::var> values;
+        for (int value = 1; value <= (int)mescal::Effect::Type::numEffectTypes; ++value)
+        {
+            values.add(value);
+        }
+        sectionComponents.add(new juce::ChoicePropertyComponent{ effectTypeValue,
+            "Effect",
+            effectNames,
+            values });
+        propertyPanel.addSection("Effect", sectionComponents);
+    }
 
+    //
+    // Effect-specific controls
+    //
+    {
+        auto const& effectProperties = effect->getProperties();
+        juce::Array<juce::PropertyComponent*> sectionComponents;
+
+        for (auto const& property : effectProperties)
+        {
+            EffectPropertyValueComponent* propertyComponent = nullptr;
+            juce::Range<float> range = property.range.has_value() ? std::get<juce::Range<float>>(property.range.value()) : juce::Range<float>{ 0.0f, 1.0f };
+
+            if (std::holds_alternative<int>(property.defaultValue))
+            {
+                auto defaultValue = std::get<int>(property.defaultValue);
+                propertyComponent = new MultiSliderPropertyComponent{ property.name,
+                    0,
+                    defaultValue,
+                    juce::Array<float>{ (float)defaultValue },
+                    juce::StringArray{ {} },
+                    juce::Range<float>{ (float)range.getStart(), (float)range.getEnd() } };
+            }
+            else if (std::holds_alternative<float>(property.defaultValue))
+            {
+                auto defaultValue = std::get<float>(property.defaultValue);
+                propertyComponent = new MultiSliderPropertyComponent{ property.name,
+                    0,
+                    defaultValue,
+                    juce::Array<float>{ defaultValue },
+                    juce::StringArray{ {} },
+                    range };
+            }
+            else if (std::holds_alternative<mescal::Vector2>(property.defaultValue))
+            {
+                auto defaultValue = std::get<mescal::Vector2>(property.defaultValue);
+                propertyComponent = new MultiSliderPropertyComponent{ property.name,
+                    0,
+                    defaultValue[0],
+                    juce::Array<float> { defaultValue[0], defaultValue[1] },
+                    juce::StringArray{ "0", "1" },
+                    juce::Range<float>{ 0.0f, 1.0f } };
+            }
+            else if (std::holds_alternative<mescal::Vector3>(property.defaultValue))
+            {
+                auto defaultValue = std::get<mescal::Vector3>(property.defaultValue);
+                propertyComponent = new MultiSliderPropertyComponent{ property.name,
+                    0,
+                    defaultValue[0],
+                    juce::Array<float>{ defaultValue[0], defaultValue[1], defaultValue[2] },
+                    juce::StringArray{ "0", "1", "2"},
+                    juce::Range<float>{ 0.0f, 1.0f } };
+            }
+            else if (std::holds_alternative<uint8_t>(property.defaultValue))
+            {
+                auto defaultValue = std::get<uint8_t>(property.defaultValue);
+                juce::StringArray array;
+                for (int i = 0; i < 3; ++i)
+                {
+                    array.add(juce::String{ i });
+                }
+                propertyComponent = new EnumPropertyComponent{ property.name,
+                    0,
+                    defaultValue,
+                    array };
+            }
+            else
+            {
+                jassertfalse;
+            }
+
+            if (propertyComponent)
+            {
+                propertyValueComponents.emplace_back(propertyComponent);
+                sectionComponents.add(propertyComponent);
+            }
+        }
+
+        propertyPanel.addSection("Properties", sectionComponents);
+    }
+
+#if 0
     //
     // Effect-specific controls
     //
@@ -142,8 +251,9 @@ void MainComponent::buildPropertyPanel()
     for (auto const& propertyVar : propertiesArray)
     {
         mescal::JSONObject propertyObject{ propertyVar };
+        auto propertyName = propertyObject.get<juce::String>("Name");
 
-        DBG("Property: " << propertyObject.get<juce::String>("Name"));
+        DBG("Property: " << propertyName);
 
         EffectPropertyValueComponent* propertyComponent = nullptr;
 
@@ -152,15 +262,17 @@ void MainComponent::buildPropertyPanel()
         {
             auto defaultValue = propertyObject.hasProperty("DefaultValue") ? propertyObject.get<float>("DefaultValue") : 0.0f;
             auto range = getFloatRange(propertyObject);
-            propertyComponent = new MultiSliderPropertyComponent{ effect->getName(), propertyIndex, defaultValue, { juce::String{} }, range };
-
+            propertyComponent = new MultiSliderPropertyComponent{propertyName,
+                propertyIndex,
+                defaultValue,
+                juce::Array<float>{ defaultValue },
+                juce::StringArray{ juce::String{} },
+                range };
         }
         else if (type == "Enum")
         {
             auto defaultValue = propertyObject.hasProperty("DefaultValue") ? propertyObject.get<int>("DefaultValue") : 0;
             auto enumArray = propertyObject.getArray("Values");
-
-
         }
         else if (type == "Point")
         {
@@ -169,6 +281,9 @@ void MainComponent::buildPropertyPanel()
         {
         }
         else if (type == "Point3D")
+        {
+        }
+        else if (type == "Vector2")
         {
         }
         else if (type == "Vector3")
@@ -188,64 +303,18 @@ void MainComponent::buildPropertyPanel()
         ++propertyIndex;
     }
 
-#if 0
-
-    juce::Array<juce::PropertyComponent*> sectionComponents;
-
-    size_t propertyIndex = 0;
-    for (auto const& property : effect->getProperties())
-    {
-        EffectPropertyValueComponent* propertyComponent = nullptr;
-        if (std::holds_alternative<int>(property.defaultValue) || std::holds_alternative<float>(property.defaultValue))
-        {
-            propertyComponent = new MultiSliderPropertyComponent{ effect->getName(), propertyIndex, property.defaultValue, { juce::String{} }, { 0.0f, 1.0f } };
-        }
-        else if (std::holds_alternative<juce::Point<float>>(property.defaultValue))
-        {
-            propertyComponent = new MultiSliderPropertyComponent{ effect->getName(), propertyIndex, juce::Point<float>{ 0.0f, 0.0f }, { "x", "y" }, { -1000.0f, 1000.0f } };
-        }
-        else if (std::holds_alternative<juce::Colour>(property.defaultValue))
-        {
-            propertyComponent = new MultiSliderPropertyComponent{ effect->getName(), propertyIndex, juce::Colour{ 0.0f, 0.0f, 0.0f, 1.0f }, { "R", "G", "B", "A" }, { 0.0f, 1.0f } };
-        }
-        else if (std::holds_alternative<mescal::RGBColor>(property.defaultValue))
-        {
-            propertyComponent = new MultiSliderPropertyComponent{ effect->getName(), propertyIndex, mescal::RGBColor{ 0.0f, 0.0f, 0.0f }, { "R", "G", "B" }, { 0.0f, 1.0f } };
-        }
-        else if (std::holds_alternative<mescal::Point3D>(property.defaultValue))
-        {
-            propertyComponent = new MultiSliderPropertyComponent{ effect->getName(), propertyIndex, mescal::Point3D{ 0.0f, 0.0f, 0.0f }, { "x", "y", "z" }, { -1000.0f, 1000.0f } };
-        }
-        else if (std::holds_alternative<mescal::Vector3>(property.defaultValue))
-        {
-            propertyComponent = new MultiSliderPropertyComponent{ effect->getName(), propertyIndex, mescal::Vector3{ 0.0f, 0.0f, 0.0f }, { "0", "1", "2" }, { -1000.0f, 1000.0f } };
-        }
-        else
-        {
-            jassertfalse;
-        }
-
-        if (propertyComponent)
-        {
-            propertyValueComponents.emplace_back(propertyComponent);
-            sectionComponents.add(propertyComponent);
-        }
-
-        ++propertyIndex;
-        }
 #endif
-
-    propertyPanel.addSection(effect->getName(), sectionComponents);
 
     for (auto& c : propertyValueComponents)
     {
-        c->onChange = [this]()
+        c->onChange = [this](size_t propertyIndex, const mescal::Effect::PropertyValue& propertyValue)
             {
+                effect->setPropertyValue(propertyIndex, propertyValue);
                 applyEffect();
                 repaint();
             };
     }
-    }
+}
 
 void MainComponent::updateEffectType()
 {

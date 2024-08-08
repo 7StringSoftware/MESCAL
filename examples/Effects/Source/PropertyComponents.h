@@ -77,14 +77,11 @@ public:
         {
             propertyValue = (float)sliders[0]->getValue();
         }
-        else if (std::holds_alternative<mescal::Point3D>(propertyValue))
-        {
-            propertyValue = mescal::Point3D{ (float)sliders[0]->getValue(), (float)sliders[1]->getValue(), (float)sliders[2]->getValue() };
-        }
         else if (std::holds_alternative<mescal::Vector3>(propertyValue))
         {
             propertyValue = mescal::Vector3{ (float)sliders[0]->getValue(), (float)sliders[1]->getValue(), (float)sliders[2]->getValue() };
         }
+#if 0
         else if (std::holds_alternative<mescal::RGBColor>(propertyValue))
         {
             auto r = juce::jlimit(0.0f, 1.0f, (float)sliders[0]->getValue());
@@ -104,6 +101,7 @@ public:
         {
             propertyValue = juce::Point<float>{ (float)sliders[0]->getValue(), (float)sliders[1]->getValue() };
         }
+#endif
 
         if (onChange)
             onChange(propertyIndex, propertyValue);
@@ -119,18 +117,18 @@ public:
     EnumPropertyComponent(const juce::String& propertyName,
         size_t propertyIndex_,
         mescal::Effect::PropertyValue propertyValue_,
-        mescal::JSONArray const& array) :
+        juce::StringArray itemStrings) :
         EffectPropertyValueComponent(propertyName,
             propertyIndex_,
             propertyValue_)
     {
         int id = 1;
-        for (auto const& v : array)
+        for (auto const& itemString : itemStrings)
         {
-            comboBox.addItem(v.toString(), id++);
+            comboBox.addItem(itemString, id++);
         }
 
-        comboBox.setSelectedItemIndex(std::get<int>(propertyValue_), juce::dontSendNotification);
+        comboBox.setSelectedItemIndex(std::get<mescal::Enumeration>(propertyValue_), juce::dontSendNotification);
 
         comboBox.onChange = [this]
             {
