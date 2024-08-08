@@ -13,6 +13,8 @@
               file="Source/Assets/Snifter_outline.svg"/>
         <FILE id="SmVNva" name="TrashcanButton-Transparent.svg" compile="0"
               resource="1" file="Source/Assets/TrashcanButton-Transparent.svg"/>
+        <FILE id="wrkULY" name="VanGogh-starry_night.jpg" compile="0" resource="1"
+              file="../Effects/Source/Assets/VanGogh-starry_night.jpg"/>
       </GROUP>
       <GROUP id="{1A05B7D7-4DAF-D246-7CA0-0DB8E0EC7BE7}" name="Demos">
         <FILE id="lyST9H" name="BottleDemo.cpp" compile="1" resource="0" file="Source/BottleDemo.cpp"/>
