@@ -35,13 +35,11 @@ void SpriteBatchDemo::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::black);
 
-    juce::Path clipPath;
-    clipPath.addRoundedRectangle(getLocalBounds().reduced(100).toFloat(), 50.0f);
-    g.reduceClipRegion(clipPath);
+//     juce::Path clipPath;
+//     clipPath.addRoundedRectangle(getLocalBounds().reduced(100).toFloat(), 50.0f);
+//     g.reduceClipRegion(clipPath);
 
     particles.draw(spriteBatchImage);
-
-    spriteBatchImage.getPixelData()->applyGaussianBlurEffect(10.0f, effectOutputImage);
     g.drawImageAt(spriteBatchImage, 0, 0, false);
 
 #if 0
@@ -69,36 +67,43 @@ void SpriteBatchDemo::Particles::update(float timeSeconds, juce::Rectangle<float
     const int spritesPerRow = atlasSize / spriteSize;
     if (atlas.isNull())
     {
-        juce::Image source{ juce::Image::ARGB, atlasSize, atlasSize, true };
-        atlas = juce::Image{ juce::Image::ARGB, atlasSize, atlasSize, true };
-        {
-            juce::Graphics g{ source };
-
-            int i = 0;
-            for (int x = 0; x < atlas.getWidth(); x += spriteSize)
-            {
-                for (int y = 0; y < atlas.getHeight(); y += spriteSize)
-                {
-                    juce::Path p;
-                    juce::Rectangle<int> r{ x, y, spriteSize, spriteSize };
-                    p.addStar(r.getCentre().toFloat(), random.nextInt({ 4, 16 }), spriteSize * 0.4f, spriteSize * 0.45f, random.nextFloat() * juce::MathConstants<float>::twoPi);
-
-                    g.setColour(juce::Colours::cyan.withAlpha(random.nextFloat() * 0.5f + 0.5f).contrasting(random.nextFloat() * 0.2f));
-                    g.fillPath(p);
-                    //g.drawText(juce::String::toHexString(i++), x, y, spriteSize, spriteSize, juce::Justification::centred);
-                }
-            }
-        }
-
-        source.getPixelData()->applyGaussianBlurEffect(0.0f * spriteSize * 0.25f, atlas);
-    }
-
-    if (sprites.size() == 0)
-    {
+        atlas = juce::ImageFileFormat::loadFrom(BinaryData::VanGoghstarry_night_jpg, BinaryData::VanGoghstarry_night_jpgSize);
         sprites = std::vector<mescal::Sprite>(numSprites);
         velocities = std::vector<Velocity>(numSprites);
+
+        auto center = area.getCentre();
+
+        for (int y = 0; y < atlas.getHeight() - spriteSize; y += spriteSize)
+        {
+            for (int x = 0; x < atlas.getWidth() - spriteSize; x += spriteSize)
+            {
+                juce::Rectangle<int> source{ x, y, spriteSize, spriteSize };
+                auto destination = juce::Rectangle<float>{ (float)x, 0.0f, (float)spriteSize, (float)spriteSize };
+                sprites.emplace_back(mescal::Sprite{ destination, source });
+
+                juce::Line<float> line{ destination.getCentre(), source.toFloat().getCentre() };
+
+                velocities.emplace_back(Velocity{ 10.0f, line.getAngle()});
+            }
+        }
     }
 
+    for (auto& sprite : sprites)
+    {
+        auto& velocity = velocities[&sprite - &sprites[0]];
+
+        if (sprite.destination.getCentre().getDistanceFrom(sprite.source.toFloat().getCentre()) < 1.0f)
+        {
+            sprite.destination = sprite.source.toFloat();
+        }
+        else
+        {
+            auto center = sprite.destination.getCentre().getPointOnCircumference(elapsedTime * velocity.speed, velocity.angle);
+            sprite.destination.setCentre(center);
+        }
+    }
+
+#if 0
     int sourceX = 0, sourceY = 0;
     for (int i = 0; i < numSprites; ++i)
     {
@@ -114,7 +119,7 @@ void SpriteBatchDemo::Particles::update(float timeSeconds, juce::Rectangle<float
             distance = juce::jmax(1.0f, distance);
             velocity.speed = 10.0f;// random.nextFloat() * 100.0f;
             velocity.angle = (random.nextFloat() /** 0.1f - 0.05f*/) * juce::MathConstants<float>::twoPi + juce::MathConstants<float>::pi;
-            
+
             sourceY += spriteSize;
             if (sourceY >= atlasSize)
             {
@@ -127,10 +132,14 @@ void SpriteBatchDemo::Particles::update(float timeSeconds, juce::Rectangle<float
         auto center = sprite.destination.getCentre().getPointOnCircumference(elapsedTime * velocity.speed, velocity.angle);
         sprite.destination.setCentre(center);
     }
+#endif
 }
 
 void SpriteBatchDemo::Particles::draw(juce::Image& destinationImage)
 {
+    if (atlas.isNull())
+        return;
+
     spriteBatch.setAtlas(atlas);
     spriteBatch.draw(destinationImage, sprites, true);
 }

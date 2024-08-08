@@ -11,13 +11,9 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
 
-
-
 private:
     juce::Image logoImage;
     juce::Image spriteBatchImage;
-    juce::Image effectOutputImage;
-    mescal::Effect blurEffect{ mescal::Effect::Type::gaussianBlur };
 
     float opacity = 0.0f;
 
@@ -34,9 +30,10 @@ private:
 
         juce::Image atlas;
         mescal::SpriteBatch spriteBatch;
-        size_t numSprites = 50000;
+        size_t numSprites = 0;
         std::vector<mescal::Sprite> sprites;
         std::vector<Velocity> velocities;
+        std::vector<juce::Point<float>> finalPositions;
         float lastTimestamp = 0.0f;
     } particles;
 
