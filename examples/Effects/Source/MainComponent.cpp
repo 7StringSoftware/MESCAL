@@ -114,6 +114,23 @@ void MainComponent::valueChanged(juce::Value& value)
 
 void MainComponent::buildPropertyPanel()
 {
+    auto getLabels = [&](mescal::JSONObject const& propertyObject)
+        {
+            if (propertyObject.hasProperty("Labels"))
+            {
+                juce::StringArray labels;
+
+                auto labelsJSONArray = propertyObject.getArray("Labels");
+                for (auto const& label : labelsJSONArray)
+                {
+                    labels.add(label.toString());
+                }
+
+                return labels;
+            }
+
+            return juce::StringArray{};
+        };
     auto getFloatRange = [&](mescal::JSONObject const& propertyObject) -> juce::Range<float>
         {
             if (propertyObject.hasProperty("Range"))
@@ -129,6 +146,10 @@ void MainComponent::buildPropertyPanel()
 
     propertyPanel.clear();
     propertyValueComponents.clear();
+
+    auto effectsArray = effectInfoCollection.getArray("Effects");
+    auto effectInfo = effectsArray.getObject((int)effect->effectType);
+    auto jsonPropertiesArray = effectInfo.getArray("Properties");
 
     //
     // Effect selection
@@ -162,29 +183,32 @@ void MainComponent::buildPropertyPanel()
         auto const& effectProperties = effect->getProperties();
         juce::Array<juce::PropertyComponent*> sectionComponents;
 
+        size_t propertyIndex = 0;
         for (auto const& property : effectProperties)
         {
             EffectPropertyValueComponent* propertyComponent = nullptr;
-            juce::Range<float> range = property.range.has_value() ? std::get<juce::Range<float>>(property.range.value()) : juce::Range<float>{ 0.0f, 1.0f };
+            auto jsonPropertyInfo = jsonPropertiesArray.getObject(propertyIndex);
 
             if (std::holds_alternative<int>(property.defaultValue))
             {
-                auto defaultValue = std::get<int>(property.defaultValue);
+                auto defaultIntValue = std::get<int>(property.defaultValue);
                 propertyComponent = new MultiSliderPropertyComponent{ property.name,
-                    0,
-                    defaultValue,
-                    juce::Array<float>{ (float)defaultValue },
-                    juce::StringArray{ {} },
-                    juce::Range<float>{ (float)range.getStart(), (float)range.getEnd() } };
+                    propertyIndex,
+                    property.defaultValue,
+                    juce::Array<float>{ (float)defaultIntValue },
+                    juce::StringArray{ juce::String{} },
+                    juce::Range<float>{ 0, 1 } };
             }
             else if (std::holds_alternative<float>(property.defaultValue))
             {
-                auto defaultValue = std::get<float>(property.defaultValue);
+                auto defaultFloatValue = std::get<float>(property.defaultValue);
+                auto range = getFloatRange(jsonPropertyInfo);
+
                 propertyComponent = new MultiSliderPropertyComponent{ property.name,
-                    0,
-                    defaultValue,
-                    juce::Array<float>{ defaultValue },
-                    juce::StringArray{ {} },
+                    propertyIndex,
+                    property.defaultValue,
+                    juce::Array<float>{ defaultFloatValue },
+                    juce::StringArray{ juce::String{} },
                     range };
             }
             else if (std::holds_alternative<mescal::Vector2>(property.defaultValue))
@@ -194,7 +218,7 @@ void MainComponent::buildPropertyPanel()
                     0,
                     defaultValue[0],
                     juce::Array<float> { defaultValue[0], defaultValue[1] },
-                    juce::StringArray{ "0", "1" },
+                    getLabels(jsonPropertyInfo),
                     juce::Range<float>{ 0.0f, 1.0f } };
             }
             else if (std::holds_alternative<mescal::Vector3>(property.defaultValue))
@@ -204,7 +228,7 @@ void MainComponent::buildPropertyPanel()
                     0,
                     defaultValue[0],
                     juce::Array<float>{ defaultValue[0], defaultValue[1], defaultValue[2] },
-                    juce::StringArray{ "0", "1", "2"},
+                    getLabels(jsonPropertyInfo),
                     juce::Range<float>{ 0.0f, 1.0f } };
             }
             else if (std::holds_alternative<uint8_t>(property.defaultValue))
@@ -230,6 +254,8 @@ void MainComponent::buildPropertyPanel()
                 propertyValueComponents.emplace_back(propertyComponent);
                 sectionComponents.add(propertyComponent);
             }
+
+            ++propertyIndex;
         }
 
         propertyPanel.addSection("Properties", sectionComponents);
@@ -309,7 +335,7 @@ void MainComponent::buildPropertyPanel()
     {
         c->onChange = [this](size_t propertyIndex, const mescal::Effect::PropertyValue& propertyValue)
             {
-                effect->setPropertyValue(propertyIndex, propertyValue);
+                effect->setPropertyValue((int)propertyIndex, propertyValue);
                 applyEffect();
                 repaint();
             };

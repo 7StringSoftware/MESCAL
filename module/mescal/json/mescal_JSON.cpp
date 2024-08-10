@@ -158,7 +158,7 @@ namespace mescal
     {
         if (auto object = jsonVar.getDynamicObject())
         {
-            return { object->getProperty(propertyName) };
+            return JSONArray{ object->getProperty(propertyName) };
         }
 
         return {};
