@@ -127,7 +127,16 @@ namespace mescal
 
     juce::String Effect::getName() const noexcept
     {
-        return "Effect";
+        std::array<const char * const, (size_t)Type::numEffectTypes> names
+        {
+            "GaussianBlur",
+            "SpotSpecularLighting",
+            "SpotDiffuseLighting",
+            "Shadow",
+            "PerspectiveTransform3D"
+        };
+
+        return names[(size_t)effectType];
     }
 
     const std::vector<Effect::Property>& Effect::getProperties() const noexcept
