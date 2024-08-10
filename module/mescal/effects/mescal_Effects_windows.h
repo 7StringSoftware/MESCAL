@@ -137,7 +137,6 @@ public:
     {
         juce::String name;
         PropertyValue defaultValue;
-        std::optional<std::variant<juce::Range<int>, juce::Range<float>, juce::StringArray>> range;
     };
 
     const std::vector<Property>& getProperties() const noexcept;
