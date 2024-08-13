@@ -19,7 +19,9 @@ private:
 
     struct Particles
     {
-        void update(float timeSeconds, juce::Rectangle<float> area, juce::Point<float> mousePos);
+        Particles();
+
+        void update(float timeMsec);
         void draw(juce::Image& destinationImage);
 
         struct Velocity
@@ -28,38 +30,23 @@ private:
             float angle = 0.0f;
         };
 
-        juce::Image atlas;
+        juce::Image sourceImage = juce::ImageFileFormat::loadFrom(BinaryData::VanGoghstarry_night_jpg, BinaryData::VanGoghstarry_night_jpgSize);
         mescal::SpriteBatch spriteBatch;
         size_t numSprites = 0;
         std::vector<mescal::Sprite> sprites;
-        std::vector<Velocity> velocities;
-        std::vector<juce::Point<float>> finalPositions;
-        float lastTimestamp = 0.0f;
+        std::vector<float> speeds;
     } particles;
 
-    juce::Animator spriteAnimator = juce::ValueAnimatorBuilder{}
-        .withEasing(juce::Easings::createLinear())
-        .runningInfinitely()
-        .withValueChangedCallback([this](auto value)
-            {
-                particles.update(value, getLocalBounds().toFloat(), getMouseXYRelative().toFloat());
-                repaint();
-            })
-        .build();
+    double startTime = juce::Time::getMillisecondCounterHiRes();
+    juce::VBlankAttachment vblankAttachment
+    { this, [this]
+        {
+            auto now = juce::Time::getMillisecondCounterHiRes();
+            particles.update(now - startTime);
 
-    juce::VBlankAnimatorUpdater updater{ this };
-    juce::Animator fadeInAnimator = juce::ValueAnimatorBuilder{}
-        .withEasing(juce::Easings::createLinear())
-        .withDurationMs(4000)
-        .withValueChangedCallback([this](auto value)
-            {
-                if (value > 0.5f)
-                {
-                    opacity = (value - 0.5f) * 2.0f;
-                }
-                repaint();
-            })
-        .build();
+            repaint();
+        }
+    };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SpriteBatchDemo)
 };

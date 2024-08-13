@@ -19,6 +19,10 @@
         <FILE id="zE2KJI" name="RippleEffect.hlsl" compile="0" resource="0"
               file="Source/RippleEffect.hlsl"/>
       </GROUP>
+      <FILE id="JL6ZlU" name="EffectChainComponent.cpp" compile="1" resource="0"
+            file="Source/EffectChainComponent.cpp"/>
+      <FILE id="RRMbLq" name="EffectChainComponent.h" compile="0" resource="0"
+            file="Source/EffectChainComponent.h"/>
       <FILE id="pzOnFB" name="EffectDemoComponent.cpp" compile="1" resource="0"
             file="Source/EffectDemoComponent.cpp"/>
       <FILE id="OvlHdk" name="EffectDemoComponent.h" compile="0" resource="0"
@@ -29,6 +33,9 @@
             file="Source/FormatConverter.cpp"/>
       <FILE id="SSeCbL" name="FormatConverter.h" compile="0" resource="0"
             file="Source/FormatConverter.h"/>
+      <FILE id="QxPCH7" name="ImageCarousel.cpp" compile="1" resource="0"
+            file="Source/ImageCarousel.cpp"/>
+      <FILE id="KFbztq" name="ImageCarousel.h" compile="0" resource="0" file="Source/ImageCarousel.h"/>
       <FILE id="fRU9qi" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="Gc4QFf" name="MainComponent.cpp" compile="1" resource="0"
             file="Source/MainComponent.cpp"/>

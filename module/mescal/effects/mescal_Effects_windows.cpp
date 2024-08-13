@@ -43,6 +43,14 @@ namespace mescal
                     jassertfalse;
                 }
             }
+
+            if (d2dEffect)
+            {
+                uint32_t minNumInputs, maxNumInputs;
+
+                auto hr = d2dEffect->GetValue(D2D1_PROPERTY_MIN_INPUTS, &minNumInputs);
+                hr = d2dEffect->GetValue(D2D1_PROPERTY_MAX_INPUTS, &maxNumInputs);
+            }
         }
 
         void setProperty(int index, const PropertyValue& value)
@@ -77,6 +85,12 @@ namespace mescal
                 d2dEffect->SetValue(index, D2D1_VECTOR_3F{ vector3[0], vector3[1], vector3[2] });
                 DBG("setProperty " << index << " Vector3 " << vector3[0] << ", " << vector3[1] << ", " << vector3[2]);
             }
+            else if (std::holds_alternative<Vector4>(value))
+            {
+                auto vector4 = std::get<Vector4>(value);
+                d2dEffect->SetValue(index, D2D1_VECTOR_4F{ vector4[0], vector4[1], vector4[2], vector4[3]});
+                DBG("setProperty " << index << " vector4 " << vector4[0] << ", " << vector4[1] << ", " << vector4[2] << ", " << vector4[3]);
+            }
             else
             {
                 jassertfalse;
@@ -94,14 +108,14 @@ namespace mescal
         {
             &CLSID_D2D1GaussianBlur,
             &CLSID_D2D1SpotSpecular,
-            &CLSID_D2D1SpotDiffuse,
             &CLSID_D2D1Shadow,
-            &CLSID_D2D13DPerspectiveTransform
+            &CLSID_D2D1SpotDiffuse,
+            &CLSID_D2D13DPerspectiveTransform,
+            &CLSID_D2D1Blend
         };
 
         std::vector <Effect::Property> properties;
     };
-
 
     Effect::Effect(Type effectType_) :
         effectType(effectType_),
@@ -110,6 +124,8 @@ namespace mescal
         pimpl->createResources();
 
         initProperties();
+
+        getName();
     }
 
     Effect::Effect(const Effect& other) :
@@ -119,6 +135,8 @@ namespace mescal
         pimpl->createResources();
 
         initProperties();
+
+        getName();
     }
 
     Effect::~Effect()
@@ -127,16 +145,63 @@ namespace mescal
 
     juce::String Effect::getName() const noexcept
     {
-        std::array<const char * const, (size_t)Type::numEffectTypes> names
+        pimpl->createResources();
+
+        if (pimpl->d2dEffect)
         {
-            "GaussianBlur",
-            "SpotSpecularLighting",
-            "SpotDiffuseLighting",
-            "Shadow",
-            "PerspectiveTransform3D"
+            wchar_t buffer[256];
+            pimpl->d2dEffect->GetValue(D2D1_PROPERTY_DISPLAYNAME, (BYTE*)buffer, sizeof(buffer));
+            return juce::String{ buffer };
+        }
+
+        return {};
+    }
+
+    void Effect::setInput(int index, juce::Image const& image)
+    {
+        struct ImageInput : public Input
+        {
+            ImageInput(juce::Image const& image_) :
+                image(juce::NativeImageType{}.convert(image_))
+            {
+            }
+
+            ~ImageInput() override = default;
+
+            void setEffectInput(int index, Pimpl* pimpl) override
+            {
+                auto sourcePixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData());
+                if (!sourcePixelData)
+                {
+                    return;
+                }
+
+                pimpl->d2dEffect->SetInput(index, sourcePixelData->getAdapterD2D1Bitmap());
+            }
+
+            juce::Image const image;
         };
 
-        return names[(size_t)effectType];
+        inputs.resize(index + 1);
+        inputs[index] = std::make_unique<ImageInput>(image);
+    }
+
+    void Effect::setInput(int index, mescal::Effect const* const otherEffect)
+    {
+        struct ChainedEffectInput : public Input
+        {
+            ChainedEffectInput(Effect const* const otherEffect_) : otherEffect(otherEffect_) {}
+
+            void setEffectInput(int index, Pimpl* pimpl) override
+            {
+                pimpl->d2dEffect->SetInputEffect(index, otherEffect->pimpl->d2dEffect.get());
+            }
+
+            Effect const* const otherEffect;
+        };
+
+        inputs.resize(index + 1);
+        inputs[index] = std::make_unique<ChainedEffectInput>(otherEffect);
     }
 
     const std::vector<Effect::Property>& Effect::getProperties() const noexcept
@@ -149,6 +214,36 @@ namespace mescal
         pimpl->setProperty(index, value);
     }
 
+    void Effect::applyEffect(juce::Image& outputImage, float scaleFactor, float alpha, bool clearDestination)
+    {
+        pimpl->createResources();
+        if (!pimpl->deviceContext || !pimpl->adapter || !pimpl->adapter->dxgiAdapter || !pimpl->d2dEffect)
+        {
+            return;
+        }
+
+        uint32_t sourceImageIndex = 0;
+        int width = 0, height = 0;
+        for (int index = 0; index < inputs.size(); ++index)
+        {
+            inputs[index]->setEffectInput(sourceImageIndex++, pimpl.get());
+        }
+
+        juce::Direct2DPixelData::Ptr outputPixelData = dynamic_cast<juce::Direct2DPixelData*>(outputImage.getPixelData());
+        if (!outputPixelData)
+        {
+            return;
+        }
+
+        pimpl->deviceContext->SetTarget(outputPixelData->getAdapterD2D1Bitmap());
+        pimpl->deviceContext->BeginDraw();
+        if (clearDestination)
+            pimpl->deviceContext->Clear();
+        pimpl->deviceContext->DrawImage(pimpl->d2dEffect.get());
+        pimpl->deviceContext->EndDraw();
+    }
+
+#if 0
     void Effect::applyEffect(juce::Image& sourceImage, juce::Graphics& destContext, float scaleFactor, float alpha)
     {
         juce::Image destinationImage{ juce::Image::ARGB, sourceImage.getWidth(), sourceImage.getHeight(), true };
@@ -185,54 +280,7 @@ namespace mescal
         pimpl->deviceContext->DrawImage(pimpl->d2dEffect.get());
         pimpl->deviceContext->EndDraw();
     }
+#endif
 
-    void EffectChain::addEffect(Effect::Type effectType)
-    {
-        effects.emplace_back(Effect{ effectType });
-    }
-
-    void EffectChain::applyEffects(juce::Image& sourceImage, juce::Image& outputImage, float scaleFactor, float alpha, bool clearDestination)
-    {
-        auto sourcePixelData = dynamic_cast<juce::Direct2DPixelData*>(sourceImage.getPixelData());
-        if (!sourcePixelData)
-        {
-            return;
-        }
-
-        auto& firstEffect = effects.front();
-        auto& pimpl = firstEffect.pimpl;
-        pimpl->createResources();
-        if (!pimpl->deviceContext || !pimpl->adapter || !pimpl->adapter->dxgiAdapter || !pimpl->d2dEffect)
-        {
-            return;
-        }
-
-        pimpl->d2dEffect->SetInput(0, sourcePixelData->getAdapterD2D1Bitmap());
-        auto previousEffect = pimpl->d2dEffect;
-        for (auto it = effects.begin() + 1; it != effects.end(); ++it)
-        {
-            auto& effect = *it;
-
-            if (!effect.pimpl->d2dEffect)
-            {
-                if (auto hr = pimpl->deviceContext->CreateEffect(*pimpl->effectGuids[(size_t)effect.pimpl->effectType], effect.pimpl->d2dEffect.put()); FAILED(hr))
-                {
-                    jassertfalse;
-                }
-            }
-
-            effect.pimpl->d2dEffect->SetInputEffect(0, previousEffect.get());
-
-            previousEffect = effect.pimpl->d2dEffect;
-        }
-
-        auto outputPixelData = dynamic_cast<juce::Direct2DPixelData*>(outputImage.getPixelData());
-        pimpl->deviceContext->SetTarget(outputPixelData->getAdapterD2D1Bitmap());
-        pimpl->deviceContext->BeginDraw();
-        if (clearDestination)
-            pimpl->deviceContext->Clear();
-        pimpl->deviceContext->DrawImage(effects.back().pimpl->d2dEffect.get());
-        pimpl->deviceContext->EndDraw();
-    }
 }
 

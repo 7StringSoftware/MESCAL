@@ -5,7 +5,7 @@ using Vector3 = std::array<float, 3>;
 using Vector4 = std::array<float, 4>;
 using Enumeration = uint8_t;
 
-class Effect : public juce::ImageEffectFilter
+class Effect
 {
 public:
 	enum class Type
@@ -15,17 +15,19 @@ public:
         shadow,
         spotDiffuseLighting,
         perspectiveTransform3D,
+        blend,
 		numEffectTypes
 	};
 
     Effect(Type effectType_);
     Effect(const Effect& other);
-    ~Effect() override;
+    ~Effect();
 
     juce::String getName() const noexcept;
 
-	void applyEffect(juce::Image& sourceImage, juce::Graphics& destContext, float scaleFactor, float alpha) override;
-	void applyEffect(juce::Image& sourceImage, juce::Image& outputImage, float scaleFactor, float alpha, bool clearDestination);
+// 	void applyEffect(juce::Image& sourceImage, juce::Graphics& destContext, float scaleFactor, float alpha) override;
+// 	void applyEffect(juce::Image& sourceImage, juce::Image& outputImage, float scaleFactor, float alpha, bool clearDestination);
+    void applyEffect(juce::Image& outputImage, float scaleFactor, float alpha, bool clearDestination);
 
     using PropertyValue = std::variant<std::monostate,
         juce::String,
@@ -44,28 +46,24 @@ public:
         PropertyValue defaultValue;
     };
 
+    void setInput(int index, juce::Image const& image);
+    void setInput(int index, mescal::Effect const * const otherEffect);
+
     const std::vector<Property>& getProperties() const noexcept;
     void setPropertyValue(int index, const PropertyValue& value);
 
 	Type const effectType;
 
 protected:
-    friend class EffectChain;
-
     void initProperties();
 
     struct Pimpl;
 	std::unique_ptr<Pimpl> pimpl;
-};
 
-class EffectChain
-{
-public:
-    void addEffect(Effect::Type effectType);
-    void applyEffects(juce::Image& sourceImage, juce::Image& outputImage, float scaleFactor, float alpha, bool clearDestination);
-
-    auto& getEffect(size_t index) noexcept { return effects[index]; }
-
-protected:
-    std::vector<Effect> effects;
+    struct Input
+    {
+        virtual ~Input() = default;
+        virtual void setEffectInput(int index, Pimpl* pimpl) = 0;
+    };
+    std::vector <std::unique_ptr<Input>> inputs;
 };

@@ -46,12 +46,14 @@ LiquidFunRenderer::LiquidFunRenderer() noexcept   : graphics (nullptr)
 
 void LiquidFunRenderer::resize(juce::Rectangle<int> r)
 {
+#if 0
     mesh.getVertex(0,0)->configure(r.getTopLeft().toFloat(), juce::Colours::deepskyblue);
     mesh.getVertex(1, 0)->configure(r.getTopRight().toFloat(), juce::Colours::lightskyblue);
     mesh.getVertex(1, 0)->configure(r.getBottomLeft().toFloat(), juce::Colours::darkblue);
     mesh.getVertex(1, 1)->configure(r.getBottomRight().toFloat(), juce::Colours::darkcyan);
 
     outputImage = juce::Image{ juce::Image::ARGB, r.getWidth(), r.getHeight(), true };
+#endif
     //mesh.draw(meshImage, {});
 }
 
@@ -62,11 +64,11 @@ void LiquidFunRenderer::render (Graphics& g, b2World& world,
     graphics = &g;
 
     auto left = boxWorldArea.getX();
-    auto top = boxWorldArea.getBottom(); // switch Y & bottom sides to flip Y axis
+    auto topControlPoint = boxWorldArea.getBottom(); // switch Y & bottom sides to flip Y axis
     auto right = boxWorldArea.getRight();
     auto bottom = boxWorldArea.getY();
-    transform = AffineTransform::fromTargetPoints (left,  top,    target.getX(),     target.getY(),
-                                                       right, top,    target.getRight(), target.getY(),
+    transform = AffineTransform::fromTargetPoints (left,  topControlPoint,    target.getX(),     target.getY(),
+                                                       right, topControlPoint,    target.getRight(), target.getY(),
                                                        left,  bottom, target.getX(),     target.getBottom());
 
     meshImage.clear(meshImage.getBounds());

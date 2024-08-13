@@ -11,9 +11,9 @@ ContentComponent::ContentComponent()
 
     //demoComponent = std::make_unique<GradientMeshDemo>();
     //demoComponent = std::make_unique<SpriteBatchDemo>();
-    //demoComponent = std::make_unique<BottleDemo>();
+    //    demoComponent = std::make_unique<BottleDemo>();
     //demoComponent = std::make_unique<ConicGradientDemo>();
-    demoComponent = std::make_unique<GradientMeshEditor>();
+    //demoComponent = std::make_unique<GradientMeshEditor>();
     addAndMakeVisible(demoComponent.get());
     setSize(2048, 1024);
 

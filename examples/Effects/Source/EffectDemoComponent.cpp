@@ -22,7 +22,7 @@ void EffectDemoComponent::paint(juce::Graphics& g)
         g.drawImage(image, sourceImageArea.removeFromTop(height).toFloat());
     }
 
-    effect->applyEffect(sourceImages.front(), outputImage, 1.0f, 1.0f, true);
+    //effect->applyEffect(sourceImages.front(), outputImage, 1.0f, 1.0f, true);
 
     auto outputImageArea = imageArea.removeFromRight(getWidth() / 2);
     //g.drawImageAt(outputImage, outputImageArea.getX(), outputImageArea.getY());

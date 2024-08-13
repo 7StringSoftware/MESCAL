@@ -77,9 +77,17 @@ public:
         {
             propertyValue = (float)sliders[0]->getValue();
         }
+        else if (std::holds_alternative<mescal::Vector2>(propertyValue))
+        {
+            propertyValue = mescal::Vector2{ (float)sliders[0]->getValue(), (float)sliders[1]->getValue() };
+        }
         else if (std::holds_alternative<mescal::Vector3>(propertyValue))
         {
             propertyValue = mescal::Vector3{ (float)sliders[0]->getValue(), (float)sliders[1]->getValue(), (float)sliders[2]->getValue() };
+        }
+        else if (std::holds_alternative<mescal::Vector4>(propertyValue))
+        {
+            propertyValue = mescal::Vector4{ (float)sliders[0]->getValue(), (float)sliders[1]->getValue(), (float)sliders[2]->getValue(), (float)sliders[3]->getValue() };
         }
 #if 0
         else if (std::holds_alternative<mescal::RGBColor>(propertyValue))
