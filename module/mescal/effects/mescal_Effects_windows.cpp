@@ -80,19 +80,20 @@ namespace mescal
 		{
 			WCHAR stringBuffer[256];
 
-			auto hr = properties->GetPropertyName(propertyIndex, stringBuffer, sizeof(stringBuffer) / sizeof(WCHAR));
+			[[maybe_unused]] auto hr = properties->GetPropertyName(propertyIndex, stringBuffer, sizeof(stringBuffer) / sizeof(WCHAR));
+			jassert(SUCCEEDED(hr));
 
 			return juce::String{ stringBuffer };
 		}
 
+#if JUCE_DEBUG
 		static void dumpPropertiesRecursive(ID2D1Properties* properties, int propertyIndex, int depth = 0)
 		{
 			juce::String indent = juce::String::repeatedString(" ", depth * 3);
 			auto name = getName(properties, propertyIndex);
-			DBG(indent << "dump " << name);
 
 			auto count = properties->GetPropertyCount();
-			for (auto subpropertyIndex = 0; subpropertyIndex < count; ++subpropertyIndex)
+			for (uint32_t subpropertyIndex = 0; subpropertyIndex < count; ++subpropertyIndex)
 			{
 				winrt::com_ptr<ID2D1Properties> subproperties;
 				if (auto hr = properties->GetSubProperties(subpropertyIndex, subproperties.put()); SUCCEEDED(hr))
@@ -104,13 +105,13 @@ namespace mescal
 			{
 				std::array<D2D1_SUBPROPERTY, 7> indices
 				{
-						D2D1_SUBPROPERTY_DISPLAYNAME,
-	D2D1_SUBPROPERTY_ISREADONLY,
-	D2D1_SUBPROPERTY_MIN,
-	D2D1_SUBPROPERTY_MAX,
-	D2D1_SUBPROPERTY_DEFAULT,
-	D2D1_SUBPROPERTY_FIELDS,
-	D2D1_SUBPROPERTY_INDEX
+					D2D1_SUBPROPERTY_DISPLAYNAME,
+					D2D1_SUBPROPERTY_ISREADONLY,
+					D2D1_SUBPROPERTY_MIN,
+					D2D1_SUBPROPERTY_MAX,
+					D2D1_SUBPROPERTY_DEFAULT,
+					D2D1_SUBPROPERTY_FIELDS,
+					D2D1_SUBPROPERTY_INDEX
 				};
 
 				for (auto index : indices)
@@ -172,8 +173,8 @@ namespace mescal
 					}
 				}
 			}
-
 		}
+#endif
 
 		int getNumProperties()
 		{
@@ -249,6 +250,7 @@ namespace mescal
 				break;
 			}
 			}
+
 			return info;
 		}
 
@@ -287,35 +289,30 @@ namespace mescal
 
 			if (std::holds_alternative<bool>(value))
 			{
-				hr = d2dEffect->SetValue(index, std::get<bool>(value));
+				hr = d2dEffect->SetValue(index, (BOOL)std::get<bool>(value));
 			}
 			else if (std::holds_alternative<int>(value))
 			{
 				hr = d2dEffect->SetValue(index, std::get<int>(value));
-				DBG("setProperty " << index << " (int) " << std::get<int>(value));
 			}
 			else if (std::holds_alternative<float>(value))
 			{
 				d2dEffect->SetValue(index, std::get<float>(value));
-				DBG("setProperty " << index << " (float) " << std::get<float>(value));
 			}
 			else if (std::holds_alternative<Vector2>(value))
 			{
 				auto vector2 = std::get<Vector2>(value);
 				d2dEffect->SetValue(index, D2D1_VECTOR_2F{ vector2[0], vector2[1] });
-				DBG("setProperty " << index << " Vector2 " << vector2[0] << ", " << vector2[1]);
 			}
 			else if (std::holds_alternative<Vector3>(value))
 			{
 				auto vector3 = std::get<Vector3>(value);
 				d2dEffect->SetValue(index, D2D1_VECTOR_3F{ vector3[0], vector3[1], vector3[2] });
-				DBG("setProperty " << index << " Vector3 " << vector3[0] << ", " << vector3[1] << ", " << vector3[2]);
 			}
 			else if (std::holds_alternative<Vector4>(value))
 			{
 				auto vector4 = std::get<Vector4>(value);
 				d2dEffect->SetValue(index, D2D1_VECTOR_4F{ vector4[0], vector4[1], vector4[2], vector4[3] });
-				DBG("setProperty " << index << " vector4 " << vector4[0] << ", " << vector4[1] << ", " << vector4[2] << ", " << vector4[3]);
 			}
 			else if (std::holds_alternative<juce::AffineTransform>(value))
 			{
@@ -524,113 +521,5 @@ namespace mescal
 		pimpl->deviceContext->DrawImage(pimpl->d2dEffect.get());
 		pimpl->deviceContext->EndDraw();
 	}
-
-#if 0
-	template <typename T> T blockToValue(juce::MemoryBlock const& block)
-	{
-		return *reinterpret_cast<T const*>(block.getData());
-	};
-
-	template<> juce::String blockToValue<juce::String>(juce::MemoryBlock const& block)
-	{
-		return block.toString();
-	}
-
-
-	void Effect::initProperties()
-	{
-		WCHAR nameBuffer[256];
-		juce::MemoryBlock valueBlock{ 1024 };
-
-		auto numProperties = pimpl->d2dEffect->GetPropertyCount();
-		for (uint32_t index = 0; index < numProperties; ++index)
-		{
-			if (auto hr = pimpl->d2dEffect->GetPropertyName(index, nameBuffer, sizeof(nameBuffer) / sizeof(WCHAR)); FAILED(hr))
-			{
-				jassertfalse;
-				continue;
-			}
-
-			D2D1_PROPERTY_TYPE type = pimpl->d2dEffect->GetType(index);
-			auto size = pimpl->d2dEffect->GetValueSize(index);
-
-			jassert(size <= valueBlock.getSize());
-
-			if (auto hr = pimpl->d2dEffect->GetValue(index, (uint8_t*)valueBlock.getData(), size); FAILED(hr))
-			{
-				jassertfalse;
-				continue;
-			}
-
-			auto name = juce::String{ nameBuffer };
-			PropertyValue value;
-			switch (type)
-			{
-			default:
-			{
-				jassertfalse;
-				break;
-			}
-
-			case D2D1_PROPERTY_TYPE_STRING:
-			{
-				value = valueBlock.toString();
-				break;
-			}
-
-			case D2D1_PROPERTY_TYPE_BOOL:
-			{
-				value = blockToValue<bool>(valueBlock);
-				break;
-			}
-
-			case D2D1_PROPERTY_TYPE_UINT32:
-			{
-				value = blockToValue<uint32_t>(valueBlock);
-				break;
-			}
-
-			case D2D1_PROPERTY_TYPE_INT32:
-			{
-				value = blockToValue<int>(valueBlock);
-				break;
-			}
-
-			case D2D1_PROPERTY_TYPE_FLOAT:
-			{
-				value = blockToValue<float>(valueBlock);
-				break;
-			}
-
-			case D2D1_PROPERTY_TYPE_VECTOR2:
-			{
-				value = blockToValue<Vector2>(valueBlock);
-				break;
-			}
-
-			case D2D1_PROPERTY_TYPE_VECTOR3:
-			{
-				value = blockToValue<Vector3>(valueBlock);
-				break;
-			}
-
-			case D2D1_PROPERTY_TYPE_VECTOR4:
-			{
-				value = blockToValue<Vector4>(valueBlock);
-				break;
-			}
-
-			case D2D1_PROPERTY_TYPE_ENUM:
-			{
-				value = blockToValue<uint8_t>(valueBlock);
-				break;
-			}
-		}
-
-			pimpl->properties.emplace_back(Property{ name, value });
-	}
-}
-#endif
-
 }
 
