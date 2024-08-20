@@ -1,57 +1,14 @@
 #include "MainComponent.h"
-#include "PropertyComponents.h"
-
-using Variant = std::variant<int, float, juce::Point<float>>;
-using Range = std::variant<juce::Range<int>, juce::Range<float>>;
-
-struct PropertyInfo
-{
-    const char* name;
-    Variant value;
-    Range range;
-};
-
-static constexpr std::array<PropertyInfo, 3> propertyValues
-{
-    PropertyInfo{ "name", 3.0f, juce::Range<float>{ 0.0f, 100.0f } },
-    PropertyInfo{ "name", 1, juce::Range<int>{ 0, 2 } },
-    PropertyInfo{ "name", juce::Point<float>{ 0.0f, 0.0f }, juce::Range<float>{} }
-};
-
-struct PropertyInfoGroup
-{
-    PropertyInfo const* const properties;
-    size_t numProperties;
-};
-
-static constexpr std::array<PropertyInfo, 2> propertyValues2
-{
-    PropertyInfo{ "name", 3.0f, juce::Range<float>{ 0.0f, 100.0f } },
-    PropertyInfo{ "name", 1, juce::Range<int>{ 0, 2 } }
-};
-
-static constexpr std::array<PropertyInfoGroup, 2> propertyGroups
-{
-    PropertyInfoGroup{ propertyValues.data(), propertyValues.size() },
-    PropertyInfoGroup{ propertyValues2.data(), propertyValues2.size() }
-};
 
 MainComponent::MainComponent()
 {
-    updateSourceImages();
+	setOpaque(true);
 
-    addAndMakeVisible(propertyPanel);
+	buildEffectChain();
+	addAndMakeVisible(effectChainComponent);
+	//addAndMakeVisible(effectDemoComponent);
 
-    setSize(1024, 1024);
-    setRepaintsOnMouseActivity(true);
-
-    valueChanged(effectTypeValue);
-    effectTypeValue.addListener(this);
-
-    sourceImageValue.addListener(this);
-    showSourceImageValue.addListener(this);
-
-    setOpaque(true);
+	setSize(2048, 1200);
 }
 
 MainComponent::~MainComponent()
@@ -60,340 +17,90 @@ MainComponent::~MainComponent()
 
 void MainComponent::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colours::white);
-
-    g.setColour(juce::Colours::darkgrey);
-    g.fillRect(propertyPanel.getBounds());
-
-    if (sourceImages.size() == 0)
-        return;
-
-    juce::Rectangle<int> imageArea{ 0, 0, propertyPanel.getX(), getHeight() };
-    int height = getHeight() / (int)sourceImages.size();
-    auto sourceImageArea = imageArea.withWidth(proportionOfWidth(0.2f));
-    for (auto& image : sourceImages)
-    {
-        g.drawImage(image, sourceImageArea.removeFromTop(height).toFloat(), juce::RectanglePlacement::centred);
-    }
-
-    if (outputImage.isValid())
-    {
-        applyEffect();
-
-        juce::Rectangle<int> outputImageArea{ sourceImageArea.getRight(), 0, propertyPanel.getX() - sourceImageArea.getRight(), getHeight() };
-        if (showSourceImageValue.getValue())
-        {
-            //g.drawImage(sourceImages.front(), outputImageArea.toFloat(), juce::RectanglePlacement::centred);
-        }
-        g.drawImage(outputImage, outputImageArea.toFloat(), juce::RectanglePlacement::centred);
-    }
+	paintSourceImage();
+	g.fillAll(juce::Colours::white);
 }
 
 void MainComponent::resized()
 {
-    propertyPanel.setBounds(getLocalBounds().removeFromRight(400).reduced(10));
+	effectChainComponent.setBounds(getLocalBounds());
 }
 
-void MainComponent::valueChanged(juce::Value& value)
+void MainComponent::animate()
 {
-    if (value.refersToSameSourceAs(effectTypeValue))
-    {
-        effect = nullptr;
-        mescal::Effect::Type effectType = (mescal::Effect::Type)((int)value.getValue() - 1);
-        effect = std::make_unique<mescal::Effect>(effectType);
-        updateEffectType();
-        return;
-    }
+	auto now = juce::Time::getMillisecondCounterHiRes();
+	auto elapsedMsec = now - lastMsec;
+	lastMsec = now;
 
-    if (value.refersToSameSourceAs(sourceImageValue))
-    {
-        updateSourceImages();
-        return;
-    }
-
-    if (value.refersToSameSourceAs(showSourceImageValue))
-    {
-        repaint();
-        return;
-    }
+	angle += elapsedMsec * 0.001 * juce::MathConstants<double>::twoPi * 0.25f;
+	repaint();
 }
 
-void MainComponent::buildPropertyPanel()
+void MainComponent::paintSourceImage()
 {
-    auto getLabels = [&](mescal::JSONObject const& propertyObject, int numSliders)
-        {
-            if (propertyObject.hasProperty("Labels"))
-            {
-                juce::StringArray labels;
+	juce::Graphics g{ sourceImage };
 
-                auto labelsJSONArray = propertyObject.getArray("Labels");
-                for (auto const& label : labelsJSONArray)
-                {
-                    labels.add(label.toString());
-                }
+	g.setColour(juce::Colours::transparentBlack);
+	g.getInternalContext().fillRect(sourceImage.getBounds(), true);
 
-                return labels;
-            }
+	auto center = sourceImage.getBounds().toFloat().getCentre();
 
-            juce::StringArray array;
-            for (int i = 0; i < numSliders; ++i)
-                array.add(juce::String{});
-            return array;
-        };
-    auto getFloatRange = [&](mescal::JSONObject const& propertyObject) -> juce::Range<float>
-        {
-            if (propertyObject.hasProperty("Range"))
-            {
-                auto rangeObject = propertyObject.get<mescal::JSONObject>("Range");
-                auto min = rangeObject.get<float>("Min");
-                auto max = rangeObject.get<float>("Max");
-                return { min, max };
-            }
+	g.setColour(juce::Colours::black.withAlpha(0.2f));
+	g.fillEllipse(sourceImage.getBounds().toFloat().withSizeKeepingCentre(800.0f, 800.0f));
 
-            return { 0.0f, 1.0f };
-        };
+	g.setColour(juce::Colours::black.withAlpha(0.6f));
+	//g.fillEllipse(sourceImage.getBounds().toFloat().withSizeKeepingCentre(800.0f, 800.0f));
+	juce::Path p;
+	//p.addPolygon(center, 8, 400.0f, angle);
+	p.addStar(center, 10, 360.0f, 400.0f, (float)angle);
+	g.fillPath(p);
 
-    propertyPanel.clear();
-    propertyValueComponents.clear();
+    //g.drawEllipse(sourceImage.getBounds().toFloat().withSizeKeepingCentre(780.0f, 780.0f), 40.0f);
 
-    auto effectsArray = effectInfoCollection.getArray("Effects");
-    auto effectInfo = effectsArray.getObject((int)effect->effectType);
-    auto jsonPropertiesArray = effectInfo.getArray("Properties");
-
-    //
-    // Effect selection
-    //
-    {
-        juce::Array<juce::PropertyComponent*> sectionComponents;
-
-        {
-            juce::StringArray effectNames
-            {
-                "Gaussian blur",
-                "Spot specular lighting",
-                "Shadow",
-                "Spot diffuse lighting",
-                "Perspective transform 3D",
-                "Blend"
-            };
-            juce::Array<juce::var> values;
-            for (int value = 1; value <= (int)mescal::Effect::Type::numEffectTypes; ++value)
-            {
-                values.add(value);
-            }
-            sectionComponents.add(new juce::ChoicePropertyComponent{ effectTypeValue,
-                "Effect",
-                effectNames,
-                values });
-        }
-
-        {
-            juce::StringArray strings
-            {
-                "M31 Galaxy",
-                "Piet Mondriaan",
-                "Van Gogh",
-                "Checkerboard"
-            };
-            juce::Array<juce::var> values;
-            for (int value = (int)m31Galaxy; value <= (int)checkerboard; ++value)
-            {
-                values.add(value);
-            }
-
-            sectionComponents.add(new juce::ChoicePropertyComponent{ sourceImageValue,
-                "Image",
-                strings,
-                values });
-        }
-
-        sectionComponents.add(new juce::BooleanPropertyComponent{ showSourceImageValue, "Show source image", "" });
-
-        propertyPanel.addSection("Effect", sectionComponents);
-    }
-
-    //
-    // Effect-specific controls
-    //
-    {
-        auto const& effectProperties = effect->getProperties();
-        juce::Array<juce::PropertyComponent*> sectionComponents;
-
-        size_t propertyIndex = 0;
-        for (auto const& property : effectProperties)
-        {
-            EffectPropertyValueComponent* propertyComponent = nullptr;
-            auto jsonPropertyInfo = jsonPropertiesArray.getObject(propertyIndex);
-
-            if (std::holds_alternative<int>(property.defaultValue))
-            {
-                auto defaultIntValue = std::get<int>(property.defaultValue);
-                propertyComponent = new MultiSliderPropertyComponent{ property.name,
-                    propertyIndex,
-                    property.defaultValue,
-                    juce::Array<float> { (float)defaultIntValue },
-                    juce::StringArray{ juce::String{} },
-                    juce::Range<float>{ 0, 1 } };
-            }
-            else if (std::holds_alternative<float>(property.defaultValue))
-            {
-                auto defaultFloatValue = std::get<float>(property.defaultValue);
-                auto range = getFloatRange(jsonPropertyInfo);
-
-                propertyComponent = new MultiSliderPropertyComponent{ property.name,
-                    propertyIndex,
-                    property.defaultValue,
-                    juce::Array<float> { defaultFloatValue },
-                    juce::StringArray{ juce::String{} },
-                    range };
-            }
-            else if (std::holds_alternative<mescal::Vector2>(property.defaultValue))
-            {
-                auto defaultValue = std::get<mescal::Vector2>(property.defaultValue);
-                auto range = getFloatRange(jsonPropertyInfo);
-
-                propertyComponent = new MultiSliderPropertyComponent{ property.name,
-                    propertyIndex,
-                    property.defaultValue,
-                    juce::Array<float> { defaultValue[0], defaultValue[1] },
-                    getLabels(jsonPropertyInfo, 2),
-                    range };
-            }
-            else if (std::holds_alternative<mescal::Vector3>(property.defaultValue))
-            {
-                auto defaultValue = std::get<mescal::Vector3>(property.defaultValue);
-                auto range = getFloatRange(jsonPropertyInfo);
-
-                propertyComponent = new MultiSliderPropertyComponent{ property.name,
-                    propertyIndex,
-                    property.defaultValue,
-                    juce::Array<float> { defaultValue[0], defaultValue[1], defaultValue[2] },
-                    getLabels(jsonPropertyInfo, 3),
-                    range };
-            }
-            else if (std::holds_alternative<mescal::Vector4>(property.defaultValue))
-            {
-                auto defaultValue = std::get<mescal::Vector4>(property.defaultValue);
-                auto range = getFloatRange(jsonPropertyInfo);
-
-                propertyComponent = new MultiSliderPropertyComponent{ property.name,
-                    propertyIndex,
-                    property.defaultValue,
-                    juce::Array<float> { defaultValue[0], defaultValue[1], defaultValue[2], defaultValue[3] },
-                    getLabels(jsonPropertyInfo, 4),
-                    range };
-            }
-            else if (std::holds_alternative<uint8_t>(property.defaultValue))
-            {
-                auto defaultValue = std::get<uint8_t>(property.defaultValue);
-
-                auto jsonStringArray = jsonPropertyInfo.getArray("Values");
-                juce::StringArray stringArray;
-                for (auto const& value : jsonStringArray)
-                {
-                    stringArray.add(value.toString());
-                }
-
-                propertyComponent = new EnumPropertyComponent{ property.name,
-                    propertyIndex,
-                    property.defaultValue,
-                    stringArray };
-            }
-            else
-            {
-                jassertfalse;
-            }
-
-            if (propertyComponent)
-            {
-                propertyValueComponents.emplace_back(propertyComponent);
-                sectionComponents.add(propertyComponent);
-            }
-
-            ++propertyIndex;
-        }
-
-        propertyPanel.addSection("Properties", sectionComponents);
-    }
-
-    for (auto& c : propertyValueComponents)
-    {
-        c->onChange = [this](size_t propertyIndex, const mescal::Effect::PropertyValue& propertyValue)
-            {
-                effect->setPropertyValue((int)propertyIndex, propertyValue);
-                applyEffect();
-                repaint();
-            };
-    }
+	juce::Line<float> line{ center, center.getPointOnCircumference(330.0f, (float)angle) };
+	g.setColour(juce::Colours::black);
+	g.drawLine(line, 30.0f);
+	g.setColour(juce::Colours::white);
+	g.drawLine(line, 20.0f);
 }
 
-void MainComponent::updateSourceImages()
+void MainComponent::buildEffectChain()
 {
-    juce::NativeImageType imageType{};
-    sourceImages.clear();
+	auto blurEffect = new mescal::Effect{ mescal::Effect::Type::gaussianBlur };
+	blurEffect->setPropertyValue(mescal::Effect::GaussianBlur::standardDeviation, 10.0f);
+	blurEffect->setInput(0, sourceImage);
 
-    switch ((int)sourceImageValue.getValue())
-    {
-    case m31Galaxy:
-    {
-        sourceImages.emplace_back(imageType.convert(juce::ImageFileFormat::loadFrom(BinaryData::M31Kennett_jpg, BinaryData::M31Kennett_jpgSize)));
-        break;
-    }
+	auto lightingEffect = new mescal::Effect{ mescal::Effect::Type::spotSpecularLighting };
+	lightingEffect->setPropertyValue(mescal::Effect::SpotSpecular::lightPosition, mescal::Vector3{ sourceImage.getWidth() * 0.1f, sourceImage.getHeight() * 0.1f, 250.0f });
+	lightingEffect->setPropertyValue(mescal::Effect::SpotSpecular::pointsAt, mescal::Vector3{ sourceImage.getWidth() * 0.5f, sourceImage.getHeight() * 0.5f, 0.0f });
+	lightingEffect->setPropertyValue(mescal::Effect::SpotSpecular::surfaceScale, 30.0f);
+	lightingEffect->setPropertyValue(mescal::Effect::SpotSpecular::color, mescal::Vector3{ 0.9f, 0.95f, 1.0f });
+	lightingEffect->setInput(0, blurEffect);
 
-    case pietModriaan:
-        sourceImages.emplace_back(imageType.convert(juce::ImageFileFormat::loadFrom(BinaryData::Piet_Mondriaan_19391942__Composition_10_jpg, BinaryData::Piet_Mondriaan_19391942__Composition_10_jpgSize)));
-        break;
+	auto shadowEffect = new mescal::Effect{ mescal::Effect::Type::shadow };
+	shadowEffect->setInput(0, sourceImage);
+	shadowEffect->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, 10.0f);
+	shadowEffect->setPropertyValue(mescal::Effect::Shadow::color, mescal::colourToVector4(juce::Colours::black.withAlpha(0.5f)));
 
-    case vanGogh:
-        sourceImages.emplace_back(imageType.convert(juce::ImageFileFormat::loadFrom(BinaryData::VanGoghstarry_night_jpg, BinaryData::VanGoghstarry_night_jpgSize)));
-        break;
+	auto affineTransformEffect = new mescal::Effect{ mescal::Effect::Type::affineTransform2D };
+	affineTransformEffect->setInput(0, shadowEffect);
+	affineTransformEffect->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, juce::AffineTransform::translation(25.0f, 25.0f));
 
-    case checkerboard:
-        sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, 1000, 1000, true, imageType });
-        {
-            juce::Graphics g{ sourceImages.back() };
-            g.setColour(juce::Colours::transparentBlack);
-            g.getInternalContext().fillRect(sourceImages.back().getBounds(), true);
+	auto compositeEffect = new mescal::Effect{ mescal::Effect::Type::composite };
+	compositeEffect->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::destinationAtop);
+	compositeEffect->setInput(0, lightingEffect);
+	compositeEffect->setInput(1, sourceImage);
 
-            g.fillCheckerBoard(sourceImages.back().getBounds().toFloat(), 50.0f, 50.0f, juce::Colours::transparentBlack, juce::Colours::lightgrey.withAlpha(0.5f));
-        }
-        break;
-    }
+	auto arithmeticCompositeEffect = new mescal::Effect{ mescal::Effect::Type::arithmeticComposite };
+	arithmeticCompositeEffect->setPropertyValue(mescal::Effect::ArithmeticComposite::coefficients, mescal::Vector4{ 0.0f, 2.0f, 1.0f, 0.0f });
+	arithmeticCompositeEffect->setInput(0, compositeEffect);
+	arithmeticCompositeEffect->setInput(1, sourceImage);
 
-    sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, 1000, 1000, true, imageType });
-    {
-        juce::Graphics g{ sourceImages.back() };
-        g.setColour(juce::Colours::transparentBlack);
-        g.getInternalContext().fillRect(sourceImages.back().getBounds(), true);
+	auto shadowCompositeEffect = new mescal::Effect{ mescal::Effect::Type::composite };
+	shadowCompositeEffect->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceOver);
+	shadowCompositeEffect->setInput(0, affineTransformEffect);
+	shadowCompositeEffect->setInput(1, arithmeticCompositeEffect);
 
-        g.fillCheckerBoard(sourceImages.back().getBounds().toFloat(), 20.0f, 20.0f, juce::Colours::transparentBlack, juce::Colours::lightblue.withAlpha(0.5f));
-    }
-
-    juce::Rectangle<int> maxBounds;
-    for (auto const& sourceImage : sourceImages)
-    {
-        maxBounds = maxBounds.getUnion(sourceImage.getBounds());
-    }
-
-    outputImage = juce::Image{ juce::Image::ARGB, maxBounds.getWidth(), maxBounds.getHeight(), true };
-
-    repaint();
-}
-
-void MainComponent::updateEffectType()
-{
-    buildPropertyPanel();
-    applyEffect();
-    repaint();
-}
-
-void MainComponent::applyEffect()
-{
-    //effect->applyEffect(sourceImages.front(), outputImage, 1.0f, 1.0f, true);
-    int index = 0;
-    for (auto const& image : sourceImages)
-    {
-        effect->setInput(index++, image);
-    }
-    effect->applyEffect(outputImage, 1.0f, 1.0f, true);
+	outputEffect = shadowCompositeEffect;
+	effectChainComponent.setOutputEffect(outputEffect, sourceImage.getWidth(), sourceImage.getHeight());
 }

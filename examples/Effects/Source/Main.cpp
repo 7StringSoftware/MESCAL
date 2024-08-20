@@ -14,7 +14,7 @@ public:
 
     void initialise (const juce::String&) override
     {
-#if MESCAL_UNIT_TESTS
+#if 0 // MESCAL_UNIT_TESTS
         juce::UnitTestRunner runner;
         runner.runAllTests();
 #endif

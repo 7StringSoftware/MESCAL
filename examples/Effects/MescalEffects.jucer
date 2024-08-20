@@ -23,12 +23,12 @@
             file="Source/EffectChainComponent.cpp"/>
       <FILE id="RRMbLq" name="EffectChainComponent.h" compile="0" resource="0"
             file="Source/EffectChainComponent.h"/>
-      <FILE id="pzOnFB" name="EffectDemoComponent.cpp" compile="1" resource="0"
-            file="Source/EffectDemoComponent.cpp"/>
-      <FILE id="OvlHdk" name="EffectDemoComponent.h" compile="0" resource="0"
-            file="Source/EffectDemoComponent.h"/>
       <FILE id="SQ19Qh" name="EffectParameters.json" compile="0" resource="1"
             file="Source/EffectParameters.json"/>
+      <FILE id="LFFWVn" name="EffectPropertyPanel.cpp" compile="1" resource="0"
+            file="Source/EffectPropertyPanel.cpp"/>
+      <FILE id="uVIozZ" name="EffectPropertyPanel.h" compile="0" resource="0"
+            file="Source/EffectPropertyPanel.h"/>
       <FILE id="ZNvebn" name="FormatConverter.cpp" compile="1" resource="0"
             file="Source/FormatConverter.cpp"/>
       <FILE id="SSeCbL" name="FormatConverter.h" compile="0" resource="0"
@@ -58,7 +58,7 @@
     <VS2022 targetFolder="Builds/VisualStudio2022">
       <CONFIGURATIONS>
         <CONFIGURATION isDebug="1" name="Debug" targetName="Mescal Effects"/>
-        <CONFIGURATION isDebug="0" name="Release" targetName="Mescal Effects"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="Mescal Effects" useRuntimeLibDLL="0"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_core" path="../../../../JUCE-dev/modules"/>

@@ -340,6 +340,72 @@
           ]
         }
       ]
+    },
+
+    {
+      "Name": "Composite",
+      "Properties": [
+        {
+          "Name": "Mode",
+          "Values": [
+            "Source over",
+            "Destination over",
+            "Source in",
+            "Destination in",
+            "Source out",
+            "Destination out",
+            "Source atop",
+            "Destination atop",
+            "Xor",
+            "Plus",
+            "Source copy",
+            "Bounded source copy",
+            "Invert"
+          ]
+        }
+      ]
+    },
+
+    {
+      "Name": "ArithmeticComposite",
+      "Properties": [
+        {
+          "Name": "Coefficients",
+          "Labels": [
+            "C1",
+            "C2",
+            "C3",
+            "C4"
+          ],
+          "Range": {
+            "Min": -100.0,
+            "Max": 100.0
+          }
+        },
+        {
+          "Name": "ClampOutput"
+        }
+      ]
+    },
+
+    {
+      "Name": "Affine Transform (2D)",
+      "Properties": [
+        {
+          "Name": "Interpolation mode",
+          "Values": [ "Nearest neighbor", "Linear", "Cubic", "Multi-sample linear", "Anisotropic", "High-quality cubic" ]
+        },
+        {
+          "Name": "Border mode",
+          "Values": [ "Soft", "Hard" ]
+        },
+        {
+          "Name": "Transform matrix"
+        },
+        {
+          "Name": "Sharpness"
+        }
+      ]
     }
 
   ]

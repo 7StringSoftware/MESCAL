@@ -1,47 +1,28 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "PropertyComponents.h"
+#include "EffectChainComponent.h"
 
-class MainComponent  : public juce::Component, public juce::Value::Listener
-{
+class MainComponent  : public juce::Component{
 public:
     MainComponent();
     ~MainComponent() override;
 
     void paint (juce::Graphics&) override;
     void resized() override;
-    void valueChanged(juce::Value& value) override;
 
 private:
-    enum
-    {
-        m31Galaxy = 1,
-        pietModriaan,
-        vanGogh,
-        checkerboard
-    };
+    double angle = 0.0;
+    juce::Image sourceImage{ juce::Image::ARGB, 1000, 1000, true, juce::NativeImageType{} };
 
-    mescal::JSONObject effectInfoCollection = []
-        {
-            auto jsonVar = juce::JSON::fromString(BinaryData::EffectParameters_json);
-            return mescal::JSONObject{ jsonVar };
-        }();
-    juce::Value effectTypeValue{ (int)mescal::Effect::Type::blend + 1 };
-    juce::Value sourceImageValue{ (int)m31Galaxy };
-    juce::Value showSourceImageValue{ true };
-    std::unique_ptr<mescal::Effect> effect;
-    juce::PropertyPanel propertyPanel;
+    mescal::Effect::Ptr outputEffect;
+    EffectChainComponent effectChainComponent;
+    double lastMsec = juce::Time::getMillisecondCounterHiRes();
+    juce::VBlankAttachment vblank{ this, [this] { animate(); } };
 
-    std::vector<juce::Image> sourceImages;
-    juce::Image outputImage;
-
-    std::vector<juce::Component::SafePointer<EffectPropertyValueComponent>> propertyValueComponents;
-
-    void buildPropertyPanel();
-    void updateSourceImages();
-    void updateEffectType();
-    void applyEffect();
+    void animate();
+    void paintSourceImage();
+    void buildEffectChain();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };
