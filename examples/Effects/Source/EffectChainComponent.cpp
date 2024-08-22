@@ -100,35 +100,38 @@ void EffectChainComponent::ViewportContent::buildEffectChainComponentsRecursive(
 	}
 }
 
-int EffectChainComponent::ViewportContent::positionEffectChainComponentsRecursive(NodeComponent* nodeComponent, int y, int depth)
+void EffectChainComponent::ViewportContent::positionEffectChainComponentsRecursive(NodeComponent* nodeComponent, int& y, int depth)
 {
 	int size = 150;
 	int gap = 50;
-	int startY = y;
+	int top = y;
 	int x = (size + gap) * (depth - 1);
 
 	int inputIndex = 0;
-	int terminalCount = 0;
+	int inputY = y;
+	int numConnectedInputs = 0;
 	for (auto& inputConnector : nodeComponent->inputConnectors)
 	{
 		if (auto connection = inputConnector->connection)
 		{
 			if (connection->outputConnector)
 			{
-				terminalCount += positionEffectChainComponentsRecursive(&connection->outputConnector->nodeComponent, startY + inputIndex * (size + gap), depth - 1);
+				positionEffectChainComponentsRecursive(&connection->outputConnector->nodeComponent, inputY, depth - 1);
+				inputY += size + gap;
+				++numConnectedInputs;
 			}
 		}
 
 		++inputIndex;
 	}
 
-	terminalCount = juce::jmax(1, terminalCount);
-
-	if (terminalCount > 1)
-		y = startY + ((size + gap) * (terminalCount - 1) - size) / 2;
+	y = top;
+	if (numConnectedInputs > 1)
+	{
+		auto height = inputY - top;
+		y = top + (height - size) / 2;
+	}
 	nodeComponent->setBounds(x, y, size, size + NodeComponent::textHeight);
-
-	return terminalCount;
 }
 
 void EffectChainComponent::ViewportContent::buildEffectChainComponents(mescal::Effect::Ptr newOutputEffect, int imageWidth, int imageHeight)
@@ -144,7 +147,8 @@ void EffectChainComponent::ViewportContent::buildEffectChainComponents(mescal::E
 	int maxDepth = 0;
 	buildEffectChainComponentsRecursive(this, nullptr, -1, newOutputEffect, 0, maxDepth);
 
-	positionEffectChainComponentsRecursive(effectComponents.front().get(), 0, maxDepth);
+	int y = 0;
+	positionEffectChainComponentsRecursive(effectComponents.front().get(), y, maxDepth);
 
 	for (auto& effectComponent : effectComponents)
 	{
@@ -247,9 +251,9 @@ void EffectChainComponent::NodeComponent::paint(juce::Graphics&)
 void EffectChainComponent::NodeComponent::resized()
 {
 	int size = 20;
-	outputConnector.setBounds(getWidth() - size, (getHeight() - size) / 2, size, size);
+	outputConnector.setBounds(getWidth() - size, (getHeight() - size - textHeight) / 2, size, size);
 
-	int yGap = getHeight() / (int)(inputConnectors.size() + 1);
+	int yGap = (getHeight() - textHeight) / (int)(inputConnectors.size() + 1);
 	int y = yGap - size / 2;
 	for (auto& inputConnector : inputConnectors)
 	{

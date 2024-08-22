@@ -93,7 +93,7 @@ private:
             mescal::Effect::Ptr effect,
             int depth,
             int& maxDepth);
-        static int positionEffectChainComponentsRecursive(NodeComponent* nodeComponent, int y, int depth);
+        static void positionEffectChainComponentsRecursive(NodeComponent* nodeComponent, int& y, int depth);
 
         void buildEffectChainComponents(mescal::Effect::Ptr newOutputEffect, int imageWidth, int imageHeight);
         void resized() override;
