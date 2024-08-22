@@ -10,6 +10,7 @@ public:
 
     void paint(juce::Graphics&) override;
     void resized() override;
+    void mouseDown(juce::MouseEvent const& event) override;
 
 private:
     juce::Image logoImage;
@@ -26,15 +27,18 @@ private:
 
         struct Velocity
         {
-            float speed = 0.0f;
             float angle = 0.0f;
+            float speed = 0.0f;
         };
 
         juce::Image sourceImage = juce::ImageFileFormat::loadFrom(BinaryData::VanGoghstarry_night_jpg, BinaryData::VanGoghstarry_night_jpgSize);
         mescal::SpriteBatch spriteBatch;
         size_t numSprites = 0;
         std::vector<mescal::Sprite> sprites;
-        std::vector<float> speeds;
+        std::vector<juce::Point<float>> targets;
+        std::vector<Velocity> velocities;
+
+        double phase = 0.0;
     } particles;
 
     double startTime = juce::Time::getMillisecondCounterHiRes();

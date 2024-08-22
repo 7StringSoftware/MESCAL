@@ -1,7 +1,5 @@
 #include <JuceHeader.h>
 #include "MainComponent.h"
-#include "FormatConverter.h"
-#include <memory>
 
 class Direct2DEffectsApplication  : public juce::JUCEApplication
 {
@@ -14,11 +12,6 @@ public:
 
     void initialise (const juce::String&) override
     {
-#if 0 // MESCAL_UNIT_TESTS
-        juce::UnitTestRunner runner;
-        runner.runAllTests();
-#endif
-
         mainWindow = std::make_unique<MainWindow> (getApplicationName());
     }
 
@@ -50,10 +43,7 @@ public:
 
             setResizable (true, true);
 
-            if (auto display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay())
-            {
-                setBounds (display->userArea.reduced (100));
-            }
+            centreWithSize(getWidth(), getHeight());
 
             setVisible (true);
         }

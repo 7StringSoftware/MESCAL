@@ -479,7 +479,7 @@ namespace mescal
 		return pimpl->getPropertyInfo(index);
 	}
 
-	void Effect::applyEffect(juce::Image& outputImage, float scaleFactor, float alpha, bool clearDestination)
+	void Effect::applyEffect(juce::Image& outputImage, const juce::AffineTransform& transform, bool clearDestination)
 	{
 		pimpl->createResources();
 		if (!pimpl->deviceContext || !pimpl->adapter || !pimpl->adapter->dxgiAdapter || !pimpl->d2dEffect)
@@ -487,8 +487,6 @@ namespace mescal
 			return;
 		}
 
-		uint32_t sourceImageIndex = 0;
-		int width = 0, height = 0;
 		for (int index = 0; index < pimpl->inputs.size(); ++index)
 		{
 			auto& input = pimpl->inputs[index];
@@ -518,6 +516,10 @@ namespace mescal
 		pimpl->deviceContext->BeginDraw();
 		if (clearDestination)
 			pimpl->deviceContext->Clear();
+
+		if (!transform.isIdentity())
+			pimpl->deviceContext->SetTransform(juce::D2DUtilities::transformToMatrix(transform));
+
 		pimpl->deviceContext->DrawImage(pimpl->d2dEffect.get());
 		pimpl->deviceContext->EndDraw();
 	}

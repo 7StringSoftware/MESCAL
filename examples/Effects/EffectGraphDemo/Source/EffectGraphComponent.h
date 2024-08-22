@@ -3,11 +3,11 @@
 #include <JuceHeader.h>
 #include "EffectPropertyPanel.h"
 
-class EffectChainComponent  : public juce::Component
+class EffectGraphComponent  : public juce::Component
 {
 public:
-    EffectChainComponent();
-    ~EffectChainComponent() override;
+    EffectGraphComponent();
+    ~EffectGraphComponent() override;
 
     void setOutputEffect(mescal::Effect::Ptr outputEffect, int imageWidth, int imageHeight);
     void paint(juce::Graphics&) override;
@@ -87,15 +87,15 @@ private:
     {
         ViewportContent();
 
-        static void buildEffectChainComponentsRecursive(ViewportContent* parent,
+        static void buildEffectGraphComponentsRecursive(ViewportContent* parent,
             NodeComponent* downstreamComponent, 
             int downstreamInputIndex,
             mescal::Effect::Ptr effect,
             int depth,
             int& maxDepth);
-        static void positionEffectChainComponentsRecursive(NodeComponent* nodeComponent, int& y, int depth);
+        static void positionEffectGraphComponentsRecursive(NodeComponent* nodeComponent, int& y, int depth);
 
-        void buildEffectChainComponents(mescal::Effect::Ptr newOutputEffect, int imageWidth, int imageHeight);
+        void buildEffectGraphComponents(mescal::Effect::Ptr newOutputEffect, int imageWidth, int imageHeight);
         void resized() override;
         void paint(juce::Graphics&) override;
         juce::Rectangle<int> getPreferredSize();
@@ -107,5 +107,5 @@ private:
     } viewportContent;
     juce::Viewport viewport;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (EffectChainComponent)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (EffectGraphComponent)
 };

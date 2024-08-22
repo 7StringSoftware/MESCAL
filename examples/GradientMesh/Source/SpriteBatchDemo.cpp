@@ -26,29 +26,16 @@ void SpriteBatchDemo::resized()
     }
 }
 
+void SpriteBatchDemo::mouseDown(juce::MouseEvent const& event)
+{
+}
+
 void SpriteBatchDemo::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colours::black);
 
-    //     juce::Path clipPath;
-    //     clipPath.addRoundedRectangle(getLocalBounds().reduced(100).toFloat(), 50.0f);
-    //     g.reduceClipRegion(clipPath);
-
     particles.draw(spriteBatchImage);
     g.drawImageAt(spriteBatchImage, 0, 0, false);
-
-#if 0
-    juce::Point<float> offset
-    {
-        ((float)getWidth() - logoImage.getWidth()) * 0.5f,
-        ((float)getHeight() - logoImage.getHeight()) * 0.5f
-    };
-    g.addTransform(juce::AffineTransform::translation(offset));
-    //glowEffect.setGlowProperties(50.0f, juce::Colours::white);
-    //glowEffect.applyEffect(logoImage, g, 1.0f, opacity);
-    shadowEffect.setShadowProperties(juce::DropShadow{ juce::Colours::white, 50, {} });
-    shadowEffect.applyEffect(logoImage, g, 1.0f, opacity);
-#endif
 }
 
 SpriteBatchDemo::Particles::Particles()
@@ -58,7 +45,7 @@ SpriteBatchDemo::Particles::Particles()
 
     numSprites = (sourceImage.getWidth() / spriteSize) * (sourceImage.getHeight() / spriteSize);
     sprites.reserve(numSprites);
-    speeds.reserve(numSprites);
+    velocities.reserve(numSprites);
     auto center = sourceImage.getBounds().toFloat().getCentre();
 
     for (int y = 0; y < sourceImage.getHeight() - spriteSize; y += spriteSize)
@@ -66,65 +53,66 @@ SpriteBatchDemo::Particles::Particles()
         for (int x = 0; x < sourceImage.getWidth() - spriteSize; x += spriteSize)
         {
             juce::Rectangle<int> source{ x, y, spriteSize, spriteSize };
-            juce::Rectangle<float> destination{ center.x, center.y, (float)spriteSize, (float)spriteSize};
-            sprites.emplace_back(mescal::Sprite{ destination, source });
 
-            speeds.emplace_back(random.nextFloat() * 5.0f);
+            auto line = juce::Line<float>{ center, source.toFloat().getCentre() };
+            auto p = line.getPointAlongLine(line.getLength() * 20.0f);
+
+            juce::Rectangle<float> drawArea{ p.x, p.y, (float)spriteSize, (float)spriteSize};
+            sprites.emplace_back(mescal::Sprite{ source, drawArea });
+
+            targets.emplace_back(source.toFloat().getCentre());
+            velocities.emplace_back(Velocity{ line.getAngle(), -1.0f});
         }
     }
 }
 
 void SpriteBatchDemo::Particles::update(float timeMsec)
 {
+#if 0
+    auto center = sourceImage.getBounds().toFloat().getCentre();
+    auto distance = timeMsec * -0.05;
+
+    for (auto& sprite : sprites)
+    {
+        auto line = juce::Line<float>{ center, sprite.atlasSourceArea.toFloat().getCentre() };
+        auto p = line.getPointAlongLine(line.getLength() + distance);
+        sprite.drawArea.setCentre(p);
+    }
+#endif
+
+#if 1
+    phase = juce::MathConstants<double>::twoPi * timeMsec * 0.001 * 0.25;
+    float amplitude = 100.0f;
+
+    auto xScale = juce::MathConstants<float>::twoPi / (float)sourceImage.getWidth();
+    for (auto& sprite : sprites)
+    {
+        auto yOffset = amplitude * std::sin((float)phase + (float)sprite.atlasSourceArea.getCentreX() * xScale);
+        sprite.drawArea.setCentre(sprite.atlasSourceArea.toFloat().getCentre().translated(0.0f, yOffset));
+    }
+#endif
+
+#if 0
     auto center = sourceImage.getBounds().toFloat().getCentre();
 
     for (size_t index = 0; index < sprites.size(); ++index)
     {
-        auto& sprite = sprites[index];
-        auto speed = speeds[index];
-        speed = 10.0f;
+        auto& velocity = velocities[index];
+        if (velocity.speed == 0.0f)
+            continue;
 
-        juce::Line<float> line{ juce::Point<float>{ (float)sprite.source.getCentreX(), 0.0f }, sprite.source.toFloat().getCentre() };
-        auto distance = timeMsec * 0.001f * speed;
-        if (distance >= line.getLength())
+        auto& sprite = sprites[index];
+        auto line = juce::Line<float>::fromStartAndAngle(sprite.drawArea.getCentre(), velocity.speed * timeMsec * 0.001f, velocity.angle);
+        auto distanceToTarget = sprite.drawArea.getCentre().getDistanceFrom(targets[index]);
+        if (distanceToTarget <= line.getLength() * 2.0f)
         {
-            sprite.destination = sprite.source.toFloat();
+            sprite.drawArea.setCentre(targets[index]);
+            velocity.speed = 0.0f;
         }
         else
         {
-            auto position = line.getPointAlongLine(distance);
-            sprite.destination = sprite.source.toFloat().withCentre(position);
+            sprite.drawArea.setCentre(line.getEnd());
         }
-    }
-
-#if 0
-    int sourceX = 0, sourceY = 0;
-    for (int i = 0; i < numSprites; ++i)
-    {
-        auto& sprite = sprites[i];
-        auto& velocity = velocities[i];
-        if (sprite.source.isEmpty() || !area.contains(sprite.destination.getCentre()))
-        {
-            sprite.source = juce::Rectangle<int>{ sourceX, sourceY, spriteSize, spriteSize };
-            float x = (random.nextFloat() - 0.5f) * area.getWidth() * 0.1f + area.getCentreX();
-            float y = (random.nextFloat() - 0.5f) * area.getHeight() * 0.1f + area.getCentreY();
-            sprite.destination = juce::Rectangle<float>{ x, y, (float)spriteSize, (float)spriteSize };
-            auto distance = mousePos.getDistanceFrom(sprite.destination.getCentre());
-            distance = juce::jmax(1.0f, distance);
-            velocity.speed = 10.0f;// random.nextFloat() * 100.0f;
-            velocity.angle = (random.nextFloat() /** 0.1f - 0.05f*/) * juce::MathConstants<float>::twoPi + juce::MathConstants<float>::pi;
-
-            sourceY += spriteSize;
-            if (sourceY >= atlasSize)
-            {
-                sourceY = 0;
-                sourceX += spriteSize;
-                sourceX %= atlasSize;
-            }
-        }
-
-        auto center = sprite.destination.getCentre().getPointOnCircumference(elapsedTime * velocity.speed, velocity.angle);
-        sprite.destination.setCentre(center);
     }
 #endif
 }

@@ -1,33 +1,33 @@
 #include <JuceHeader.h>
-#include "EffectChainComponent.h"
+#include "EffectGraphComponent.h"
 
-EffectChainComponent::EffectChainComponent()
+EffectGraphComponent::EffectGraphComponent()
 {
 	viewport.setViewedComponent(&viewportContent, false);
 	addAndMakeVisible(viewport);
 }
 
-EffectChainComponent::~EffectChainComponent()
+EffectGraphComponent::~EffectGraphComponent()
 {
 }
 
-void EffectChainComponent::setOutputEffect(mescal::Effect::Ptr outputEffect, int imageWidth, int imageHeight)
+void EffectGraphComponent::setOutputEffect(mescal::Effect::Ptr outputEffect, int imageWidth, int imageHeight)
 {
-	viewportContent.buildEffectChainComponents(outputEffect, imageWidth, imageHeight);
+	viewportContent.buildEffectGraphComponents(outputEffect, imageWidth, imageHeight);
 }
 
-void EffectChainComponent::paint(juce::Graphics& g)
+void EffectGraphComponent::paint(juce::Graphics& g)
 {
 	g.fillAll(juce::Colours::white);
 }
 
-void EffectChainComponent::resized()
+void EffectGraphComponent::resized()
 {
 	viewportContent.setBounds(viewportContent.getPreferredSize());
 	viewport.setBounds(getLocalBounds());
 }
 
-juce::Rectangle<int> EffectChainComponent::ViewportContent::getPreferredSize()
+juce::Rectangle<int> EffectGraphComponent::ViewportContent::getPreferredSize()
 {
 	juce::Rectangle<int> bounds;
 
@@ -39,11 +39,11 @@ juce::Rectangle<int> EffectChainComponent::ViewportContent::getPreferredSize()
 	return bounds;
 }
 
-EffectChainComponent::ViewportContent::ViewportContent()
+EffectGraphComponent::ViewportContent::ViewportContent()
 {
 }
 
-void EffectChainComponent::ViewportContent::buildEffectChainComponentsRecursive(EffectChainComponent::ViewportContent* parent,
+void EffectGraphComponent::ViewportContent::buildEffectGraphComponentsRecursive(EffectGraphComponent::ViewportContent* parent,
 	NodeComponent* downstreamComponent,
 	int downstreamInputIndex,
 	mescal::Effect::Ptr effect,
@@ -83,7 +83,7 @@ void EffectChainComponent::ViewportContent::buildEffectChainComponentsRecursive(
 		if (std::holds_alternative<mescal::Effect::Ptr>(input))
 		{
 			auto chainedEffect = std::get<mescal::Effect::Ptr>(input);
-			buildEffectChainComponentsRecursive(parent, effectComponent, index, chainedEffect, depth, maxDepth);
+			buildEffectGraphComponentsRecursive(parent, effectComponent, index, chainedEffect, depth, maxDepth);
 		}
 		else if (std::holds_alternative<juce::Image>(input))
 		{
@@ -100,7 +100,7 @@ void EffectChainComponent::ViewportContent::buildEffectChainComponentsRecursive(
 	}
 }
 
-void EffectChainComponent::ViewportContent::positionEffectChainComponentsRecursive(NodeComponent* nodeComponent, int& y, int depth)
+void EffectGraphComponent::ViewportContent::positionEffectGraphComponentsRecursive(NodeComponent* nodeComponent, int& y, int depth)
 {
 	int size = 150;
 	int gap = 50;
@@ -116,7 +116,7 @@ void EffectChainComponent::ViewportContent::positionEffectChainComponentsRecursi
 		{
 			if (connection->outputConnector)
 			{
-				positionEffectChainComponentsRecursive(&connection->outputConnector->nodeComponent, inputY, depth - 1);
+				positionEffectGraphComponentsRecursive(&connection->outputConnector->nodeComponent, inputY, depth - 1);
 				inputY += size + gap;
 				++numConnectedInputs;
 			}
@@ -134,7 +134,7 @@ void EffectChainComponent::ViewportContent::positionEffectChainComponentsRecursi
 	nodeComponent->setBounds(x, y, size, size + NodeComponent::textHeight);
 }
 
-void EffectChainComponent::ViewportContent::buildEffectChainComponents(mescal::Effect::Ptr newOutputEffect, int imageWidth, int imageHeight)
+void EffectGraphComponent::ViewportContent::buildEffectGraphComponents(mescal::Effect::Ptr newOutputEffect, int imageWidth, int imageHeight)
 {
 	outputEffect = newOutputEffect;
 	if (!outputEffect)
@@ -145,10 +145,10 @@ void EffectChainComponent::ViewportContent::buildEffectChainComponents(mescal::E
 	connectionComponents.clear();
 
 	int maxDepth = 0;
-	buildEffectChainComponentsRecursive(this, nullptr, -1, newOutputEffect, 0, maxDepth);
+	buildEffectGraphComponentsRecursive(this, nullptr, -1, newOutputEffect, 0, maxDepth);
 
 	int y = 0;
-	positionEffectChainComponentsRecursive(effectComponents.front().get(), y, maxDepth);
+	positionEffectGraphComponentsRecursive(effectComponents.front().get(), y, maxDepth);
 
 	for (auto& effectComponent : effectComponents)
 	{
@@ -158,7 +158,7 @@ void EffectChainComponent::ViewportContent::buildEffectChainComponents(mescal::E
 	resized();
 }
 
-void EffectChainComponent::EffectComponent::mouseUp(juce::MouseEvent const&)
+void EffectGraphComponent::EffectComponent::mouseUp(juce::MouseEvent const&)
 {
 	if (isMouseOver(false))
 	{
@@ -166,7 +166,7 @@ void EffectChainComponent::EffectComponent::mouseUp(juce::MouseEvent const&)
 	}
 }
 
-void EffectChainComponent::EffectComponent::showCallout()
+void EffectGraphComponent::EffectComponent::showCallout()
 {
 	auto content = std::make_unique<EffectPropertyPanel>(effect);
 	content->onPropertyChange = [this]()
@@ -178,7 +178,7 @@ void EffectChainComponent::EffectComponent::showCallout()
 		nullptr);
 }
 
-void EffectChainComponent::ViewportContent::resized()
+void EffectGraphComponent::ViewportContent::resized()
 {
 	for (auto& connectionComponent : connectionComponents)
 	{
@@ -186,22 +186,22 @@ void EffectChainComponent::ViewportContent::resized()
 	}
 }
 
-void EffectChainComponent::ViewportContent::paint(juce::Graphics&)
+void EffectGraphComponent::ViewportContent::paint(juce::Graphics&)
 {
 }
 
-EffectChainComponent::EffectComponent::EffectComponent(mescal::Effect::Ptr effect_) :
+EffectGraphComponent::EffectComponent::EffectComponent(mescal::Effect::Ptr effect_) :
 	NodeComponent(effect_->getInputs().size()),
 	effect(effect_)
 {
 	setName(effect_->getName());
 }
 
-void EffectChainComponent::EffectComponent::paint(juce::Graphics& g)
+void EffectGraphComponent::EffectComponent::paint(juce::Graphics& g)
 {
 	NodeComponent::paint(g);
 
-	effect->applyEffect(image, 1.0f, 1.0f, true);
+	effect->applyEffect(image, {}, true);
 	g.drawImage(image, getLocalBounds().withTrimmedBottom(textHeight).toFloat());
 
 	g.setColour(juce::Colours::white.withAlpha(0.8f));
@@ -212,12 +212,12 @@ void EffectChainComponent::EffectComponent::paint(juce::Graphics& g)
 	g.drawMultiLineText(effect->getName(), 0, getHeight() - textHeight / 2, getWidth(), juce::Justification::centred);
 }
 
-void EffectChainComponent::EffectComponent::resized()
+void EffectGraphComponent::EffectComponent::resized()
 {
 	NodeComponent::resized();
 }
 
-EffectChainComponent::InputImageComponent::InputImageComponent(juce::Image image_) :
+EffectGraphComponent::InputImageComponent::InputImageComponent(juce::Image image_) :
 	NodeComponent(0)
 {
 	setName("Image");
@@ -226,12 +226,12 @@ EffectChainComponent::InputImageComponent::InputImageComponent(juce::Image image
 	numOutputs = 1;
 }
 
-void EffectChainComponent::InputImageComponent::paint(juce::Graphics& g)
+void EffectGraphComponent::InputImageComponent::paint(juce::Graphics& g)
 {
 	g.drawImage(image, getLocalBounds().withTrimmedBottom(textHeight).toFloat());
 }
 
-EffectChainComponent::NodeComponent::NodeComponent(size_t numInputs_) :
+EffectGraphComponent::NodeComponent::NodeComponent(size_t numInputs_) :
 	numInputs(numInputs_),
 	outputConnector(*this, 0)
 {
@@ -244,11 +244,11 @@ EffectChainComponent::NodeComponent::NodeComponent(size_t numInputs_) :
 	}
 }
 
-void EffectChainComponent::NodeComponent::paint(juce::Graphics&)
+void EffectGraphComponent::NodeComponent::paint(juce::Graphics&)
 {
 }
 
-void EffectChainComponent::NodeComponent::resized()
+void EffectGraphComponent::NodeComponent::resized()
 {
 	int size = 20;
 	outputConnector.setBounds(getWidth() - size, (getHeight() - size - textHeight) / 2, size, size);
@@ -262,33 +262,33 @@ void EffectChainComponent::NodeComponent::resized()
 	}
 }
 
-EffectChainComponent::OutputConnectorComponent::OutputConnectorComponent(NodeComponent& nodeComponent_, int index_) :
+EffectGraphComponent::OutputConnectorComponent::OutputConnectorComponent(NodeComponent& nodeComponent_, int index_) :
 	nodeComponent(nodeComponent_),
 	index(index_)
 {
 }
 
-void EffectChainComponent::OutputConnectorComponent::paint(juce::Graphics& g)
+void EffectGraphComponent::OutputConnectorComponent::paint(juce::Graphics& g)
 {
 	g.setColour(juce::Colours::lightgrey);
 	auto r = getLocalBounds().toFloat().reduced(6.0, 6.0f);
 	g.drawEllipse(r, 4.0f);
 }
 
-EffectChainComponent::InputConnectorComponent::InputConnectorComponent(NodeComponent& nodeComponent_, int index_) :
+EffectGraphComponent::InputConnectorComponent::InputConnectorComponent(NodeComponent& nodeComponent_, int index_) :
 	nodeComponent(nodeComponent_),
 	index(index_)
 {
 }
 
-void EffectChainComponent::InputConnectorComponent::paint(juce::Graphics& g)
+void EffectGraphComponent::InputConnectorComponent::paint(juce::Graphics& g)
 {
 	g.setColour(juce::Colours::lightgrey);
 	auto r = getLocalBounds().toFloat().reduced(6.0, 6.0f);
 	g.drawEllipse(r, 4.0f);
 }
 
-void EffectChainComponent::ConnectionComponent::paint(juce::Graphics& g)
+void EffectGraphComponent::ConnectionComponent::paint(juce::Graphics& g)
 {
 	if (outputConnector && inputConnector)
 	{
@@ -300,7 +300,7 @@ void EffectChainComponent::ConnectionComponent::paint(juce::Graphics& g)
 	}
 }
 
-bool EffectChainComponent::ConnectionComponent::hitTest(int, int)
+bool EffectGraphComponent::ConnectionComponent::hitTest(int, int)
 {
 	return false;
 }

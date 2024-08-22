@@ -116,6 +116,8 @@ public:
 
     struct Blend
     {
+        static constexpr int mode = 0;
+
         static constexpr int multiply = 0;
         static constexpr int screen = 1;
         static constexpr int darken = 2;
@@ -218,7 +220,7 @@ public:
     void setInput(int index, juce::ReferenceCountedObjectPtr<Effect> otherEffect);
     std::vector<Input> const& getInputs() const noexcept;
 
-    void applyEffect(juce::Image& outputImage, float scaleFactor, float alpha, bool clearDestination);
+    void applyEffect(juce::Image& outputImage, const juce::AffineTransform& transform, bool clearDestination);
 
     int getNumProperties();
     juce::String getPropertyName(int index);

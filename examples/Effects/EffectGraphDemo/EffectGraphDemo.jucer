@@ -1,41 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<JUCERPROJECT id="XEbnPK" name="Mescal Effects" projectType="guiapp" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" defines="MESCAL_UNIT_TESTS=1">
-  <MAINGROUP id="VYSsCw" name="Mescal Effects">
+<JUCERPROJECT id="XEbnPK" name="EffectGraphDemo" projectType="guiapp" useAppConfig="0"
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" defines="">
+  <MAINGROUP id="VYSsCw" name="EffectGraphDemo">
     <GROUP id="{8B15FD36-06CF-DAD8-A43B-75B5A35F0253}" name="Source">
-      <GROUP id="{3A7C1015-776B-4D85-7D87-3D491A7EE533}" name="Assets">
-        <FILE id="mnErcV" name="Piet_Mondriaan,_1939-1942_-_Composition_10.jpg"
-              compile="0" resource="1" file="Source/Assets/Piet_Mondriaan,_1939-1942_-_Composition_10.jpg"/>
-        <FILE id="pzPBcD" name="VanGogh-starry_night.jpg" compile="0" resource="1"
-              file="Source/Assets/VanGogh-starry_night.jpg"/>
-        <FILE id="IrixGa" name="M31(Kennett).jpg" compile="0" resource="1"
-              file="Source/Assets/M31(Kennett).jpg"/>
-      </GROUP>
-      <GROUP id="{1DEA9876-9FC2-2ECE-F790-D8A8C2C78514}" name="Custom Effect">
-        <FILE id="EmLZkt" name="RippleEffect.cpp" compile="1" resource="0"
-              file="Source/RippleEffect.cpp"/>
-        <FILE id="SiT6z6" name="RippleEffect.h" compile="0" resource="0" file="Source/RippleEffect.h"/>
-        <FILE id="zE2KJI" name="RippleEffect.hlsl" compile="0" resource="0"
-              file="Source/RippleEffect.hlsl"/>
-      </GROUP>
-      <FILE id="JL6ZlU" name="EffectChainComponent.cpp" compile="1" resource="0"
-            file="Source/EffectChainComponent.cpp"/>
-      <FILE id="RRMbLq" name="EffectChainComponent.h" compile="0" resource="0"
-            file="Source/EffectChainComponent.h"/>
+      <FILE id="CMJqOo" name="EffectGraph.cpp" compile="1" resource="0" file="Source/EffectGraph.cpp"/>
+      <FILE id="HWE1hf" name="EffectGraph.h" compile="0" resource="0" file="Source/EffectGraph.h"/>
+      <FILE id="ltWRcX" name="EffectGraphComponent.cpp" compile="1" resource="0"
+            file="Source/EffectGraphComponent.cpp"/>
+      <FILE id="GMWNQO" name="EffectGraphComponent.h" compile="0" resource="0"
+            file="Source/EffectGraphComponent.h"/>
       <FILE id="SQ19Qh" name="EffectParameters.json" compile="0" resource="1"
             file="Source/EffectParameters.json"/>
       <FILE id="LFFWVn" name="EffectPropertyPanel.cpp" compile="1" resource="0"
             file="Source/EffectPropertyPanel.cpp"/>
       <FILE id="uVIozZ" name="EffectPropertyPanel.h" compile="0" resource="0"
             file="Source/EffectPropertyPanel.h"/>
-      <FILE id="ZNvebn" name="FormatConverter.cpp" compile="1" resource="0"
-            file="Source/FormatConverter.cpp"/>
-      <FILE id="SSeCbL" name="FormatConverter.h" compile="0" resource="0"
-            file="Source/FormatConverter.h"/>
-      <FILE id="QxPCH7" name="ImageCarousel.cpp" compile="1" resource="0"
-            file="Source/ImageCarousel.cpp"/>
-      <FILE id="KFbztq" name="ImageCarousel.h" compile="0" resource="0" file="Source/ImageCarousel.h"/>
       <FILE id="fRU9qi" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="Gc4QFf" name="MainComponent.cpp" compile="1" resource="0"
             file="Source/MainComponent.cpp"/>
@@ -57,8 +37,8 @@
   <EXPORTFORMATS>
     <VS2022 targetFolder="Builds/VisualStudio2022">
       <CONFIGURATIONS>
-        <CONFIGURATION isDebug="1" name="Debug" targetName="Mescal Effects"/>
-        <CONFIGURATION isDebug="0" name="Release" targetName="Mescal Effects" useRuntimeLibDLL="0"/>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="EffectGraphDemo"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="EffectGraphDemo" useRuntimeLibDLL="0"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_core" path="../../../../JUCE-dev/modules"/>
@@ -66,7 +46,7 @@
         <MODULEPATH id="juce_events" path="../../../../JUCE-dev/modules"/>
         <MODULEPATH id="juce_graphics" path="../../../../JUCE-dev/modules"/>
         <MODULEPATH id="juce_gui_basics" path="../../../../JUCE-dev/modules"/>
-        <MODULEPATH id="mescal" path="../../module"/>
+        <MODULEPATH id="mescal" path="../../../module"/>
         <MODULEPATH id="juce_gui_extra" path="../../../../JUCE/modules"/>
       </MODULEPATHS>
     </VS2022>

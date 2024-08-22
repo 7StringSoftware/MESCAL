@@ -76,18 +76,18 @@ namespace mescal
             {
                 *destinationRectangle = D2D1_RECT_F
                 {
-                    sprite.destination.getX(),
-                    sprite.destination.getY(),
-                    sprite.destination.getRight(),
-                    sprite.destination.getBottom()
+                    sprite.drawArea.getX(),
+                    sprite.drawArea.getY(),
+                    sprite.drawArea.getRight(),
+                    sprite.drawArea.getBottom()
                 };
 
                 *sourceRectangle = D2D1_RECT_U
                 {
-                    static_cast<UINT32>(sprite.source.getX()),
-                    static_cast<UINT32>(sprite.source.getY()),
-                    static_cast<UINT32>(sprite.source.getRight()),
-                    static_cast<UINT32>(sprite.source.getBottom())
+                    static_cast<UINT32>(sprite.atlasSourceArea.getX()),
+                    static_cast<UINT32>(sprite.atlasSourceArea.getY()),
+                    static_cast<UINT32>(sprite.atlasSourceArea.getRight()),
+                    static_cast<UINT32>(sprite.atlasSourceArea.getBottom())
                 };
 
                 ++destinationRectangle;

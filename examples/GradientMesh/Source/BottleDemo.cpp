@@ -17,11 +17,6 @@ BottleDemo::BottleDemo()
 {
     setOpaque(true);
 
-    shadowEffectChain.addEffect(mescal::Effect::Type::shadow);
-    shadowEffectChain.addEffect(mescal::Effect::Type::perspectiveTransform3D);
-
-    auto& effect = shadowEffectChain.getEffect(1);
-
     liquidFun.createWorld();
 }
 
@@ -160,7 +155,7 @@ void BottleDemo::LiquidFun::createWorld()
 
     juce::Random random{};
     auto center = boxWorldArea.getCentre().transformedBy(flip);
-    for (int i = 0; i < 10000; ++i)
+    for (int i = 0; i < 100; ++i)
     {
         b2ParticleDef pd;
         pd.flags = b2_waterParticle;
@@ -182,7 +177,7 @@ void BottleDemo::LiquidFun::paint(juce::Graphics& g, juce::AffineTransform const
 {
     renderer.render(g,
         world,
-        boxWorldArea,
+        boxWorldArea.expanded(200.0f),
         g.getClipBounds().toFloat());
 }
 
@@ -192,3 +187,4 @@ void BottleDemo::LiquidFun::resize(juce::Rectangle<int> size)
 
     renderer.resize(size);
 }
+

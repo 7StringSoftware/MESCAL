@@ -2,8 +2,8 @@
 
 struct Sprite
 {
-    juce::Rectangle<float> destination;
-    juce::Rectangle<int> source;
+    juce::Rectangle<int> atlasSourceArea;
+    juce::Rectangle<float> drawArea;
 };
 
 class SpriteBatch

@@ -32,7 +32,7 @@ LiquidFunRenderer::LiquidFunRenderer() noexcept   : graphics (nullptr)
 {
     SetFlags (e_shapeBit | e_particleBit);
 
-    juce::ColourGradient radialGradient{ juce::Colours::lightskyblue, particleImage.getBounds().getCentre().toFloat(),
+    juce::ColourGradient radialGradient{ juce::Colours::darkblue, particleImage.getBounds().getCentre().toFloat(),
         juce::Colours::aliceblue, {0.0f, particleImage.getHeight() * 0.5f},
         true };
 
@@ -100,8 +100,8 @@ void LiquidFunRenderer::DrawParticles(const b2Vec2* centers, float32 radius, con
     {
         auto& sprite = sprites[index];
         juce::Rectangle<float> destination{ centers[index].x, centers[index].y, radius * 2.0f, radius * 2.0f };
-        sprite.destination = destination.transformedBy(transform);
-        sprite.source = particleImage.getBounds();
+        sprite.drawArea = destination.transformedBy(transform);
+        sprite.atlasSourceArea = particleImage.getBounds();
     }
 
     spriteBatch.setAtlas(particleImage);
@@ -109,9 +109,8 @@ void LiquidFunRenderer::DrawParticles(const b2Vec2* centers, float32 radius, con
     graphics->getInternalContext().fillRect(outputImage.getBounds(), true);
     spriteBatch.draw(outputImage, sprites, true);
 
-    graphics->setColour(juce::Colours::black);
+    graphics->setColour(juce::Colours::white);
     graphics->drawImageAt(outputImage, 0, 0, false);
-
 }
 
 void LiquidFunRenderer::DrawPoint(const b2Vec2& p, float32 size, const b2Color& color)
