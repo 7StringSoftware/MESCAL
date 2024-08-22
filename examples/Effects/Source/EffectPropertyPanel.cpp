@@ -22,7 +22,29 @@ void EffectPropertyPanel::buildPropertyPanel()
 	auto jsonEffectPropertiesObject = [&]()
 		{
 			juce::var jsonVar;
-			auto jsonString = juce::String{ BinaryData::EffectParameters_json };
+			juce::String jsonString;
+#if JUCE_DEBUG
+			juce::File directory = juce::File::getCurrentWorkingDirectory().getParentDirectory();
+
+			bool found = false;
+			while (!directory.isRoot() && !found)
+			{
+				auto files = directory.findChildFiles(juce::File::findFiles, true, "*.json");
+				for (auto const& file : files)
+				{
+					if (file.getFileNameWithoutExtension() == "EffectParameters")
+					{
+						jsonString = file.loadFileAsString();
+						found = true;
+						break;
+					}
+				}
+
+				directory = directory.getParentDirectory();
+			}
+#else
+			jsonString = juce::String{ BinaryData::EffectParameters_json };
+#endif
 			auto result = juce::JSON::parse(jsonString, jsonVar);
 			jassert(result.wasOk());
 			return mescal::JSONObject{ jsonVar }
@@ -70,6 +92,20 @@ void EffectPropertyPanel::buildPropertyPanel()
 				return juce::Range<float>{ 0.0f, 1.0f };
 			};
 
+		auto getSkew = [&](int propertyIndex) -> std::optional<std::tuple<float, bool>>
+			{
+				auto jsonEffectPropertyObject = jsonEffectPropertiesObject.getObject(propertyIndex);
+				if (jsonEffectPropertyObject.hasProperty("Skew"))
+				{
+					auto skewObject = jsonEffectPropertyObject.get < mescal::JSONObject>("Skew");
+					float factor = skewObject.get<float>("Factor");
+					bool symmetric = skewObject.get<bool>("Symmetric");
+					return std::make_tuple(factor, symmetric);
+				}
+
+				return {};
+			};
+
 		propertyPanel.clear();
 		propertyValueComponents.clear();
 
@@ -102,55 +138,64 @@ void EffectPropertyPanel::buildPropertyPanel()
 						propertyValue,
 						juce::Array<float> { (float)defaultIntValue },
 						juce::StringArray{ juce::String{} },
-						juce::Range<float>{ 0, 1 } };
+						juce::Range<float>{ 0, 1 },
+						{} };
 				}
 				else if (std::holds_alternative<float>(propertyValue))
 				{
 					auto defaultFloatValue = std::get<float>(propertyValue);
 					auto range = getRange(propertyInfo, propertyIndex);
+					auto skew = getSkew(propertyIndex);
 
 					propertyComponent = new MultiSliderPropertyComponent{ propertyName,
 						propertyIndex,
 						propertyValue,
 						juce::Array<float> { defaultFloatValue },
 						juce::StringArray{ juce::String{} },
-						range };
+						range,
+						skew };
 				}
 				else if (std::holds_alternative<mescal::Vector2>(propertyValue))
 				{
 					auto defaultValue = std::get<mescal::Vector2>(propertyValue);
 					auto range = getRange(propertyInfo, propertyIndex);
+					auto skew = getSkew(propertyIndex);
 
 					propertyComponent = new MultiSliderPropertyComponent{ propertyName,
 						propertyIndex,
 						propertyValue,
 						juce::Array<float> { defaultValue[0], defaultValue[1] },
 						getLabels(2, propertyIndex),
-						range };
+						range,
+						skew };
 				}
 				else if (std::holds_alternative<mescal::Vector3>(propertyValue))
 				{
 					auto defaultValue = std::get<mescal::Vector3>(propertyValue);
 					auto range = getRange(propertyInfo, propertyIndex);
+					auto skew = getSkew(propertyIndex);
 
 					propertyComponent = new MultiSliderPropertyComponent{ propertyName,
 						propertyIndex,
 						propertyValue,
 						juce::Array<float> { defaultValue[0], defaultValue[1], defaultValue[2] },
 						getLabels(3, propertyIndex),
-						range };
+						range, 
+						skew };
 				}
 				else if (std::holds_alternative<mescal::Vector4>(propertyValue))
 				{
 					auto defaultValue = std::get<mescal::Vector4>(propertyValue);
 					auto range = getRange(propertyInfo, propertyIndex);
+					auto skew = getSkew(propertyIndex);
 
 					propertyComponent = new MultiSliderPropertyComponent{ propertyName,
 						propertyIndex,
 						propertyValue,
 						juce::Array<float> { defaultValue[0], defaultValue[1], defaultValue[2], defaultValue[3] },
 						getLabels(4, propertyIndex),
-						range };
+						range,
+						skew };
 				}
 				else if (std::holds_alternative<uint8_t>(propertyValue))
 				{

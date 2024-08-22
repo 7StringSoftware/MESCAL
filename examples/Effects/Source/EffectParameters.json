@@ -51,14 +51,18 @@
         {
           "Name": "Focus",
           "Range": {
-            "Min": 0.0,
+            "Min": -100.0,
             "Max": 100.0
+          },
+          "Skew": {
+            "Factor" : 0.25,
+            "Symmetric" : true
           }
         },
         {
           "Name": "Limiting cone angle",
           "Range": {
-            "Min": 0.0,
+            "Min": -90.0,
             "Max": 90.0
           }
         },
@@ -67,6 +71,10 @@
           "Range": {
             "Min": 0.0,
             "Max": 128.0
+          },
+          "Skew": {
+            "Factor": 0.25,
+            "Symmetric": true
           }
         },
         {
@@ -74,6 +82,10 @@
           "Range": {
             "Min": 0.0,
             "Max": 10000.0
+          },
+          "Skew": {
+            "Factor": 0.25,
+            "Symmetric": false
           }
         },
         {
@@ -81,6 +93,10 @@
           "Range": {
             "Min": 0.0,
             "Max": 10000.0
+          },
+          "Skew": {
+            "Factor": 0.25,
+            "Symmetric": true
           }
         },
         {

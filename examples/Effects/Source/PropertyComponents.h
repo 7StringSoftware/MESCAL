@@ -57,15 +57,24 @@ public:
 		mescal::Effect::PropertyValue propertyValue_,
 		juce::Array<float> const& sliderDefaultValues,
 		juce::StringArray const& sliderNames_,
-		juce::Range<float> sliderRange_) :
+		juce::Range<float> sliderRange_,
+		std::optional<std::tuple<float, bool>> skew) :
 		EffectPropertyValueComponent(propertyName_, propertyIndex_, propertyValue_)
 	{
 		int index = 0;
+
 		for (auto const& name : sliderNames_)
 		{
 			auto slider = std::make_unique<juce::Slider>(juce::Slider::LinearBar, juce::Slider::TextBoxLeft);
 			slider->setRange(sliderRange_.getStart(), sliderRange_.getEnd(), 0.01);
 			slider->setValue(sliderDefaultValues[index++], juce::dontSendNotification);
+
+			if (skew.has_value())
+			{
+				auto [factor, symmetric] = *skew;
+				slider->setSkewFactor(factor, symmetric);
+			}
+
 			addAndMakeVisible(slider.get());
 			slider->onValueChange = [this]
 				{
