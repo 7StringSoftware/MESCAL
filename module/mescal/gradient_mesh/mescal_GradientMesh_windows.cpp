@@ -236,6 +236,11 @@ namespace mescal
                 d2dPatch.color03 = toCOLOR_F(topRight->color);
                 d2dPatch.color30 = toCOLOR_F(bottomLeft->color);
                 d2dPatch.color33 = toCOLOR_F(bottomRight->color);
+
+                d2dPatch.topEdgeMode = (row == 0) ? D2D1_PATCH_EDGE_MODE_ANTIALIASED : D2D1_PATCH_EDGE_MODE_ALIASED;
+                d2dPatch.leftEdgeMode = (column == 0) ? D2D1_PATCH_EDGE_MODE_ANTIALIASED : D2D1_PATCH_EDGE_MODE_ALIASED;
+                d2dPatch.bottomEdgeMode = (row >= numRows - 2) ? D2D1_PATCH_EDGE_MODE_ANTIALIASED : D2D1_PATCH_EDGE_MODE_ALIASED;
+                d2dPatch.rightEdgeMode = (column >= numColumns - 2) ? D2D1_PATCH_EDGE_MODE_ANTIALIASED : D2D1_PATCH_EDGE_MODE_ALIASED;
             }
         }
 
