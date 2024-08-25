@@ -7,7 +7,8 @@
       <FILE id="qGKRbG" name="M31(Kennett).jpg" compile="0" resource="1"
             file="../Assets/M31(Kennett).jpg"/>
       <FILE id="fRU9qi" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
-      <FILE id="z8zkXI" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
+      <FILE id="z8zkXI" name="ImageBlendDemo.h" compile="0" resource="0"
+            file="Source/ImageBlendDemo.h"/>
       <FILE id="Kqkdse" name="VanGogh-starry_night.jpg" compile="0" resource="1"
             file="../Assets/VanGogh-starry_night.jpg"/>
     </GROUP>

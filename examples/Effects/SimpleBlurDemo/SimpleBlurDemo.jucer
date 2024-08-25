@@ -5,7 +5,8 @@
   <MAINGROUP id="VYSsCw" name="SimpleBlurDemo">
     <GROUP id="{8B15FD36-06CF-DAD8-A43B-75B5A35F0253}" name="Source">
       <FILE id="fRU9qi" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
-      <FILE id="z8zkXI" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
+      <FILE id="z8zkXI" name="SimpleBlurDemo.h" compile="0" resource="0"
+            file="Source/SimpleBlurDemo.h"/>
       <FILE id="Kqkdse" name="VanGogh-starry_night.jpg" compile="0" resource="1"
             file="../Assets/VanGogh-starry_night.jpg"/>
     </GROUP>

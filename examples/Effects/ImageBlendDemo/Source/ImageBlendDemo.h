@@ -1,11 +1,9 @@
 #pragma once
 
-#include <JuceHeader.h>
-
-class MainComponent  : public juce::Component
+class ImageBlendDemo  : public juce::Component
 {
 public:
-    MainComponent()
+    ImageBlendDemo()
     {
         //
         // The blend effect only has a single property that sets the mode. Query the effect object for a list
@@ -70,5 +68,5 @@ private:
 
     juce::ComboBox modeCombo;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ImageBlendDemo)
 };

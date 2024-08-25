@@ -1,10 +1,10 @@
 #include <JuceHeader.h>
-#include "MainComponent.h"
+#include "SimpleBlurDemo.h"
 
-class Direct2DEffectsApplication  : public juce::JUCEApplication
+class DemoApplication  : public juce::JUCEApplication
 {
 public:
-    Direct2DEffectsApplication() {}
+    DemoApplication() {}
 
     const juce::String getApplicationName() override       { return ProjectInfo::projectName; }
     const juce::String getApplicationVersion() override    { return ProjectInfo::versionString; }
@@ -39,7 +39,7 @@ public:
                               DocumentWindow::allButtons)
         {
             setUsingNativeTitleBar (true);
-            setContentNonOwned(&mainComponent, true);
+            setContentNonOwned(&simpleBlurDemo, true);
 
             setResizable (true, true);
 
@@ -54,7 +54,7 @@ public:
         }
 
     private:
-        MainComponent mainComponent;
+        SimpleBlurDemo simpleBlurDemo;
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainWindow)
     };
 
@@ -62,4 +62,4 @@ private:
     std::unique_ptr<MainWindow> mainWindow;
 };
 
-START_JUCE_APPLICATION (Direct2DEffectsApplication)
+START_JUCE_APPLICATION (DemoApplication)

@@ -1,11 +1,9 @@
 #pragma once
 
-#include <JuceHeader.h>
-
-class MainComponent  : public juce::Component
+class SimpleBlurDemo  : public juce::Component
 {
 public:
-    MainComponent()
+    SimpleBlurDemo()
     {
         addAndMakeVisible(blurAmountSlider);
         blurAmountSlider.setRange({ 0.0, 50.0 }, 0.1);
@@ -50,5 +48,5 @@ private:
     
     juce::Slider blurAmountSlider{ juce::Slider::LinearHorizontal, juce::Slider::TextBoxLeft };
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleBlurDemo)
 };
