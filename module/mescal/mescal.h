@@ -44,9 +44,9 @@ END_JUCE_MODULE_DECLARATION
 namespace mescal
 {
     #include "json/mescal_JSON.h"
-    #include "gradient_mesh/mescal_GradientMesh_windows.h"
-    #include "gradient_mesh/mescal_ConicGradient_windows.h"
-    #include "sprite_batch/mescal_SpriteBatch_windows.h"
+    #include "gradients/mescal_MeshGradient_windows.h"
+    #include "gradients/mescal_ConicGradient_windows.h"
+    #include "sprites/mescal_SpriteBatch_windows.h"
     #include "effects/mescal_Effects_windows.h"
     #include "effects/mescal_CustomEffect_windows.h"
 }
