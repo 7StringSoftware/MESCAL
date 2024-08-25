@@ -76,6 +76,10 @@
 
 */
 
+/**
+* Color128 holds a single ARGB color value with premultiplied alpha. Each color channel is stored a 32-bit floating point value.
+*/
+
 struct Color128
 {
     Color128() {}
@@ -104,6 +108,28 @@ struct Color128
     static Color128 fromHSV(float hue, float saturation, float value, float alpha) noexcept;
     static Color128 grayLevel(float level) noexcept;
 };
+
+/**
+ 
+ A mesh gradient is a gradient with colors that transition smoothly between a set of points. Mesh gradient colors can blend and flow 
+ in multiple directions simultaneously.
+
+ A GradientMesh creates and stores a set of points called vertices. Each vertex has a designated color. A group of four vertices defines a patch. 
+ Each edge of the patch is a cubic Bezier spline.
+ 
+ Here's a basic mesh gradient with a single patch with the vertices and Bezier control points shown:
+ 
+ \image html simple_mesh_with_controls.webp width=25%
+
+ By arranging the verices and control points, the patch can form arbitrary shapes:
+
+ \image html simple_mesh_arbitrary_shape.webp width=25%
+
+ But that's not much of a mesh. Here's a more complex mesh gradient with multiple patches, shown with and without the patch boundaries:
+
+ \image html 8x8_side_by_side.webp width=50%
+
+ */
 
 class GradientMesh
 {
