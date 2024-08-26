@@ -6,8 +6,11 @@ public:
     ConicGradient();
     ~ConicGradient();
 
-    void setBounds(juce::Rectangle<float> bounds_);
-    juce::Rectangle<float> getBounds() const noexcept;
+    void setRadiusRange(juce::Range<float> radiusRange_)
+    {
+        jassert(radiusRange_.getStart() >= 0.0f);
+        radiusRange = radiusRange_;
+    }
 
     struct Stop
     {
@@ -27,9 +30,8 @@ public:
     void draw(juce::Image image, juce::AffineTransform transform);
 
 private:
-    juce::Rectangle<float> bounds;
-
     std::vector<Stop> stops;
+    juce::Range<float> radiusRange;
 
     void sortStops();
 

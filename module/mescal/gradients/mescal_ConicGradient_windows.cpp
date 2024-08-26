@@ -46,23 +46,68 @@ namespace mescal
             jassert(stops.size() >= 2);
             auto patches = std::vector<D2D1_GRADIENT_MESH_PATCH>{ stops.size() - 1 };
 
-            float radiusX = owner.bounds.getWidth() * 0.5f;
-            float radiusY = owner.bounds.getHeight() * 0.5f;
+            float outerRadius = owner.radiusRange.getEnd();
+            float innerRadius = owner.radiusRange.getStart();
             juce::Point<float> center{ 0.0f, 0.0f };
+            auto bottomEdgeMode = innerRadius >= 0.0f ? D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ANTIALIASED : D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ALIASED;
 
-            transform = juce::AffineTransform::scale(radiusX, radiusY).translated(owner.bounds.getCentre()).followedBy(transform);
             for (size_t index = 0; index < patches.size(); ++index)
             {
                 auto& stop = stops[index];
                 auto& nextStop = stops[index + 1];
                 auto& patch = patches[index];
-                auto p1 = center.getPointOnCircumference(1.0f, stop.angle);
-                auto p2 = center.getPointOnCircumference(1.0f, nextStop.angle);
 
-                patch.point00 = toPOINT_2F(p1.transformedBy(transform));
-                patch.point03 = toPOINT_2F(p2.transformedBy(transform));
-                patch.point33 = toPOINT_2F({ owner.bounds.getCentre() });
-                patch.point30 = patch.point33;
+                auto outerArcStart = center.getPointOnCircumference(outerRadius, stop.angle);
+                auto outerArcEnd = center.getPointOnCircumference(outerRadius, nextStop.angle);
+                auto innerArcStart = center.getPointOnCircumference(innerRadius, stop.angle);
+                auto innerArcEnd = center.getPointOnCircumference(innerRadius, nextStop.angle);
+
+                /*
+
+                Direct2D mesh gradient patch layout:
+
+               P00------------P03
+                |              |
+                |              |
+                |              |
+                |              |
+                |              |
+                |              |
+               P30------------P33
+
+                To make an arc segment with an inner and outer radius:
+
+                P00--------.
+                |          \
+                |           \
+               P30-----      \
+                       \      \
+                        \      \
+                         \      |
+                         |      |
+                         |      |
+                         |      |
+                         P33---P03
+
+                If the inner radius zero, collapse the inner two points to the center.
+
+               P00--------.
+                |          \
+                |           \
+                |            \
+                |             \
+                |              \
+                |               \
+                |               |
+                |               |
+               P30-------------P03
+               P33
+
+                */
+                patch.point00 = toPOINT_2F(outerArcStart.transformedBy(transform));
+                patch.point03 = toPOINT_2F(outerArcEnd.transformedBy(transform));
+                patch.point30 = toPOINT_2F(innerArcStart.transformedBy(transform));
+                patch.point33 = toPOINT_2F(innerArcEnd.transformedBy(transform));
 
                 patch.color00 = { stop.color128.red, stop.color128.green, stop.color128.blue, stop.color128.alpha };
                 patch.color03 = { nextStop.color128.red, nextStop.color128.green, nextStop.color128.blue, nextStop.color128.alpha };
@@ -71,20 +116,26 @@ namespace mescal
 
                 auto arcAngle = nextStop.angle - stop.angle;
                 auto controlPointDistance = 4.0f * std::tan(arcAngle * 0.25f) / 3.0f;
-                auto cp0 = p1.getPointOnCircumference(controlPointDistance, stop.angle + juce::MathConstants<float>::halfPi);
-                auto cp1 = p2.getPointOnCircumference(controlPointDistance, nextStop.angle - juce::MathConstants<float>::halfPi);
+                auto controlPointAngle0 = stop.angle + juce::MathConstants<float>::halfPi; // control points should be tangential to the arc segment
+                auto controlPointAngle1 = nextStop.angle - juce::MathConstants<float>::halfPi;
 
-                patch.point01 = toPOINT_2F(cp0.transformedBy(transform));
-                patch.point02 = toPOINT_2F(cp1.transformedBy(transform));
+                auto outerControlPointDistance = outerRadius * controlPointDistance;
+                auto outerArcControlPoint0 = outerArcStart.getPointOnCircumference(outerControlPointDistance, controlPointAngle0);
+                auto outerArcControlPoint1 = outerArcEnd.getPointOnCircumference(outerControlPointDistance, controlPointAngle1);
+
+                auto innerControlPointDistance = innerRadius * controlPointDistance;
+                auto innerArcControlPoint0 = innerArcStart.getPointOnCircumference(innerControlPointDistance, controlPointAngle0);
+                auto innerArcControlPoint1 = innerArcEnd.getPointOnCircumference(innerControlPointDistance, controlPointAngle1);
+
+                patch.point01 = toPOINT_2F(outerArcControlPoint0.transformedBy(transform));
+                patch.point02 = toPOINT_2F(outerArcControlPoint1.transformedBy(transform));
+                patch.point31 = toPOINT_2F(innerArcControlPoint0.transformedBy(transform));
+                patch.point32 = toPOINT_2F(innerArcControlPoint1.transformedBy(transform));
 
                 patch.point10 = patch.point00;
                 patch.point13 = patch.point03;
-
                 patch.point20 = patch.point30;
-                patch.point31 = patch.point30;
-
                 patch.point23 = patch.point33;
-                patch.point32 = patch.point33;
 
                 patch.point11 = patch.point00;
                 patch.point12 = patch.point03;
@@ -93,7 +144,7 @@ namespace mescal
 
                 patch.topEdgeMode = D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ANTIALIASED;
                 patch.rightEdgeMode = D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ALIASED;
-                patch.bottomEdgeMode = D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ALIASED;
+                patch.bottomEdgeMode = bottomEdgeMode;
                 patch.leftEdgeMode = D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ALIASED;
             }
 
@@ -165,16 +216,6 @@ namespace mescal
     void ConicGradient::draw(juce::Image image, juce::AffineTransform transform)
     {
         pimpl->draw(stops, image, transform);
-    }
-
-    void ConicGradient::setBounds(juce::Rectangle<float> bounds_)
-    {
-        bounds = bounds_;
-    }
-
-    juce::Rectangle<float> ConicGradient::getBounds() const noexcept
-    {
-        return bounds;
     }
 
     void ConicGradient::sortStops()
