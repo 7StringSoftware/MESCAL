@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="XEbnPK" name="SimpleBlurDemo" projectType="guiapp" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" defines="">
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
   <MAINGROUP id="VYSsCw" name="SimpleBlurDemo">
     <GROUP id="{8B15FD36-06CF-DAD8-A43B-75B5A35F0253}" name="Source">
       <FILE id="fRU9qi" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
