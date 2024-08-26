@@ -30,6 +30,8 @@
 #define JUCE_CORE_INCLUDE_COM_SMART_PTR 1
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
+#include <juce_graphics/native/juce_Direct2DMetrics_windows.h>
+#include <juce_graphics/native/juce_EventTracing.h>
 #include <juce_graphics/native/juce_DirectX_windows.h>
 #include <juce_graphics/native/juce_Direct2DImage_windows.h>
 
