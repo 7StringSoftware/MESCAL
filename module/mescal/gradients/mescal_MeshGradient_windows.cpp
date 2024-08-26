@@ -1,6 +1,52 @@
 namespace mescal
 {
 
+/*
+
+    D2D1_GRADIENT_MESH_PATCH
+
+    P00  Top left corner
+    P03  Top right corner
+    P30  Bottom left corner
+    P33  Bottom right corner
+
+    P01  Top edge control point #1
+    P02  Top edge control point #1
+
+    P10  Left edge control point #1
+    P20  Left edge control point #1
+
+    P13  Right edge control point #1
+    P23  Right edge control point #1
+
+    P31  Bottom edge control point #1
+    P32  Bottom edge control point #1
+
+    P11  Top left corner (inner)
+    P12  Top right corner (inner)
+    P21  Bottom left corner (inner)
+    P22  Bottom right corner (inner)
+
+
+            P01
+        /
+        P00--------------------P03
+    / |                    / | \
+    P10  |                  P02 |  P13
+        |                      |
+        |     P11     P12      |
+        |                      |
+        |     P21     P22      |
+        |                      |
+        | P20                  |
+        | /   P31          P23 |
+        |/   /               \ |
+        P30--------------------P33
+                            /
+                        P32
+
+*/
+
 #ifdef __INTELLISENSE__
 
 #include "mescal_GradientMesh_windows.h"

@@ -1,81 +1,5 @@
 #pragma once
 
-/*
-
-    D2D1_GRADIENT_MESH_PATCH
-
-    P00  Top left corner
-    P03  Top right corner
-    P30  Bottom left corner
-    P33  Bottom right corner
-
-    P01  Top edge control point #1
-    P02  Top edge control point #1
-
-    P10  Left edge control point #1
-    P20  Left edge control point #1
-
-    P13  Right edge control point #1
-    P23  Right edge control point #1
-
-    P31  Bottom edge control point #1
-    P32  Bottom edge control point #1
-
-    P11  Top left corner (inner)
-    P12  Top right corner (inner)
-    P21  Bottom left corner (inner)
-    P22  Bottom right corner (inner)
-
-
-         P01
-        /
-     P00--------------------P03
-    / |                    / | \
- P10  |                  P02 |  P13
-      |                      |
-      |     P11     P12      |
-      |                      |
-      |     P21     P22      |
-      |                      |
-      | P20                  |
-      | /   P31          P23 |
-      |/   /               \ |
-     P30--------------------P33
-                          /
-                       P32
-
-
-    For three-sided faces, squish the upper right corner onto the upper left
-    corner so the top edge has zero length
-
-                    RIGHT EDGE
-    P00 / P01 / P02 / P03 -----------P33
-             |                        |
-             |                       /
-             |                      /
-             |                     /
-             |                    /
-             |                   /
-           L |                  /
-           E |                 / B
-           F |                / O
-           T |               / T
-             |              / T
-           E |             / O
-           D |            / M
-           G |           /
-           E |          / E
-             |         / D
-             |        / G
-             |       / E
-             |      /
-             |     /
-             |    /
-             |   /
-              P30
-
-*/
-
 /**
 * Color128 holds a single ARGB color value with premultiplied alpha. Each color channel is stored a 32-bit floating point value.
 */
@@ -110,15 +34,15 @@ struct Color128
 };
 
 /**
- 
- A mesh gradient is a gradient with colors that transition smoothly between a set of points. Mesh gradient colors can blend and flow 
+
+ A mesh gradient is a gradient with colors that transition smoothly between a set of points. Mesh gradient colors can blend and flow
  in multiple directions simultaneously.
 
- A MeshGradient creates and stores a set of points called vertices. Each vertex has a designated color. A group of four vertices defines a patch. 
+ A MeshGradient creates and stores a set of points called vertices. Each vertex has a designated color. A group of four vertices defines a patch.
  Each edge of the patch is a cubic Bezier spline.
- 
+
  Here's a basic mesh gradient with a single patch with the vertices and Bezier control points shown:
- 
+
  \image html simple_mesh_with_controls.webp width=25%
 
  By arranging the verices and control points, the patch can form arbitrary shapes:
