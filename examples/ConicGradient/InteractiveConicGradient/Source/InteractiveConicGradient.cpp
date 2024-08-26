@@ -26,7 +26,7 @@ InteractiveConicGradient::InteractiveConicGradient()
             updateSliders();
             repaint();
         };
-    presetCombo.setSelectedId(royGBiv, juce::dontSendNotification);
+    presetCombo.setSelectedId(grayscale, juce::dontSendNotification);
 
     directionCombo.addItem("Clockwise", clockwise);
     directionCombo.addItem("Counterclockwise", counterclockwise);
@@ -34,7 +34,7 @@ InteractiveConicGradient::InteractiveConicGradient()
     directionCombo.onChange = presetCombo.onChange;
     directionCombo.setSelectedId(clockwise, juce::dontSendNotification);
 
-    setGradientStops(royGBiv, clockwise);
+    setGradientStops(grayscale, clockwise);
 
     createSliders();
     updateSliders();
@@ -74,11 +74,11 @@ void InteractiveConicGradient::resized()
 {
     auto localBounds = getLocalBounds();
     int size = juce::jmin(localBounds.getWidth(), localBounds.getHeight());
-    conicGradientBounds = juce::Rectangle<int>{ size, size }.reduced(100).withCentre(localBounds.getCentre());
-    conicGradient.setBounds(conicGradientBounds.withZeroOrigin().toFloat());
+    outerRadius = 0.4f * (float)size;
+    conicGradient.setRadiusRange({ outerRadius * 0.75f, outerRadius});
 
     auto stopIterator = conicGradient.getStops().begin();
-    auto dragRadius = conicGradientBounds.getWidth() * 0.5f + 25.0f;
+    auto dragRadius = outerRadius + 25.0f;
     for (auto& slider : sliders)
     {
         slider->setAngle(stopIterator->angle);
@@ -130,7 +130,8 @@ void InteractiveConicGradient::setGradientStops(PresetType presetType, Direction
 
     case hsv:
     {
-        for (float hue = 0.0f; hue <= 1.0f; hue += 0.0625f)
+        int numSteps = 16;
+        for (float hue = 0.0f; hue <= 1.0f; hue += 1.0f / (float)numSteps)
         {
             conicGradient.addStop(sign * hue * juce::MathConstants<float>::twoPi, mescal::Color128::fromHSV(hue, 1.0f, 1.0f, 1.0f));
         }
@@ -139,9 +140,9 @@ void InteractiveConicGradient::setGradientStops(PresetType presetType, Direction
 
     case grayscale:
     {
-        for (float level = 0.0f; level <= 1.0f; level += 0.25f)
+        for (float level = 0.0f; level <= 1.0f; level += 0.125f)
         {
-            conicGradient.addStop(sign * level * juce::MathConstants<float>::twoPi, mescal::Color128::grayLevel(level));
+            conicGradient.addStop(sign * level * juce::MathConstants<float>::twoPi, mescal::Color128::grayLevel(level + 0.25f));
         }
         break;
     }
@@ -190,14 +191,14 @@ void InteractiveConicGradient::updateSliders()
 
 void InteractiveConicGradient::paintConicGradient(juce::Graphics& g)
 {
-    if (conicGradientBounds.isEmpty())
+    if (getLocalBounds().isEmpty())
         return;
 
-    if (image.isNull() || image.getWidth() != conicGradientBounds.getWidth() || image.getHeight() != conicGradientBounds.getHeight())
-        image = juce::Image(juce::Image::ARGB, conicGradientBounds.getWidth(), conicGradientBounds.getHeight(), true);
+    if (image.isNull() || image.getWidth() != getWidth() || image.getHeight() != getHeight())
+        image = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
 
-    conicGradient.draw(image, {});
-    g.drawImage(image, conicGradientBounds.toFloat(), juce::RectanglePlacement::centred);
+    conicGradient.draw(image, juce::AffineTransform{}.translated(getLocalBounds().toFloat().getCentre()));
+    g.drawImage(image, getLocalBounds().toFloat(), juce::RectanglePlacement::centred);
 }
 
 InteractiveConicGradient::ArcSlider::ArcSlider(InteractiveConicGradient& owner_, size_t index_) :

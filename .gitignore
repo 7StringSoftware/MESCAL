@@ -1,6 +1,5 @@
 .vs/
 x64/
-JuceLibraryCode/
-Builds/
 doxygen/html
 .DS_Store
+*.vcxproj.user

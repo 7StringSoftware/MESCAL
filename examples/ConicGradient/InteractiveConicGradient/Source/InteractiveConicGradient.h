@@ -11,7 +11,7 @@ public:
     void resized() override;
 
 private:
-    juce::Rectangle<int> conicGradientBounds;
+    float outerRadius = 0.0f;
     juce::Image image;
     mescal::ConicGradient conicGradient;
     juce::ComboBox presetCombo;
