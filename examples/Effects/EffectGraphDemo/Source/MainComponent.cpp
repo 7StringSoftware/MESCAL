@@ -7,7 +7,7 @@ MainComponent::MainComponent()
 	effectGraphComponent.setOutputEffect(effectGraph.outputEffect, effectGraph.sourceImage.getWidth(), effectGraph.sourceImage.getHeight());
 	addAndMakeVisible(effectGraphComponent);
 
-	setSize(2048, 1200);
+	setBounds(effectGraphComponent.getPreferredSize());
 }
 
 MainComponent::~MainComponent()

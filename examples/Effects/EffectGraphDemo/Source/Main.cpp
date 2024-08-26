@@ -42,11 +42,7 @@ public:
             setContentNonOwned(&mainComponent, true);
 
             setResizable (true, true);
-
-            if (auto display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay())
-            {
-                setBounds (display->userArea.reduced (100));
-            }
+            centreWithSize (getWidth(), getHeight());
 
             setVisible (true);
         }

@@ -27,6 +27,12 @@ void EffectGraphComponent::resized()
 	viewport.setBounds(getLocalBounds());
 }
 
+
+juce::Rectangle<int> EffectGraphComponent::getPreferredSize()
+{
+    return viewportContent.getPreferredSize();
+}
+
 juce::Rectangle<int> EffectGraphComponent::ViewportContent::getPreferredSize()
 {
 	juce::Rectangle<int> bounds;
@@ -174,8 +180,8 @@ void EffectGraphComponent::EffectComponent::showCallout()
 			getParentComponent()->repaint();
 		};
 	juce::CallOutBox::launchAsynchronously(std::move(content),
-		getScreenBounds(),
-		nullptr);
+		getBoundsInParent(),
+		getParentComponent());
 }
 
 void EffectGraphComponent::ViewportContent::resized()
