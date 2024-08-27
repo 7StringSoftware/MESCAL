@@ -21,7 +21,7 @@ InteractiveConicGradient::InteractiveConicGradient()
     presetCombo.onChange = [this]()
         {
             setGradientStops(static_cast<PresetType>(presetCombo.getSelectedId()), static_cast<Direction>(directionCombo.getSelectedId()));
-            createSliders();
+            createArcSliders();
             resized();
             updateSliders();
             repaint();
@@ -36,15 +36,22 @@ InteractiveConicGradient::InteractiveConicGradient()
 
     setGradientStops(grayscale, clockwise);
 
-    createSliders();
+    createArcSliders();
     updateSliders();
+
+    addAndMakeVisible(radiiSlider);
+    radiiSlider.onValueChange = [this]
+        {
+            conicGradient.setRadiusRange({ (float)radiiSlider.getMinValue(), (float)radiiSlider.getMaxValue() });
+            repaint();
+        };
 
 	setSize(768, 768);
 }
 
-void InteractiveConicGradient::createSliders()
+void InteractiveConicGradient::createArcSliders()
 {
-    sliders.clear();
+    arcSliders.clear();
 
     auto const& stops = conicGradient.getStops();
     for (size_t index = 0; index < stops.size(); ++index)
@@ -60,7 +67,7 @@ void InteractiveConicGradient::createSliders()
                 updateSliders();
             };
 
-        sliders.push_back(std::move(slider));
+        arcSliders.push_back(std::move(slider));
     }
 }
 
@@ -72,14 +79,15 @@ void InteractiveConicGradient::paint(juce::Graphics& g)
 
 void InteractiveConicGradient::resized()
 {
+    int controlHeight = 34;
     auto localBounds = getLocalBounds();
-    int size = juce::jmin(localBounds.getWidth(), localBounds.getHeight());
+    int size = juce::jmin(localBounds.getWidth(), localBounds.getHeight() - controlHeight);
     outerRadius = 0.4f * (float)size;
-    conicGradient.setRadiusRange({ outerRadius * 0.75f, outerRadius});
+    conicGradient.setRadiusRange({ outerRadius * 0.25f, outerRadius});
 
     auto stopIterator = conicGradient.getStops().begin();
     auto dragRadius = outerRadius + 25.0f;
-    for (auto& slider : sliders)
+    for (auto& slider : arcSliders)
     {
         slider->setAngle(stopIterator->angle);
         slider->dragRadius = dragRadius;
@@ -88,10 +96,21 @@ void InteractiveConicGradient::resized()
 
     updateSliders();
 
+    if (radiiSlider.getMaxValue() == 0.0)
+    {
+        auto range = conicGradient.getRadiusRange();
+        radiiSlider.setRange({ 0.0, outerRadius }, juce::dontSendNotification);
+        radiiSlider.setMinAndMaxValues(range.getStart(), range.getEnd(), juce::dontSendNotification);
+    }
+
     int w = 200;
-    int h = 34;
-    presetCombo.setBounds(getWidth() - w - 10, 10, w, h);
-    directionCombo.setBounds(presetCombo.getBounds().translated(0, h + 10));
+    presetCombo.setBounds(getWidth() - w - 10, 10, w, controlHeight);
+    directionCombo.setBounds(presetCombo.getBounds().translated(0, controlHeight + 10));
+
+    addAndMakeVisible(radiiLabel);
+    radiiLabel.attachToComponent(&radiiSlider, true);
+    w = getWidth() - 30 - radiiLabel.getFont().getStringWidth(radiiLabel.getText());
+    radiiSlider.setBounds(getRight() - w - 10, getHeight() - controlHeight - 10, w, controlHeight);
 }
 
 void InteractiveConicGradient::setGradientStops(PresetType presetType, Direction direction)
@@ -157,7 +176,7 @@ void InteractiveConicGradient::updateSliders()
     for (size_t index = 0; index < stops.size(); ++index)
     {
         auto& stop = stops[index];
-        auto& slider = sliders[index];
+        auto& slider = arcSliders[index];
 
         auto stopAngle = stop.angle;
         while (stopAngle < sliderRangeStartAngle)

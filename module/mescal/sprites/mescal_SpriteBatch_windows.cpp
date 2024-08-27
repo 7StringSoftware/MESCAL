@@ -137,7 +137,7 @@ namespace mescal
         }
 
         SpriteBatch& owner;
-        int numSprites;
+        int numSprites = 0;
         juce::Image atlas;
         winrt::com_ptr<ID2D1DeviceContext3> deviceContext;
         winrt::com_ptr<ID2D1SpriteBatch> spriteBatch;

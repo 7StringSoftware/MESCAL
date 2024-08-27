@@ -64,7 +64,7 @@ public:
 
     enum class Placement
     {
-        top, left, bottom, right
+        top, left, bottom, right, unknown = -1
     };
 
     struct Vertex
@@ -121,6 +121,7 @@ public:
         return vertices;
     }
 
+    juce::Rectangle<float> getBounds() const noexcept;
     void applyTransform(juce::AffineTransform const& transform);
 
     void draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor = juce::Colours::transparentBlack);

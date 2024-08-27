@@ -202,7 +202,7 @@ public:
 			editor->onFocusLost = editor->onReturnKey;
 		}
 
-		auto transform = std::get<juce::AffineTransform>(propertyValue_);
+		auto const& transform = std::get<juce::AffineTransform>(propertyValue_);
 		editor00.setText(juce::String{ transform.mat00, 3 });
 		editor01.setText(juce::String{ transform.mat01, 3 });
 		editor02.setText(juce::String{ transform.mat02, 3 });

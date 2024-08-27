@@ -19,7 +19,7 @@ private:
 
         juce::ComponentDragger dragger;
         std::weak_ptr<mescal::MeshGradient::Vertex> vertex;
-        mescal::MeshGradient::Placement placement;
+        mescal::MeshGradient::Placement placement = mescal::MeshGradient::Placement::unknown;
         std::function<void(BezierControlComponent&)> onChange;
     };
 
@@ -52,11 +52,11 @@ private:
     struct ColorCalloutContent : public juce::ChangeListener, public juce::Component
     {
         ColorCalloutContent(juce::Colour color) :
-            colorSelector(juce::ColourSelector::showColourAtTop | 
-				juce::ColourSelector::showSliders | 
-				juce::ColourSelector::showColourspace |
-				juce::ColourSelector::showAlphaChannel |
-				juce::ColourSelector::editableColour)
+            colorSelector(juce::ColourSelector::showColourAtTop |
+                juce::ColourSelector::showSliders |
+                juce::ColourSelector::showColourspace |
+                juce::ColourSelector::showAlphaChannel |
+                juce::ColourSelector::editableColour)
         {
             colorSelector.setCurrentColour(color);
             colorSelector.addChangeListener(this);
@@ -80,14 +80,13 @@ private:
 
     std::unique_ptr<mescal::MeshGradient> mesh;
     juce::Image meshImage;
-    juce::Rectangle<float> meshBounds;
     std::array<VertexComponent, 4> vertexComponents;
     std::array<BezierControlComponent, 8> bezierControlComponents;
     std::vector<std::unique_ptr<PatchComponent>> patchComponents;
     juce::Label rowCountLabel{ "Rows", "Rows" }, columnCountLabel{ "Columns", "Columns" };
     juce::Slider rowCountSlider{ juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft };
     juce::Slider columnCountSlider{ juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft };
-	juce::ToggleButton showControlsToggle{ "Show control points" };
+    juce::ToggleButton showControlsToggle{ "Show control points" };
 
     void createMesh();
     void createComponents();

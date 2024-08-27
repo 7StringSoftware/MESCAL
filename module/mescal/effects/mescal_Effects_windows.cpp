@@ -311,12 +311,12 @@ namespace mescal
 			}
 			else if (std::holds_alternative<Vector4>(value))
 			{
-				auto vector4 = std::get<Vector4>(value);
+				auto const& vector4 = std::get<Vector4>(value);
 				d2dEffect->SetValue(index, D2D1_VECTOR_4F{ vector4[0], vector4[1], vector4[2], vector4[3] });
 			}
 			else if (std::holds_alternative<juce::AffineTransform>(value))
 			{
-				auto transform = std::get<juce::AffineTransform>(value);
+				auto const& transform = std::get<juce::AffineTransform>(value);
 				auto matrix = juce::D2DUtilities::transformToMatrix(transform);
 				d2dEffect->SetValue(index, matrix);
 			}

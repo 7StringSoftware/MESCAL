@@ -12,6 +12,11 @@ public:
         radiusRange = radiusRange_;
     }
 
+    juce::Range<float> getRadiusRange() const noexcept
+    {
+        return radiusRange;
+    }
+
     struct Stop
     {
         float angle;

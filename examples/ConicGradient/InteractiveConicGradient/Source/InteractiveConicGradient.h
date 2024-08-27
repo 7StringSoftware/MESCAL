@@ -5,7 +5,7 @@ class InteractiveConicGradient : public juce::Component
 public:
     InteractiveConicGradient();
 
-    void createSliders();
+    void createArcSliders();
 
     void paint(juce::Graphics&) override;
     void resized() override;
@@ -50,7 +50,9 @@ private:
         std::function<void(size_t, float)> onChange;
     };
 
-    std::vector <std::unique_ptr<ArcSlider>> sliders;
+    std::vector <std::unique_ptr<ArcSlider>> arcSliders;
+    juce::Label radiiLabel{ {}, "Radii" };
+    juce::Slider radiiSlider{ juce::Slider::TwoValueHorizontal, juce::Slider::NoTextBox };
 
     void updateSliders();
     void paintConicGradient(juce::Graphics& g);
