@@ -45,11 +45,11 @@ struct Color128
 
  \image html simple_mesh_with_controls.webp width=25%
 
- By arranging the verices and control points, the patch can form arbitrary shapes:
+ By arranging the vertices and control points, the patch can form arbitrary shapes:
 
- \image html simple_mesh_arbitrary_shape.webp width=25%
+ \image html simple_mesh_arbitrary_shape.webp width=35%
 
- But that's not much of a mesh. Here's a more complex mesh gradient with multiple patches, shown with and without the patch boundaries:
+ Here's a more complex mesh gradient with multiple patches, shown with and without the patch boundaries:
 
  \image html 8x8_side_by_side.webp width=50%
 
