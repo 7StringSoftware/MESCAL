@@ -48,5 +48,4 @@ namespace mescal
     #include "gradients/mescal_ConicGradient_windows.h"
     #include "sprites/mescal_SpriteBatch_windows.h"
     #include "effects/mescal_Effects_windows.h"
-    #include "effects/mescal_CustomEffect_windows.h"
 }

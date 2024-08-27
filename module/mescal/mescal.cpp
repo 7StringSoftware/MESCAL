@@ -42,4 +42,3 @@
 #include "gradients/mescal_ConicGradient_windows.cpp"
 #include "sprites/mescal_SpriteBatch_windows.cpp"
 #include "effects/mescal_Effects_windows.cpp"
-//#include "effects/mescal_CustomEffect_windows.cpp"
