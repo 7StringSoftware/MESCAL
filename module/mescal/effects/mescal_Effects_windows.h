@@ -15,7 +15,7 @@ inline Vector4 colourToVector4(juce::Colour colour)
 
 /**
 
- The Effect class is a wrapper for built-in Direct2D effects. The effects are applied using shaders
+ The Effect class is a wrapper for built-in Direct2D effects. The effects are processed using shaders
  in the GPU.
 
  You can apply a single effect to a JUCE Image, or construct an effect graph that can combine multiple Images
@@ -26,13 +26,17 @@ inline Vector4 colourToVector4(juce::Colour colour)
 
  Each effect has a set of properties that configure the effect, such as setting the blur radius or blend mode.
 
+ The final effect in the chain paints the output onto a JUCE Image. Note that the Image needs to
+ be a Direct2D Image.
+
  To apply a single Effect, create an Effect object with the desired effect type, set the inputs, set the properties,
  and call applyEffect. For a single Effect you'll probably set the input to a JUCE Image and the output will be a JUCE Image.
 
  To apply multiple effects at once, determine what effects you want to use and the order in which they should be
- applied. Each effect chain will have one final effect; that's the one that is actually applied. The final effect will have
- one or more inputs; each of those inputs will in turn have their own inputs and so forth.
-
+ applied. Create the final effect, then create the Image and Effect objects that will be the inputs to the final effect.
+ Call Effect::setInput on each input for the final effect and pass the Image or Effect object for that input. Repeat that some
+ process for each effect "upstream" from the final effect. Note that you only need to call applyEffect on the final effect; the
+ upstream effects will be applied in the correct order.
 
  The simplest effect graph is a single effect with no inputs:
 
@@ -115,7 +119,7 @@ public:
 
 	/**
 	* Constants for built-in Direct2D gaussian blur effect
-	* 
+	*
 	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/gaussian-blur
 	*/
     struct GaussianBlur
@@ -134,7 +138,7 @@ public:
 
 	/**
 	* Constants for built-in Direct2D spot specular lighting effect
-	* 
+	*
 	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/spot-specular-lighting
 	*/
     struct SpotSpecular
@@ -160,7 +164,7 @@ public:
 
 	/**
 	* Constants for built-in Direct2D shadow effect
-	* 
+	*
 	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/shadow
 	*/
     struct Shadow
@@ -176,7 +180,7 @@ public:
 
 	/**
 	* Constants for built-in Direct2D spot diffuse lighting effect
-	* 
+	*
 	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/spot-diffuse-lighting
 	*/
     struct SpotDiffuseLighting
@@ -201,7 +205,7 @@ public:
 
 	/**
 	* Constants for built-in Direct2D 3D perspective transform effect
-	* 
+	*
 	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/3d-perspective-transform
 	*/
     struct PerspectiveTransform3D
@@ -227,7 +231,7 @@ public:
 
 	/**
 	* Constants for built-in Direct2D blend effect
-	* 
+	*
 	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/blend
 	*/
     struct Blend
@@ -264,7 +268,7 @@ public:
 
 	/**
 	* Constants for built-in Direct2D composite effect
-	* 
+	*
 	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/composite
 	*/
     struct Composite
@@ -299,7 +303,7 @@ public:
 
 	/**
 	* Constants for built-in Direct2D 2D affine transform effect
-	* 
+	*
 	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/2d-affine-transform
 	*/
     struct AffineTransform2D
@@ -321,16 +325,16 @@ public:
     };
 
 	/**
-	* Variant that can hold different types of inputs for an effect.
-	* 
-	* Effects have zero or more inputs. Each input can be a JUCE Image or another Effect. 
+    * Variant that can hold different types of inputs for an effect.
+	*
+	* Effects have zero or more inputs. Each input can be a JUCE Image or another Effect.
 	* Chaining effects together allows for complex image processing graphs.
 	*/
-    using Input = std::variant<juce::Image, juce::ReferenceCountedObjectPtr<Effect>>;
+    using Input = std::variant<std::monostate, juce::Image, juce::ReferenceCountedObjectPtr<Effect>>;
 
 	/**
-	* Variant that can hold different types for getting and setting effect property values
-	* 
+    * Variant that can hold different types for getting and setting effect property values
+	*
 	* Effects have properties that configure the effect. Properties can have different types, such as
 	* float, arrays, or text strings. The PropertyValue variant can hold any of these types.
 	*/
@@ -348,7 +352,7 @@ public:
 
 	/**
 	* Structure that contains metadata about an effect property
-	* 
+	*
 	* PropertyInfo contains the name of the property and any relevant range information.
 	*/
     struct PropertyInfo
@@ -360,7 +364,7 @@ public:
 
 	/**
 	* Constructor for an Effect object
-	* 
+	*
 	* @param effectType_ The type of effect to create
 	*/
     Effect(Type effectType_);
@@ -373,28 +377,39 @@ public:
     juce::String getName() const noexcept;
 
 	/**
-	* Get a reference to the effect's array of inputs. 
-	* 
-	* Effects can have zero, one, or multiple inputs. Each input can be connected to a 
-	* JUCE Image or another Effect. 
+	* Get a reference to the effect's array of inputs.
+	*
+	* Effects can have zero, one, or multiple inputs. Each input can be connected to a
+	* JUCE Image or another Effect.
 	*/
 	std::vector<Input> const& getInputs() const noexcept;
 
 	/**
 	* Set the input at the specified index to a JUCE Image
+    *
+    * @param index The index of the input
+    * @param image The JUCE Image that will be the source for that input
 	*/
     void setInput(int index, juce::Image const& image);
 
 	/**
 	* Set the input at the specified index to another Effect
-	*/
+    *
+    * @param index The index of the input
+    * @param image The Effect that will be the source for that input
+    */
     void setInput(int index, juce::ReferenceCountedObjectPtr<Effect> otherEffect);
 
 	/**
-	* Run the effect and paint the output from the final effect in the chain onto outputImage
-	*
-	* Note that if you have multiple chained effects you only need to call applyEffect on the final effect. 
-	* The final effect will walk balk up the chain and apply any upstream effects in the correct order.
+	* Run the effect graph and paint the output from the final effect in the chain onto outputImage
+    *
+    * This effect will be the final effect in the graph. If you have multiple chained effects you only
+    * need to call applyEffect on the final effect. The final effect will walk balk up the chain and
+    * apply any upstream effects in the correct order.
+    *
+    * @param The JUCE Image that will be painted with the output of the effect graph
+    * @param transform The affine transform to apply to the effect output before the effect output is painted onto outputImage
+    * @param clearDestination If true, outputImage will be cleared before the effect output is painted
 	*/
     void applyEffect(juce::Image& outputImage, const juce::AffineTransform& transform, bool clearDestination);
 

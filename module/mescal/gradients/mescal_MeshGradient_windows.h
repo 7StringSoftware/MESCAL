@@ -53,6 +53,9 @@ struct Color128
 
  \image html 8x8_side_by_side.webp width=50%
 
+ * The actual gradient is painted by a GPU shader onto a JUCE Image by calling the draw method. Note that the Image needs to
+ * be a Direct2D Image.
+ *
  */
 
 class MeshGradient
@@ -127,6 +130,7 @@ public:
     void draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor = juce::Colours::transparentBlack);
 
 private:
+    /** @internal */
     int const numRows;
     int const numColumns;
 

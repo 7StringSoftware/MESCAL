@@ -1,6 +1,6 @@
 /** \mainpage MESCAL
 
-MESCAL is a JUCE module that adds Direct2D bonus features for JUCE 8. 
+MESCAL is a JUCE module that adds Direct2D bonus features for JUCE 8.
 
 https://github.com/juce-framework/JUCE
 
@@ -11,10 +11,10 @@ MESCAL features:
 - Image effects
 - Sprite batches
 
-All of these features are processed in the GPU and work with stanard JUCE objects such as Image and Colour.
+All of these features are processed in the GPU and work with standard JUCE objects such as Image and Colour.
 
-In the long standing tradition of JUCE and JUCE modules, the name MESCAL is a somewhat silly forced backronym 
-that includes the author's name: 
+In the long standing tradition of JUCE and JUCE modules, the name MESCAL is a somewhat silly forced backronym
+that includes the author's name:
 
 Matt's Enhancements for Shaders, Composition, Acceleration and Layering
 
@@ -22,26 +22,29 @@ Or it's just because I like mescal.
 
 # Mesh gradient
 
-A mesh gradient defined by a set of vertices, each with a unique color. Mesh gradient colors flow smoothly between
+A MeshGradient defined by a set of vertices, each with a unique color. Mesh gradient colors flow smoothly between
 the vertices across an image.
 
  \image html 8x8_mesh_gradient.webp width=20%
 
- # Conic gradient
+# Conic gradient
 
- A conic gradient is a gradient with colors that flow in a circular path around a center point. The gradient can fill
- an entire circle, or an arc segment.
+A ConicGradient is a gradient with colors that flow in an elliptical path around a center point. The gradient can fill
+an entire ellipse, or just an arc segment.
 
 \image html roy_g_biv_donut.webp width=25%
 
- # Image effects
+# Image effects
 
- Direct2D has built-in image effects that can be chained into complex image processing graphs. For example, here's 
- a knob image initially drawn with standard JUCE graphics calls, then processed with lighting, shadow, and composition
- effects to create a 3D metallic look. Effects are applied in realtime; note how the lighting and shadows change on the 
- processed image as the knob rotates.
+The Effect class is a wrapper for built-in Direct2D image effects.
 
- \image html fx_graph_loop.webp width=40%
+https://learn.microsoft.com/en-us/windows/win32/direct2d/built-in-effects
 
+Effects can be chained together to create complex image processing graphs. For example, here's a knob image initially
+drawn with standard JUCE graphics calls, then processed with lighting, shadow, and composition effects to create a 3D
+metallic look. Effects are applied in realtime; note how the lighting and shadows change on the processed image as the
+knob rotates.
+
+ \image html fx_graph_loop.webp width=75%
 
 */
