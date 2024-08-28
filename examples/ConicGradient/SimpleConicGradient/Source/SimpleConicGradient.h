@@ -23,7 +23,7 @@ public:
 		//
 		// Paint the conic gradient
 		//
-		conicGradient.draw(outputImage, {});
+		conicGradient.draw(outputImage, juce::AffineTransform::translation((float)getWidth() * 0.5f, (float)getHeight() * 0.5f));
         
         //
         // Paint the output image
@@ -34,7 +34,7 @@ public:
     void resized() override
     {
         outputImage = juce::Image{ juce::Image::ARGB, getWidth(), getHeight(), true };
-		conicGradient.setBounds(outputImage.getBounds().toFloat().reduced(50.0f));
+        conicGradient.setRadiusRange({ 0.0f, getWidth() * 0.4f });
     }
 
 private:

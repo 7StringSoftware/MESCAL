@@ -46,6 +46,8 @@ namespace mescal
             jassert(stops.size() >= 2);
             auto patches = std::vector<D2D1_GRADIENT_MESH_PATCH>{ stops.size() - 1 };
 
+            jassert(owner.radiusRange.getLength() > 0.0f);
+
             float outerRadius = owner.radiusRange.getEnd();
             float innerRadius = owner.radiusRange.getStart();
             juce::Point<float> center{ 0.0f, 0.0f };
