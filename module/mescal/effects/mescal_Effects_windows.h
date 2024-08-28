@@ -18,22 +18,16 @@ inline Vector4 colourToVector4(juce::Colour colour)
  The Effect class is a wrapper for built-in Direct2D effects. The effects are processed using shaders
  in the GPU.
 
- An Effect takes a JUCE Image as an input, processes it with the effect, and paints the effect output onto another image. 
- Effect objects can also accept another Effect object as an input. This allows you easily apply a single effect to an Image, or 
- to chain effects together to create complex image processing graphs.
+ https://learn.microsoft.com/en-us/windows/win32/direct2d/built-in-effects
 
- Each effect has a set of properties that configure the effect, such as setting the blur radius or blend mode.
+ An Effect has a set of inputs and a set of properties. Running the effect processes the inputs according to the effect's
+ properties and paints the processed output onto an Image.
 
- To apply a single Effect, create an Effect object with the desired effect type, set the inputs, set the properties,
- and call applyEffect. For a single Effect you'll probably set the input to a JUCE Image and the output will be a JUCE Image.
+ An Effect input can be set to be a JUCE Image or another Effect. Connecting an Effect to the input of another
+ Effect feeds the output of the "upstream" effect directly into the "downstream" effect. You can chain multiple effects together
+ to create complex image processing graphs.
 
- To apply multiple effects at once, determine what effects you want to use and the order in which they should be
- applied. Create the final effect, then create the Image and Effect objects that will be the inputs to the final effect.
- Call Effect::setInput on each input for the final effect and pass the Image or Effect object for that input. Repeat that some
- process for each effect "upstream" from the final effect. Note that you only need to call applyEffect on the final effect; the
- upstream effects will be applied in the correct order.
-
- The simplest effect graph is a single effect with no inputs:
+ Some effects have no inputs:
 
  \image html simple_effect.svg
 
@@ -45,16 +39,15 @@ inline Vector4 colourToVector4(juce::Colour colour)
 
  \image html two_in_one_out.svg
 
- You can build more complex graphs; just set the input of the "downstream" effect to be another effect ("upstream").
- In this example, "Effect 1" is added as an input to "Effect 2":
+ Chained effects are automatically run the proper order; here, "Effect 1" will run first, then "Effect 2" will process the
+ output of "Effect 1".
 
  \image html two_in_two_effects.svg
 
-
  Effect graphs can be arbitrarily complex; the main limitation is the capacity of the GPU.
 
-
- The code for applying a blur effect to a single image looks like this:
+ To apply a single Effect, create an Effect object with the desired effect type, set the inputs, set the properties,
+ and call applyEffect.
 
  \code{.cpp}
 	juce::Image sourceImage = ...;
@@ -83,12 +76,34 @@ inline Vector4 colourToVector4(juce::Colour colour)
    juce::Image outputImage = juce::Image{ juce::Image::ARGB, sourceImage.getWidth(), sourceImage.getHeight(), true };
    mescal::Effect blurEffect{ mescal::Effect::Type::gaussianBlur };
    mescal::Effect affineTransformEffect{ mescal::Effect::Type::affineTransform2D };
+
+   //
+   // sourceImage -> blurEffect
+   //
    blurEffect.setInput(0, sourceImage);
+
+   //
+   // blurEffect -> affineTransformEffect
+   //
    affineTransformEffect.setInput(0, blurEffect);
+
+   //
+   // sourceImage -> blurEffect -> affineTransformEffect
+   //
+   // Only call applyEffect on the last effect in the chain; blurEffect will be applied first, then affineTransformEffect
+   //
    affineTransformEffect.applyEffect(outputImage, juce::AffineTransform{}, false);
 \endcode
 
+ To apply multiple effects, determine what effects you want to use and the order in which they should be  applied. Create the
+ final effect, then create the Image and Effect objects that will be the inputs to the final effect. Call Effect::setInput on
+ each input for the final effect and pass the Image or Effect object for that input. Repeat that same process for each effect
+ upstream from the final effect. Note that you only need to call applyEffect on the final effect; the upstream effects will be
+ applied in the correct order.
+
 Note that applyEffect is only called on the affine transform effect; chained effects are applied recursively in the correct order.
+
+Effects only run in the GPU, so any Image objects used for inputs or outputs must be Direct2D Image objects.
 
 */
 
@@ -100,15 +115,15 @@ public:
 	 */
 	enum class Type
 	{
-		gaussianBlur,               /**< Gaussian blur effect */
-		spotSpecularLighting,       /**< Spot specular lighting effect */
+		gaussianBlur,               /**< GaussianBlur effect */
+		spotSpecularLighting,       /**< SpotSpecularLighting effect */
 		shadow,                     /**< Shadow effect */
-		spotDiffuseLighting,        /**< Spot diffuse lighting effect */
-		perspectiveTransform3D,     /**< Perspective transform 3D effect */
+		spotDiffuseLighting,        /**< SpotDiffuseLighting effect */
+		perspectiveTransform3D,     /**< PerspectiveTransform3D effect */
 		blend,                      /**< Blend effect */
 		composite,                  /**< Composite effect */
-		arithmeticComposite,        /**< Arithmetic composite effect */
-		affineTransform2D,          /**< Affine transform 2D effect */
+		arithmeticComposite,        /**< ArithmeticComposite effect */
+		affineTransform2D,          /**< AffineTransform2D effect */
 		numEffectTypes              /**< Number of effect types */
 	};
 
@@ -136,7 +151,7 @@ public:
 	*
 	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/spot-specular-lighting
 	*/
-    struct SpotSpecular
+    struct SpotSpecularLighting
     {
         static constexpr int lightPosition = 0;
         static constexpr int pointsAt = 1;
@@ -374,8 +389,7 @@ public:
 	/**
 	* Get a reference to the effect's array of inputs.
 	*
-	* Effects can have zero, one, or multiple inputs. Each input can be connected to a
-	* JUCE Image or another Effect.
+	* Effects can have zero, one, or multiple inputs.
 	*/
 	std::vector<Input> const& getInputs() const noexcept;
 
@@ -383,24 +397,24 @@ public:
 	* Set the input at the specified index to a JUCE Image
     *
     * @param index The index of the input
-    * @param image The JUCE Image that will be the source for that input
+    * @param image The JUCE Image to use as the input
 	*/
     void setInput(int index, juce::Image const& image);
 
 	/**
-	* Set the input at the specified index to another Effect
+	* Set the input at the specified index to another Effect. This builds an effect processing graph.
     *
     * @param index The index of the input
-    * @param image The Effect that will be the source for that input
+    * @param image The Effect to use as the input
     */
     void setInput(int index, juce::ReferenceCountedObjectPtr<Effect> otherEffect);
 
 	/**
-	* Run the effect graph and paint the output from the final effect in the chain onto outputImage
+	* Run this Effect and paint the output from this Effect onto outputImage.
     *
-    * This effect will be the final effect in the graph. If you have multiple chained effects you only
-    * need to call applyEffect on the final effect. The final effect will walk balk up the chain and
-    * apply any upstream effects in the correct order.
+    * If any of the inputs to this Effect are also Effect objects, then this effect will walk up the chain
+    * and recursively run any upstream effects in the correct order. You only need to call applyEffect
+    * for the last effect in the chain.
     *
     * @param The JUCE Image that will be painted with the output of the effect graph
     * @param transform The affine transform to apply to the effect output before the effect output is painted onto outputImage

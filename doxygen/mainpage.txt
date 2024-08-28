@@ -1,28 +1,26 @@
 /** \mainpage MESCAL
 
-MESCAL is a JUCE module that adds Direct2D bonus features for JUCE 8.
-
-https://github.com/juce-framework/JUCE
-
-MESCAL features:
+MESCAL is a JUCE module that adds Direct2D bonus features for <a href="https://github.com/juce-framework/JUCE">JUCE</a> 8:
 
 - Mesh gradients
 - Conic gradients
 - Image effects
 
-All of these features are processed in the GPU and work with standard JUCE objects such as Image and Colour.
+All of these features are GPU-accelerated and work with standard JUCE objects such as Graphics, Image and Colour.
 
 In the long standing tradition of JUCE and JUCE modules, the name MESCAL is a somewhat silly forced backronym
 that includes the author's name:
 
-Matt's Enhancements for Shaders, Composition, Acceleration and Layering
+<b>Matt's Enhancements for Shaders, Composition, Acceleration and Layering</b>
 
 Or it's just because I like mescal.
+
+Since these are Direct2D features, MESCAL only supports Windows.
 
 # Mesh gradient
 
 A MeshGradient is a gradient defined by a set of vertices, each with a specific color. The gradient colors flow
-according to the placement of the vertices, offering a more precise and flexible gradients than can be achieved 
+according to the placement of the vertices, allowing more complex and flexible gradients than can be achieved
 with linear or radial gradients.
 
  \image html 8x8_mesh_gradient.webp width=20%
@@ -40,10 +38,10 @@ The Effect class is a wrapper for built-in Direct2D image effects.
 
 https://learn.microsoft.com/en-us/windows/win32/direct2d/built-in-effects
 
-Effects can be chained together to create complex image processing graphs. For example, here's a knob image initially
-drawn with standard JUCE graphics calls, then processed with lighting, shadow, and composition effects to create a 3D
-metallic look. Effects are applied in realtime; note how the lighting and shadows change on the processed image as the
-knob rotates.
+Effects can be chained together to create complex image processing graphs. For example, here's a graph that takes a
+knob initially drawn with standard JUCE graphics calls, and feeds that image through lighting, shadow, and composition
+effects to create a 3D metallic look. Effects are applied in realtime; note how the lighting and shadows change
+as the knob rotates.
 
  \image html fx_graph_loop.webp width=75%
 
