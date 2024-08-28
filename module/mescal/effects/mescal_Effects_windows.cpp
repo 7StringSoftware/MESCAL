@@ -320,6 +320,11 @@ namespace mescal
 				auto matrix = juce::D2DUtilities::transformToMatrix(transform);
 				d2dEffect->SetValue(index, matrix);
 			}
+			else if (std::holds_alternative<juce::Colour>(value))
+			{
+				auto color = std::get<juce::Colour>(value);
+				d2dEffect->SetValue(index, D2D1_VECTOR_4F{ color.getFloatRed(), color.getFloatGreen(), color.getFloatBlue(), color.getFloatAlpha() });
+			}
 			else
 			{
 				jassertfalse;

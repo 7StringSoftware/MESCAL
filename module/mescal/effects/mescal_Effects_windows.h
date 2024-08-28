@@ -358,7 +358,8 @@ public:
         Vector3,
         Vector4,
         Enumeration,
-        juce::AffineTransform>;
+        juce::AffineTransform,
+        juce::Colour>;
 
 	/**
 	* Structure that contains metadata about an effect property
