@@ -1,7 +1,8 @@
 #pragma once
 
 /**
-* Color128 holds a single ARGB color value with premultiplied alpha. Each color channel is stored a 32-bit floating point value.
+* Color128 holds a single ARGB color value with premultiplied alpha. The color value is stored as four 32-bit floating-point
+* values, one for each color channel. Each color channel can range from 0.0 to 1.0.
 */
 
 struct Color128

@@ -18,16 +18,11 @@ inline Vector4 colourToVector4(juce::Colour colour)
  The Effect class is a wrapper for built-in Direct2D effects. The effects are processed using shaders
  in the GPU.
 
- You can apply a single effect to a JUCE Image, or construct an effect graph that can combine multiple Images
- and process them through a complex chain of effects.
-
- The Effect class takes zero, one, or multiple inputs, applies the effect, and outputs the result. Each input
- can be a JUCE Image or another Effect.
+ An Effect takes a JUCE Image as an input, processes it with the effect, and paints the effect output onto another image. 
+ Effect objects can also accept another Effect object as an input. This allows you easily apply a single effect to an Image, or 
+ to chain effects together to create complex image processing graphs.
 
  Each effect has a set of properties that configure the effect, such as setting the blur radius or blend mode.
-
- The final effect in the chain paints the output onto a JUCE Image. Note that the Image needs to
- be a Direct2D Image.
 
  To apply a single Effect, create an Effect object with the desired effect type, set the inputs, set the properties,
  and call applyEffect. For a single Effect you'll probably set the input to a JUCE Image and the output will be a JUCE Image.

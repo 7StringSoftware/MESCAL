@@ -207,6 +207,9 @@ void EffectGraphComponent::EffectComponent::paint(juce::Graphics& g)
 {
 	NodeComponent::paint(g);
 
+	//
+	// Process the entire effect graph. Note that only the final effect needs to be applied.
+	//
 	effect->applyEffect(image, {}, true);
 	g.drawImage(image, getLocalBounds().withTrimmedBottom(textHeight).toFloat());
 
