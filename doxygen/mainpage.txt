@@ -9,7 +9,6 @@ MESCAL features:
 - Mesh gradients
 - Conic gradients
 - Image effects
-- Sprite batches
 
 All of these features are processed in the GPU and work with standard JUCE objects such as Image and Colour.
 
