@@ -3,23 +3,26 @@
 class ImageBlendDemo  : public juce::Component
 {
 public:
+    static constexpr int firstSourceImageID = -1;
+    static constexpr int secondSourceImageID = -2;
+
     ImageBlendDemo()
     {
         //
         // The blend effect only has a single property that sets the mode. Query the effect object for a list
         // of available modes and use that to populate the combo box.
         //
+        modeCombo.addItem("First source image", firstSourceImageID);
+        modeCombo.addItem("Second source image", secondSourceImageID);
+        modeCombo.addSeparator();
+
         auto propertyInfo = blendEffect->getPropertyInfo(mescal::Effect::Blend::mode);
         for (int index = 0; index < propertyInfo.enumeration.size(); ++index)
         {
             modeCombo.addItem(propertyInfo.enumeration[index], index + 1);
         }
 
-        //
-        // Ask the effect for the current mode setting and set the combo box to match
-        //
-        auto value = blendEffect->getPropertyValue(mescal::Effect::Blend::mode);
-        modeCombo.setSelectedItemIndex(std::get<uint8_t>(value), juce::dontSendNotification);
+        modeCombo.setSelectedId(mescal::Effect::Blend::overlay + 1, juce::dontSendNotification);
 
         //
         // Repaint the screen when the combo box changes
@@ -35,29 +38,46 @@ public:
 
     void paint(juce::Graphics& g) override
     {
-        //
-        // Apply the effect: source image 0 -->
-        //                                       blend --> output image 
-        //                   source image 1 -->
-        //
-        // Get the current blend mode from the combo box and set it before applying the effect
-        //
-        blendEffect->setInput(0, sourceImage0);
-        blendEffect->setInput(1, sourceImage1);
-        blendEffect->setPropertyValue(mescal::Effect::Blend::mode, modeCombo.getSelectedItemIndex());
-        blendEffect->applyEffect(outputImage, juce::AffineTransform{}, false);
-        
-        //
-        // Paint the output image
-        //
-        g.drawImageAt(outputImage, 0, 0);
+        auto id = modeCombo.getSelectedId();
+
+        switch (id)
+        {
+        case firstSourceImageID:
+            g.drawImageAt(sourceImage0, 0, 0);
+            break;
+
+        case secondSourceImageID:
+            g.drawImageAt(sourceImage1, 0, 0);
+            break;
+
+        default:
+        {
+            //
+            // Apply the effect: source image 0 -->
+            //                                       blend --> output image 
+            //                   source image 1 -->
+            //
+            // Get the current blend mode from the combo box and set it before applying the effect
+            //
+            blendEffect->setInput(0, sourceImage0);
+            blendEffect->setInput(1, sourceImage1);
+            blendEffect->setPropertyValue(mescal::Effect::Blend::mode, id - 1);
+            blendEffect->applyEffect(outputImage, juce::AffineTransform{}, false);
+
+            //
+            // Paint the output image
+            //
+            g.drawImageAt(outputImage, 0, 0);
+            break;
+        }
+        }
     }
 
     void resized() override
     {
         outputImage = juce::Image{ juce::Image::ARGB, getWidth(), getHeight(), true };
 
-        modeCombo.setBounds(20, 20, 150, 30);
+        modeCombo.setBounds(20, 20, 250, 30);
     }
 
 private:
