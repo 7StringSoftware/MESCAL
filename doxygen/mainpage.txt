@@ -22,8 +22,9 @@ Or it's just because I like mescal.
 
 # Mesh gradient
 
-A MeshGradient defined by a set of vertices, each with a unique color. Mesh gradient colors flow smoothly between
-the vertices across an image.
+A MeshGradient is a gradient defined by a set of vertices, each with a specific color. The gradient colors flow
+according to the placement of the vertices, offering a more precise and flexible gradients than can be achieved 
+with linear or radial gradients.
 
  \image html 8x8_mesh_gradient.webp width=20%
 
