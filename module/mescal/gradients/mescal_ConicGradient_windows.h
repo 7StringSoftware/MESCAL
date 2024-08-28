@@ -48,9 +48,10 @@ public:
     {
         return stops;
     }
+    void setStopColor(size_t index, Color128 color128);
     void setStopAngle(size_t index, float angle);
 
-    void draw(juce::Image image, juce::AffineTransform transform);
+    void draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor = juce::Colours::transparentBlack);
 
 private:
     std::vector<Stop> stops;

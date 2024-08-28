@@ -36,7 +36,7 @@ namespace mescal
             }
         }
 
-        void draw(juce::Span<Stop> stops, juce::Image image, juce::AffineTransform transform)
+        void draw(juce::Span<Stop> stops, juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor)
         {
             auto toPOINT_2F = [](juce::Point<float> p)
                 {
@@ -167,7 +167,7 @@ namespace mescal
                             deviceContext->SetTarget(bitmap);
                             deviceContext->BeginDraw();
                             deviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
-                            deviceContext->Clear({ 0.0f, 0.0f, 0.0f, 0.0f });
+                            deviceContext->Clear(juce::D2DUtilities::toCOLOR_F(backgroundColor));
 
                             deviceContext->DrawGradientMesh(gradientMesh.get());
 
@@ -213,9 +213,9 @@ namespace mescal
         sortStops();
     }
 
-    void ConicGradient::draw(juce::Image image, juce::AffineTransform transform)
+    void ConicGradient::draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor)
     {
-        pimpl->draw(stops, image, transform);
+        pimpl->draw(stops, image, transform, backgroundColor);
     }
 
     void ConicGradient::sortStops()
