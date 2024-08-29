@@ -55,8 +55,8 @@
             "Max": 100.0
           },
           "Skew": {
-            "Factor" : 0.25,
-            "Symmetric" : true
+            "Factor": 0.25,
+            "Symmetric": true
           }
         },
         {
@@ -372,6 +372,29 @@
           "Name": "Sharpness"
         }
       ]
+    },
+
+    {
+      "Name": "Invert"
+    },
+
+    {
+      "Name": "Flood",
+      "Properties": [
+        {
+          "Name": "Color",
+          "Labels": [
+            "r",
+            "g",
+            "b",
+            "a"
+          ]
+        }
+      ]
+    },
+
+    {
+      "Name": "AlphaMask"
     }
 
   ]

@@ -1,51 +1,51 @@
 namespace mescal
 {
 
-/*
+    /*
 
-    D2D1_GRADIENT_MESH_PATCH
+        D2D1_GRADIENT_MESH_PATCH
 
-    P00  Top left corner
-    P03  Top right corner
-    P30  Bottom left corner
-    P33  Bottom right corner
+        P00  Top left corner
+        P03  Top right corner
+        P30  Bottom left corner
+        P33  Bottom right corner
 
-    P01  Top edge control point #1
-    P02  Top edge control point #1
+        P01  Top edge control point #1
+        P02  Top edge control point #1
 
-    P10  Left edge control point #1
-    P20  Left edge control point #1
+        P10  Left edge control point #1
+        P20  Left edge control point #1
 
-    P13  Right edge control point #1
-    P23  Right edge control point #1
+        P13  Right edge control point #1
+        P23  Right edge control point #1
 
-    P31  Bottom edge control point #1
-    P32  Bottom edge control point #1
+        P31  Bottom edge control point #1
+        P32  Bottom edge control point #1
 
-    P11  Top left corner (inner)
-    P12  Top right corner (inner)
-    P21  Bottom left corner (inner)
-    P22  Bottom right corner (inner)
+        P11  Top left corner (inner)
+        P12  Top right corner (inner)
+        P21  Bottom left corner (inner)
+        P22  Bottom right corner (inner)
 
 
-            P01
-        /
-        P00--------------------P03
-    / |                    / | \
-    P10  |                  P02 |  P13
-        |                      |
-        |     P11     P12      |
-        |                      |
-        |     P21     P22      |
-        |                      |
-        | P20                  |
-        | /   P31          P23 |
-        |/   /               \ |
-        P30--------------------P33
-                            /
-                        P32
+                P01
+            /
+            P00--------------------P03
+        / |                    / | \
+        P10  |                  P02 |  P13
+            |                      |
+            |     P11     P12      |
+            |                      |
+            |     P21     P22      |
+            |                      |
+            | P20                  |
+            | /   P31          P23 |
+            |/   /               \ |
+            P30--------------------P33
+                                /
+                            P32
 
-*/
+    */
 
 #ifdef __INTELLISENSE__
 
@@ -207,6 +207,49 @@ namespace mescal
         }
     }
 
+    std::optional<juce::Point<float>> MeshGradient::Vertex::InteriorControlPoints::getControlPoint(Placement placement) const
+    {
+        switch (placement)
+        {
+        case Placement::topLeft:
+            return topLeftControlPoint;
+
+        case Placement::bottomLeft:
+            return bottomLeftControlPoint;
+
+        case Placement::bottomRight:
+            return bottomRightControlPoint;
+
+        case Placement::topRight:
+            return topRightControlPoint;
+        }
+
+        jassertfalse;
+        return {};
+    }
+
+    void MeshGradient::Vertex::InteriorControlPoints::setControlPoint(Placement placement, juce::Point<float> point)
+    {
+        switch (placement)
+        {
+        case Placement::topLeft:
+            topLeftControlPoint = point;
+            break;
+
+        case Placement::bottomLeft:
+            bottomLeftControlPoint = point;
+            break;
+
+        case Placement::bottomRight:
+            bottomRightControlPoint = point;
+            break;
+
+        case MeshGradient::Placement::topRight:
+            topRightControlPoint = point;
+            break;
+        }
+    }
+
     void MeshGradient::draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor)
     {
         auto vertexToPOINT_2F = [&](int row, int column)
@@ -219,6 +262,20 @@ namespace mescal
         auto bezierToPOINT_2F = [&](std::shared_ptr<Vertex> vertex, Placement placement, D2D1_POINT_2F& point2F)
             {
                 auto controlPoint = vertex->bezier.getControlPoint(placement);
+                if (controlPoint.has_value())
+                {
+                    auto transformedPoint = controlPoint.value().transformedBy(transform);
+                    point2F = D2D1_POINT_2F{ transformedPoint.x, transformedPoint.y };
+                }
+                else
+                {
+                    point2F = D2D1_POINT_2F{ vertex->position.x, vertex->position.y };
+                }
+            };
+
+        auto interiorToPOINT_2F = [&](std::shared_ptr<Vertex> vertex, Placement placement, D2D1_POINT_2F& point2F)
+            {
+                auto controlPoint = vertex->interior.getControlPoint(placement);
                 if (controlPoint.has_value())
                 {
                     auto transformedPoint = controlPoint.value().transformedBy(transform);
@@ -273,10 +330,10 @@ namespace mescal
                 bezierToPOINT_2F(bottomRight, Placement::top, d2dPatch.point23);
                 bezierToPOINT_2F(bottomRight, Placement::left, d2dPatch.point32);
 
-                d2dPatch.point11 = d2dPatch.point00;
-                d2dPatch.point12 = d2dPatch.point03;
-                d2dPatch.point21 = d2dPatch.point30;
-                d2dPatch.point22 = d2dPatch.point33;
+                interiorToPOINT_2F(topLeft, Placement::bottomRight, d2dPatch.point11);
+                interiorToPOINT_2F(bottomLeft, Placement::topRight, d2dPatch.point12);
+                interiorToPOINT_2F(bottomRight, Placement::topLeft, d2dPatch.point21);
+                interiorToPOINT_2F(topRight, Placement::bottomLeft, d2dPatch.point22);
 
                 d2dPatch.color00 = toCOLOR_F(topLeft->color);
                 d2dPatch.color03 = toCOLOR_F(topRight->color);
@@ -375,8 +432,8 @@ namespace mescal
         */
 
 
-    }
+}
 #endif
 
 
-} // namespace mescal
+    } // namespace mescal

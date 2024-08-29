@@ -408,7 +408,10 @@ namespace mescal
 			&CLSID_D2D1Blend,
 			&CLSID_D2D1Composite,
 			&CLSID_D2D1ArithmeticComposite,
-			&CLSID_D2D12DAffineTransform
+			&CLSID_D2D12DAffineTransform,
+            &CLSID_D2D1Invert,
+            &CLSID_D2D1Flood,
+            &CLSID_D2D1AlphaMask
 		};
 	};
 

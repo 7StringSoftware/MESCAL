@@ -5,6 +5,9 @@ EffectGraphComponent::EffectGraphComponent()
 {
 	viewport.setViewedComponent(&viewportContent, false);
 	addAndMakeVisible(viewport);
+
+
+    setTransform(juce::AffineTransform::scale(1.0f));
 }
 
 EffectGraphComponent::~EffectGraphComponent()
@@ -109,7 +112,7 @@ void EffectGraphComponent::ViewportContent::buildEffectGraphComponentsRecursive(
 void EffectGraphComponent::ViewportContent::positionEffectGraphComponentsRecursive(NodeComponent* nodeComponent, int& y, int depth)
 {
 	int size = 150;
-	int gap = 50;
+	int gap = 80;
 	int top = y;
 	int x = (size + gap) * (depth - 1);
 
