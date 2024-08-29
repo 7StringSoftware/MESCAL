@@ -395,6 +395,10 @@
 
     {
       "Name": "AlphaMask"
+    },
+
+    {
+      "Name": "Emboss"
     }
 
   ]

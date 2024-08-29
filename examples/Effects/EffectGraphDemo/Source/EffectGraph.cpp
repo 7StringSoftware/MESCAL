@@ -130,10 +130,8 @@ void EffectGraph::paint3DButtonImages()
     sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, 300, 300, true });
     sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, 300, 300, true });
 
-    auto bottomImage = sourceImages.front();
-    auto middleEllipseImage = sourceImages[1];
-
     {
+        auto middleEllipseImage = sourceImages[1];
         juce::Graphics g{ middleEllipseImage };
 
         g.setColour(juce::Colour{ 0xff5d5d5d });
@@ -155,6 +153,7 @@ void EffectGraph::paint3DButtonImages()
     }
 
     {
+        auto bottomImage = sourceImages.front();
         juce::Graphics g{ bottomImage };
 
         {
@@ -167,13 +166,33 @@ void EffectGraph::paint3DButtonImages()
         g.fillEllipse(bottomImage.getBounds().toFloat().withSizeKeepingCentre(185.0f, 185.0f));
     }
 
+    {
+        auto topImage = sourceImages[2];
+        juce::Graphics g{ topImage };
+
+        g.setColour(juce::Colour{ 0xff2c2c2c });
+        auto topEllipseBounds = topImage.getBounds().toFloat().withSizeKeepingCentre(85.0f, 85.0f);
+        g.fillEllipse(topEllipseBounds);
+
+        {
+            auto gradient = juce::ColourGradient::vertical(juce::Colour{ 0xffd7dae1 }, 0, juce::Colour{ 0xffcad0d8 }, (float)topImage.getHeight());
+            g.setGradientFill(gradient);
+            g.fillEllipse(topEllipseBounds);
+        }
+
+    }
+
 }
 
 void EffectGraph::create3DButtonEffectGraph()
 {
     auto bottomImage = sourceImages.front();
     auto middleEllipseImage = sourceImages[1];
+    auto topImage = sourceImages[2];
 
+    //
+    // Middle ellipse outer shadow
+    //
     auto shadowEffect = new mescal::Effect{ mescal::Effect::Type::shadow };
     shadowEffect->setInput(0, middleEllipseImage);
     shadowEffect->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, 10.0f);
@@ -189,6 +208,7 @@ void EffectGraph::create3DButtonEffectGraph()
     shadowCompositeEffect->setInput(1, middleEllipseImage);
 
 
+#if 0
     auto floodEffect = new mescal::Effect{ mescal::Effect::Type::flood };
     floodEffect->setPropertyValue(mescal::Effect::Flood::color, juce::Colours::blue);
 
@@ -209,16 +229,59 @@ void EffectGraph::create3DButtonEffectGraph()
     auto alphaMaskTransform = new mescal::Effect{ mescal::Effect::Type::affineTransform2D };
     alphaMaskTransform->setInput(0, alphaMaskEffect);
     alphaMaskTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, juce::AffineTransform::scale(0.8f).translated(30.0f, 30.0f));
+#endif
 
-    auto compositeEffect = new mescal::Effect{ mescal::Effect::Type::composite };
-    compositeEffect->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
-    compositeEffect->setInput(0, bottomImage);
-    compositeEffect->setInput(1, shadowCompositeEffect);
+    mescal::Effect::Ptr middleComposite = new mescal::Effect{ mescal::Effect::Type::composite };
+    middleComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
+    middleComposite->setInput(0, bottomImage);
+    middleComposite->setInput(1, shadowCompositeEffect);
 
-    auto innerShadowComposite = new mescal::Effect{ mescal::Effect::Type::composite };
-    innerShadowComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
-    innerShadowComposite->setInput(0, compositeEffect);
-    innerShadowComposite->setInput(1, alphaMaskTransform);
+    auto topInnerShadow = createInnerShadow(topImage, juce::Colour{ 0xffc5c8ce }, 10.0f);
 
-    outputEffect = innerShadowComposite;
+    mescal::Effect::Ptr topShadowComposite = new mescal::Effect{ mescal::Effect::Type::composite };
+    topShadowComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::maskInvert);
+    topShadowComposite->setInput(0, topImage);
+    topShadowComposite->setInput(1, topInnerShadow);
+
+    mescal::Effect::Ptr finalComposite = new mescal::Effect{ mescal::Effect::Type::composite };
+    finalComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
+    finalComposite->setInput(0, middleComposite);
+    finalComposite->setInput(1, topShadowComposite);
+
+    outputEffect = finalComposite;
 }
+
+mescal::Effect::Ptr EffectGraph::createInnerShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize)
+{
+    auto floodEffect = new mescal::Effect{ mescal::Effect::Type::flood };
+    floodEffect->setPropertyValue(mescal::Effect::Flood::color, juce::Colours::blue);
+
+    auto arithmeticComposite = new mescal::Effect{ mescal::Effect::Type::arithmeticComposite };
+    arithmeticComposite->setPropertyValue(mescal::Effect::ArithmeticComposite::coefficients, mescal::Vector4{ 0.0f, 1.0f, -1.0f, 0.0f });
+    arithmeticComposite->setInput(0, floodEffect);
+    arithmeticComposite->setInput(1, sourceImage);
+
+    auto innerShadow = new mescal::Effect{ mescal::Effect::Type::shadow };
+    innerShadow->setInput(0, arithmeticComposite);
+    innerShadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, shadowSize);
+    innerShadow->setPropertyValue(mescal::Effect::Shadow::color, mescal::colourToVector4(shadowColor));
+
+    auto alphaMaskEffect = new mescal::Effect{ mescal::Effect::Type::alphaMask };
+    alphaMaskEffect->setInput(0, innerShadow);
+    alphaMaskEffect->setInput(1, sourceImage);
+
+    auto alphaMaskTransform = new mescal::Effect{ mescal::Effect::Type::affineTransform2D };
+    alphaMaskTransform->setInput(0, alphaMaskEffect);
+    alphaMaskTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, juce::AffineTransform::scale(1.1f).translated(-15.0f, -8.0f));
+
+    auto alphaMaskEffect2 = new mescal::Effect{ mescal::Effect::Type::alphaMask };
+    alphaMaskEffect2->setInput(0, alphaMaskTransform);
+    alphaMaskEffect2->setInput(1, sourceImage);
+
+    return alphaMaskEffect2;
+}
+
+
+// mescal::Effect::Ptr emboss = new mescal::Effect{ mescal::Effect::Type::emboss };
+// emboss->setInput(0, sourceImage);
+

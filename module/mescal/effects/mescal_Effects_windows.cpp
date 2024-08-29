@@ -411,7 +411,8 @@ namespace mescal
 			&CLSID_D2D12DAffineTransform,
             &CLSID_D2D1Invert,
             &CLSID_D2D1Flood,
-            &CLSID_D2D1AlphaMask
+            &CLSID_D2D1AlphaMask,
+            & CLSID_D2D1Emboss
 		};
 	};
 
