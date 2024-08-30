@@ -126,58 +126,71 @@ void EffectGraph::paint3DButtonImages()
 
     */
 
-    sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, 300, 300, true });
-    sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, 300, 300, true });
-    sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, 300, 300, true });
+    int imageWidth = 300;
+    sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, imageWidth, imageWidth, true });
+    sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, imageWidth, imageWidth, true });
+    sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, imageWidth, imageWidth, true });
 
-    {
-        auto middleEllipseImage = sourceImages[1];
-        juce::Graphics g{ middleEllipseImage };
+    auto bottomLayerRect = sourceImages.front().getBounds().toFloat().withSizeKeepingCentre(300.0f, 185.0f);
+    float cornerProportion = 0.1f;
 
-        g.setColour(juce::Colour{ 0xff5d5d5d });
-        auto middleEllipseBounds = middleEllipseImage.getBounds().toFloat().withSizeKeepingCentre(150.0f, 150.0f);
-        g.fillEllipse(middleEllipseBounds);
-
-        {
-            juce::Graphics::ScopedSaveState saveState{ g };
-            auto gradient = juce::ColourGradient::vertical(juce::Colour{ 0xffb0b4bf },
-                middleEllipseBounds.getBottom(),
-                juce::Colour{ 0xfff5f6fa },
-                middleEllipseBounds.getY());
-            gradient.addColour(0.33f, juce::Colour{ 0xffcdd0d7 });
-            gradient.addColour(0.66f, juce::Colour{ 0xffdee1e6 });
-
-            g.setGradientFill(gradient);
-            g.fillEllipse(middleEllipseBounds);
-        }
-    }
-
+    //
+    // Bottom layer
+    //
     {
         auto bottomImage = sourceImages.front();
         juce::Graphics g{ bottomImage };
 
+        g.setColour(juce::Colour{ 0xff959595 });
+        g.fillRoundedRectangle(bottomLayerRect, cornerProportion * bottomLayerRect.getHeight());
+
         {
             auto gradient = juce::ColourGradient::vertical(juce::Colour{ 0xffbdc1cc }, 0, juce::Colour{ 0xffe7ebee }, (float)bottomImage.getHeight());
             g.setGradientFill(gradient);
-            g.fillRect(bottomImage.getBounds());
+            //g.fillEllipse(bottomLayerRect);
+            g.fillRoundedRectangle(bottomLayerRect, cornerProportion * bottomLayerRect.getHeight());
         }
-
-        g.setColour(juce::Colour{ 0xff959595 });
-        g.fillEllipse(bottomImage.getBounds().toFloat().withSizeKeepingCentre(185.0f, 185.0f));
     }
 
+    //
+    // Middle layer
+    //
+    {
+        auto middleEllipseImage = sourceImages[1];
+        juce::Graphics g{ middleEllipseImage };
+
+        auto middleLayerRect = bottomLayerRect.reduced(bottomLayerRect.getWidth() * 0.04f);
+
+        g.setColour(juce::Colour{ 0xff5d5d5d });
+        g.fillRoundedRectangle(middleLayerRect, cornerProportion * middleLayerRect.getHeight());
+
+        {
+            juce::Graphics::ScopedSaveState saveState{ g };
+            auto gradient = juce::ColourGradient::vertical(juce::Colour{ 0xffb0b4bf },
+                middleLayerRect.getBottom(),
+                juce::Colour{ 0xfff5f6fa },
+                middleLayerRect.getY());
+            gradient.addColour(0.33f, juce::Colour{ 0xffcdd0d7 });
+            gradient.addColour(0.66f, juce::Colour{ 0xffdee1e6 });
+
+            g.setGradientFill(gradient);
+            g.fillRoundedRectangle(middleLayerRect, cornerProportion * middleLayerRect.getHeight());
+        }
+    }
+
+    //
+    // Top layer
+    //
     {
         auto topImage = sourceImages[2];
         juce::Graphics g{ topImage };
 
-        g.setColour(juce::Colour{ 0xff2c2c2c });
-        auto topEllipseBounds = topImage.getBounds().toFloat().withSizeKeepingCentre(85.0f, 85.0f);
-        g.fillEllipse(topEllipseBounds);
+        auto topLayerRect = bottomLayerRect.reduced(bottomLayerRect.getWidth() * 0.08f);
 
         {
-            auto gradient = juce::ColourGradient::vertical(juce::Colour{ 0xffd7dae1 }, 0, juce::Colour{ 0xffcad0d8 }, (float)topImage.getHeight());
+            auto gradient = juce::ColourGradient::vertical(juce::Colour{ 0xffdcdae1 }, 0, juce::Colour{ 0xffd0d0d8 }, (float)topImage.getHeight());
             g.setGradientFill(gradient);
-            g.fillEllipse(topEllipseBounds);
+            g.fillRoundedRectangle(topLayerRect, cornerProportion * topLayerRect.getHeight());
         }
 
     }
@@ -243,12 +256,19 @@ void EffectGraph::create3DButtonEffectGraph()
     topShadowComposite->setInput(0, topImage);
     topShadowComposite->setInput(1, topInnerShadow);
 
+#if 0
     mescal::Effect::Ptr finalComposite = new mescal::Effect{ mescal::Effect::Type::composite };
     finalComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
     finalComposite->setInput(0, middleComposite);
-    finalComposite->setInput(1, topShadowComposite);
+    finalComposite->setInput(1, topInnerShadow);
+#endif
 
-    outputEffect = finalComposite;
+    mescal::Effect::Ptr blend = new mescal::Effect{ mescal::Effect::Type::blend };
+    blend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::colorBurn);
+    blend->setInput(0, middleComposite);
+    blend->setInput(1, topShadowComposite);
+
+    outputEffect = blend;
 }
 
 mescal::Effect::Ptr EffectGraph::createInnerShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize)
@@ -280,8 +300,3 @@ mescal::Effect::Ptr EffectGraph::createInnerShadow(juce::Image const& sourceImag
 
     return alphaMaskEffect2;
 }
-
-
-// mescal::Effect::Ptr emboss = new mescal::Effect{ mescal::Effect::Type::emboss };
-// emboss->setInput(0, sourceImage);
-
