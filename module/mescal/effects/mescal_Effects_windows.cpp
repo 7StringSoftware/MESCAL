@@ -434,6 +434,12 @@ namespace mescal
 	{
 	}
 
+    Effect::Ptr Effect::create(Type effectType)
+    {
+        return new Effect(effectType);
+    }
+
+
 	juce::String Effect::getName() const noexcept
 	{
 		pimpl->createResources();
