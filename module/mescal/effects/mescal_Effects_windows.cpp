@@ -452,6 +452,13 @@ namespace mescal
         pimpl->createResources();
     }
 
+    Effect::Effect(const Effect& other) :
+        effectType(other.effectType),
+        pimpl(std::make_unique<Pimpl>(other.effectType))
+    {
+        pimpl->createResources();
+    }
+
     Effect::~Effect()
     {
     }
