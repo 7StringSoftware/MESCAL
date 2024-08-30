@@ -233,7 +233,7 @@ public:
 
     /**
     * Constants for built-in Direct2D crop effect
-    * 
+    *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/crop
     */
     struct Crop

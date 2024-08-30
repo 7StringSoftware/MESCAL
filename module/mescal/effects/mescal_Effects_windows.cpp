@@ -540,7 +540,8 @@ namespace mescal
             pimpl->deviceContext->SetTransform(juce::D2DUtilities::transformToMatrix(transform));
 
         pimpl->deviceContext->DrawImage(pimpl->d2dEffect.get());
-        pimpl->deviceContext->EndDraw();
+        [[maybe_unused]] auto hr = pimpl->deviceContext->EndDraw();
+        jassert(SUCCEEDED(hr));
     }
 }
 
