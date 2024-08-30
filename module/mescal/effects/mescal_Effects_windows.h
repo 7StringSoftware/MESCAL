@@ -382,6 +382,8 @@ public:
     Effect(const Effect& other);
     ~Effect();
 
+    static juce::ReferenceCountedObjectPtr<Effect> create(Type effectType);
+
 	/**
 	* Get the name of the effect
 	*/
