@@ -279,7 +279,7 @@ mescal::Effect::Ptr EffectGraph::createInnerShadow(juce::Image const& sourceImag
     auto shadowTransform = new mescal::Effect{ mescal::Effect::Type::affineTransform2D };
     shadowTransform->setInput(0, innerShadow);
     shadowTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, transform);
-    
+
     auto alphaMaskEffect = new mescal::Effect{ mescal::Effect::Type::alphaMask };
     alphaMaskEffect->setInput(0, shadowTransform);
     alphaMaskEffect->setInput(1, sourceImage);
