@@ -50,5 +50,5 @@ void WidgetsComponent::resized()
         }
     }
 
-    horizontalSlider.setBounds(10, 600, getWidth() - 20, 40);
+    horizontalSlider.setBounds(10, 600, getWidth() - 40, 40);
 }

@@ -15,9 +15,11 @@ private:
     juce::Image inputScratchpad, outputScratchpad;
     std::vector<juce::Image> images;
 
-    mescal::Effect::Ptr createInnerShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize);
+    mescal::Effect::Ptr createInnerShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform);
     void paint3DButtonImages(juce::Colour backgroundColor, bool buttonHighlighted, bool buttonDown);
+    void paint3DSliderImages(juce::Rectangle<int> area, juce::Slider& slider);
     mescal::Effect::Ptr create3DButtonEffectGraph(bool buttonDown, bool buttonHighlighted);
+    mescal::Effect::Ptr create3DSliderEffectGraph(juce::Rectangle<float> area, juce::Slider& slider, float sliderPos);
 
     void drawLinearHorizontalSlider(juce::Graphics&, int x, int y, int width, int height, float sliderPos, float minSliderPos, float maxSliderPos, juce::Slider::SliderStyle, juce::Slider&);
 

@@ -63,8 +63,8 @@ public:
 
     private:
         MescalLookAndFeel mescalLookAndFeel;
-        WidgetsComponent widgets;
-        //WidgetsDemo widgets;
+        //WidgetsComponent widgets;
+        WidgetsDemo widgets;
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainWindow)
     };
 
