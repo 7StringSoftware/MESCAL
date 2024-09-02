@@ -7,7 +7,7 @@ WidgetsComponent::WidgetsComponent()
     for (int index = 0; index < 8; ++index)
     {
         auto& button = buttons.emplace_back(std::make_unique<juce::TextButton>(juce::String{index}));
-        addAndMakeVisible(button.get());
+        //addAndMakeVisible(button.get());
     }
 
     addAndMakeVisible(rotarySlider);
@@ -50,5 +50,6 @@ void WidgetsComponent::resized()
         }
     }
 
-    horizontalSlider.setBounds(10, 600, getWidth() - 40, 40);
+    horizontalSlider.setBounds(10, 600, 1000, 40);
+    verticalSlider.setBounds(10, 10, 40, 500);
 }

@@ -6,11 +6,14 @@ MescalLookAndFeel::MescalLookAndFeel()
     setColour(juce::TextButton::ColourIds::textColourOnId, juce::Colours::black);
     setColour(juce::TextButton::ColourIds::textColourOffId, juce::Colours::black);
     setColour(juce::ComboBox::ColourIds::outlineColourId, juce::Colour{ 0xff959595 });
-    setColour(juce::Slider::ColourIds::trackColourId, juce::Colour{ 0xff959595 });
+    setColour(juce::Slider::ColourIds::trackColourId, juce::Colour::greyLevel(0.5f).withAlpha(0.5f));
+    setColour(juce::Slider::ColourIds::thumbColourId, juce::Colours::lightsteelblue);
+    setColour(juce::Slider::ColourIds::backgroundColourId, juce::Colour::greyLevel(0.85f));
 }
 
 void MescalLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPosProportional, float rotaryStartAngle, float rotaryEndAngle, juce::Slider& slider)
 {
+#if 0
     auto bounds = juce::Rectangle<int>(x, y, width, height).toFloat().reduced(10);
     auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.45f;
     auto toAngle = rotaryStartAngle + sliderPosProportional * (rotaryEndAngle - rotaryStartAngle);
@@ -80,10 +83,12 @@ void MescalLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
         g.reduceClipRegion(strokedBackgroundArc);
         g.drawImageAt(inputScratchpad, x, y);
     }
+#endif
 }
 
 void MescalLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button, const juce::Colour& backgroundColour, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
 {
+#if 0
     images.clear();
 
     for (int i = 0; i < 4; ++i)
@@ -95,72 +100,12 @@ void MescalLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& bu
     auto target = juce::Image{ juce::Image::PixelFormat::ARGB, button.getWidth(), button.getHeight(), true, juce::NativeImageType{} };
     graph->applyEffect(target, {}, true);
     g.drawImageAt(target, 0, 0);
-}
-
-void MescalLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPos, float minSliderPos, float maxSliderPos, juce::Slider::SliderStyle style, juce::Slider& slider)
-{
-    if (style == juce::Slider::SliderStyle::LinearHorizontal)
-    {
-        drawLinearHorizontalSlider(g, x, y, width, height, sliderPos, minSliderPos, maxSliderPos, style, slider);
-        return;
-    }
-
-    if (style != juce::Slider::SliderStyle::LinearVertical)
-        return juce::LookAndFeel_V4::drawLinearSlider(g, x, y, width, height, sliderPos, minSliderPos, maxSliderPos, style, slider);
-
-    if (inputScratchpad.getWidth() < width || inputScratchpad.getHeight() < height)
-    {
-        inputScratchpad = juce::Image(juce::Image::PixelFormat::ARGB, width, height, false);
-    }
-
-    if (outputScratchpad.getWidth() < width || outputScratchpad.getHeight() < height)
-    {
-        outputScratchpad = juce::Image(juce::Image::PixelFormat::ARGB, width, height, false);
-    }
-
-    auto bounds = juce::Rectangle<int>{ 0, 0, width, height }.reduced(0, 60).toFloat();
-    float trackWidth = (float)width * 0.1f;
-
-    auto trackColor = slider.findColour(juce::Slider::ColourIds::trackColourId);
-
-    g.setColour(trackColor);
-    g.fillRoundedRectangle(bounds.getCentreX() - trackWidth * 0.5f + (float)x, bounds.getY() + (float)y, trackWidth, bounds.getHeight(), trackWidth * 0.5f);
-
-    auto value = slider.getValue();
-    auto range = slider.getNormalisableRange();
-    sliderPos = bounds.proportionOfHeight(1.0f - range.convertTo0to1(value)) + bounds.getY();
-    juce::Rectangle<float> gradientBounds;
-
-    {
-        juce::Graphics layerG{ inputScratchpad };
-        layerG.setColour(juce::Colours::transparentBlack);
-        layerG.getInternalContext().fillRect(inputScratchpad.getBounds(), true);
-
-        juce::ColourGradient gradient = juce::ColourGradient::vertical(juce::Colours::transparentWhite, bounds.getBottom(), juce::Colours::white, sliderPos);
-        layerG.setGradientFill(gradient);
-        float gradientHeight = bounds.getBottom() - sliderPos;
-        if (gradientHeight > 0.0f)
-        {
-            gradientBounds = { bounds.getCentreX() - trackWidth * 0.5f, sliderPos, trackWidth, gradientHeight };
-            layerG.fillRoundedRectangle(gradientBounds, trackWidth * 0.5f);
-        }
-    }
-
-    mescal::Effect effect{ mescal::Effect::Type::shadow };
-    effect.setPropertyValue(mescal::Effect::Shadow::color, juce::Colours::cyan);
-    effect.setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, trackWidth * 1.2f);
-    effect.setInput(0, inputScratchpad);
-
-    effect.applyEffect(outputScratchpad, {}, true);
-    {
-        g.drawImageAt(outputScratchpad, x, y);
-    }
-
-    g.drawImageAt(inputScratchpad, x, y);
+#endif
 }
 
 void MescalLookAndFeel::paint3DButtonImages(juce::Colour backgroundColor, bool buttonHighlighted, bool buttonDown)
 {
+#if 0
     /*
 
     background gradient: #bdc1cc to #e7ebee linearly vertically
@@ -235,11 +180,11 @@ void MescalLookAndFeel::paint3DButtonImages(juce::Colour backgroundColor, bool b
         g.setColour(backgroundColor);
         g.fillRoundedRectangle(middleLayerRect, cornerProportion * middleLayerRect.getHeight());
 
-//         auto topColor = juce::Colour{ 0xfff5f6fa };//color.withMultipliedBrightness(3.0f);
-//         auto topMidColor = juce::Colour{ 0xffdee1e6 };
-//         auto bottomMidColor = juce::Colour{ 0xffcdd0d7 };
-//         auto bottomColor = juce::Colour{ 0xffb0b4bf };
-        //b0b4bf to #cdd0d7 to #dee1e6 to #f5f6fa
+        //         auto topColor = juce::Colour{ 0xfff5f6fa };//color.withMultipliedBrightness(3.0f);
+        //         auto topMidColor = juce::Colour{ 0xffdee1e6 };
+        //         auto bottomMidColor = juce::Colour{ 0xffcdd0d7 };
+        //         auto bottomColor = juce::Colour{ 0xffb0b4bf };
+                //b0b4bf to #cdd0d7 to #dee1e6 to #f5f6fa
 
         auto topColor = midColor.withMultipliedBrightness(1.1f);
         auto topMidColor = midColor.withMultipliedBrightness(1.05f);
@@ -249,9 +194,9 @@ void MescalLookAndFeel::paint3DButtonImages(juce::Colour backgroundColor, bool b
         {
             juce::Graphics::ScopedSaveState saveState{ g };
             auto gradient = juce::ColourGradient::vertical(
-                topColor, 0, 
+                topColor, 0,
                 bottomColor, (float)middleEllipseImage.getHeight());
-            
+
             gradient.addColour(0.33f, topMidColor);
             gradient.addColour(0.66f, bottomMidColor);
             g.setGradientFill(gradient);
@@ -277,77 +222,13 @@ void MescalLookAndFeel::paint3DButtonImages(juce::Colour backgroundColor, bool b
             g.fillRoundedRectangle(topLayerRect, cornerProportion * topLayerRect.getHeight());
         }
     }
+#endif
 }
 
-void MescalLookAndFeel::paint3DSliderImages(juce::Rectangle<int> area, juce::Slider& slider)
-{
-    auto bottomImage = images.front();
-    juce::Graphics g{ bottomImage };
-    auto outlineColor = findColour(juce::ComboBox::ColourIds::outlineColourId);
-
-    auto trackArea = area.toFloat().reduced((float)area.getWidth() * 0.1f, (float)area.getHeight() * 0.1f);
-
-    {
-        g.setColour(juce::Colours::transparentBlack);
-        g.getInternalContext().fillRect(bottomImage.getBounds(), true);
-
-        //g.setColour(juce::Colour{ 0xff959595 });
-        //g.fillRoundedRectangle(bottomLayerRect, cornerProportion * bottomLayerRect.getHeight());
-
-        {
-            //auto gradient = ;
-            auto topColor = outlineColor.withMultipliedLightness(1.0f);
-            auto bottomColor = outlineColor.withMultipliedLightness(1.2f);
-            g.setGradientFill(juce::ColourGradient::vertical(topColor, 0, bottomColor, (float)bottomImage.getHeight()));
-            //g.fillEllipse(bottomLayerRect);
-            g.fillRoundedRectangle(trackArea, 0.5f * trackArea.getHeight() * 0.9f);
-
-            g.setColour(juce::Colour::greyLevel(1.0f));
-            g.drawRoundedRectangle(trackArea.toFloat(), 0.5f * trackArea.getHeight(), trackArea.getHeight() * 0.1f);
-        }
-    }
-
-    {
-        auto thumbImage = images[1];
-        juce::Graphics g{ thumbImage };
-        g.setColour(juce::Colours::transparentBlack);
-        g.getInternalContext().fillRect(thumbImage.getBounds(), true);
-
-        auto thumbSize = (float)images[1].getHeight();
-        auto thumbArea = images[1].getBounds().toFloat().reduced(thumbSize * 0.1f);
-            
-        auto thumbColor = findColour(juce::Slider::ColourIds::thumbColourId);
-
-        g.setColour(thumbColor);
-        g.fillEllipse(thumbArea);
-
-        //         auto topColor = juce::Colour{ 0xfff5f6fa };//color.withMultipliedBrightness(3.0f);
-        //         auto topMidColor = juce::Colour{ 0xffdee1e6 };
-        //         auto bottomMidColor = juce::Colour{ 0xffcdd0d7 };
-        //         auto bottomColor = juce::Colour{ 0xffb0b4bf };
-                //b0b4bf to #cdd0d7 to #dee1e6 to #f5f6fa
-
-        auto topColor = thumbColor.withMultipliedBrightness(1.1f);
-        auto topMidColor = thumbColor.withMultipliedBrightness(1.05f);
-        auto bottomMidColor = thumbColor.withMultipliedBrightness(0.95f);
-        auto bottomColor = thumbColor.withMultipliedBrightness(0.9f);
-
-        {
-            juce::Graphics::ScopedSaveState saveState{ g };
-            auto gradient = juce::ColourGradient::vertical(
-                topColor, 0,
-                bottomColor, thumbArea.getHeight());
-
-            gradient.addColour(0.33f, topMidColor);
-            gradient.addColour(0.66f, bottomMidColor);
-            g.setGradientFill(gradient);
-            g.fillEllipse(thumbArea);
-        }
-    }
-}
 
 mescal::Effect::Ptr  MescalLookAndFeel::create3DButtonEffectGraph(bool buttonDown, bool buttonHighlighted)
 {
+#if 0
     auto bottomImage = images.front();
     auto middleLayerImage = images[1];
     auto topImage = images[2];
@@ -409,65 +290,28 @@ mescal::Effect::Ptr  MescalLookAndFeel::create3DButtonEffectGraph(bool buttonDow
     finalComposite->setInput(1, topLayerComposite);
 
     return finalComposite;
-}
-
-mescal::Effect::Ptr MescalLookAndFeel::create3DSliderEffectGraph(juce::Rectangle<float> area, juce::Slider& slider, float sliderPos)
-{
-    auto shadow = createInnerShadow(images[0], juce::Colours::black, area.getHeight() * 0.2f,
-        juce::AffineTransform::scale(2.0f, 2.0f, area.getCentreX(), area.getCentreY()).translated(0.0f, area.getHeight() * 0.5f));
-
-    auto blend = new mescal::Effect{ mescal::Effect::Type::blend };
-    blend->setInput(0, images[0]);
-    blend->setInput(1, shadow);
-    blend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::hardMix);
-
-    auto thumbShadow = new mescal::Effect{ mescal::Effect::Type::shadow };
-    thumbShadow->setInput(0, images[1]);
-
-    auto thumbComposite = new mescal::Effect{ mescal::Effect::Type::composite };
-    thumbComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
-    thumbComposite->setInput(0, thumbShadow);
-    thumbComposite->setInput(1, images[1]);
-
-    auto thumbTransform = new mescal::Effect{ mescal::Effect::Type::affineTransform2D };
-    thumbTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, juce::AffineTransform::translation(sliderPos - images[1].getWidth() * 0.5f, (area.getHeight() - images[1].getHeight()) * 0.5f));
-    thumbTransform->setInput(0, thumbComposite);
-
-    auto output = new mescal::Effect{ mescal::Effect::Type::composite };
-    output->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
-    output->setInput(0, blend);
-    output->setInput(1, thumbTransform);
-
-    return output;
-}
-
-void MescalLookAndFeel::drawLinearHorizontalSlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPos, float minSliderPos, float maxSliderPos, juce::Slider::SliderStyle, juce::Slider& slider)
-{
-    images.clear();
-
-    images.emplace_back(juce::Image{ juce::Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true, juce::NativeImageType{} });
-    auto thumbSize = (float)height * 0.7f;
-    images.emplace_back(juce::Image{ juce::Image::PixelFormat::ARGB, (int)thumbSize, (int)thumbSize, true, juce::NativeImageType{}});
-    images.emplace_back(juce::Image{ juce::Image::PixelFormat::ARGB, slider.getWidth(), slider.getHeight(), true, juce::NativeImageType{} });
-
-    juce::Rectangle<int> area{ x, y, width, height };
-
-    paint3DSliderImages(area.withZeroOrigin(), slider);
-
-    auto effectGraph = create3DSliderEffectGraph(area.withZeroOrigin().toFloat(), slider, sliderPos);
-    //g.drawImageAt(images[0], x, y);
-    effectGraph->applyEffect(images[2], {}, true);
-    g.drawImageAt(images[2], x, y);
-
-#if 0
-    auto trackArea = area.toFloat().reduced((float)area.getHeight() * 0.05f);
-    auto size = (float)images[1].getHeight();
-    float thumbY = ((float)images[0].getHeight() - size) * 0.5f + (float)y;
-    auto thumbArea = juce::Rectangle<float>{ size, size }.withY(thumbY).withX((float)x + sliderPos);
-    g.drawImage(images[1],
-        thumbArea,
-        juce::RectanglePlacement::doNotResize);
 #endif
+    return nullptr;
+}
+
+
+mescal::Effect::Ptr MescalLookAndFeel::addShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform)
+{
+    auto shadow = new mescal::Effect{ mescal::Effect::Type::shadow };
+    shadow->setInput(0, sourceImage);
+    shadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, shadowSize);
+    shadow->setPropertyValue(mescal::Effect::Shadow::color, mescal::colourToVector4(shadowColor));
+
+    auto shadowTransform = new mescal::Effect{ mescal::Effect::Type::affineTransform2D };
+    shadowTransform->setInput(0, shadow);
+    shadowTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, transform);
+
+    auto composite = new mescal::Effect{ mescal::Effect::Type::composite };
+    composite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceOver);
+    composite->setInput(0, shadowTransform);
+    composite->setInput(1, sourceImage);
+
+    return composite;
 }
 
 mescal::Effect::Ptr MescalLookAndFeel::createInnerShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform)
@@ -498,4 +342,98 @@ mescal::Effect::Ptr MescalLookAndFeel::createInnerShadow(juce::Image const& sour
     alphaMaskEffect2->setInput(1, sourceImage);
 
     return alphaMaskEffect2;
+}
+
+juce::Rectangle<float> MescalLookAndFeel::paintSliderTrack(juce::Graphics& g,
+    juce::Point<float> start, juce::Point<float> end,
+    juce::Colour backgroundColor, juce::Colour trackColor,
+    float trackThickness, bool horizontal)
+{
+    juce::Rectangle<float> trackArea{ (end.x - start.x) + trackThickness, trackThickness };
+    auto paintOffset = start - juce::Point<float>{ trackThickness * 0.5f, trackThickness * 0.5f };
+
+    if (!horizontal)
+    {
+        trackArea = { trackThickness, std::abs(end.y - start.y) + trackThickness };
+        paintOffset = end - juce::Point<float>{ trackThickness * 0.5f, trackThickness * 0.5f };
+    }
+
+    auto imageBounds = trackArea.toNearestIntEdges();
+    if (imageBounds.isEmpty())
+        return {};
+
+    juce::Image trackImage{ juce::Image::ARGB, imageBounds.getWidth(), imageBounds.getHeight(), true };
+
+    {
+        juce::Graphics trackG{ trackImage };
+
+        trackColor = juce::Colour::greyLevel(0.95f);
+        auto startColor = trackColor.withMultipliedLightness(1.1f);
+        auto stopColor = trackColor.withMultipliedLightness(horizontal ? 1.0f : 0.8f);
+
+        trackG.setColour(juce::Colour{ 0xff959595 });
+        //trackG.fillRoundedRectangle(r, 0.5f * trackThickness);
+
+        auto gradient = horizontal ? juce::ColourGradient::vertical(startColor, 0.0f, stopColor, trackThickness) :
+            juce::ColourGradient::vertical(startColor, trackThickness, stopColor, 0.0f);
+        trackG.setGradientFill(gradient);
+        trackG.fillRoundedRectangle(trackArea, 0.5f * trackThickness);
+    }
+
+    auto shadowTransform = juce::AffineTransform::scale(2.0f, 2.0f, trackArea.getCentreX(), trackArea.getCentreY()).translated(0.0f, trackThickness * 0.5f);
+    float shadowSize = horizontal ? trackThickness * 0.1f : trackThickness * 0.2f;
+    auto shadow = createInnerShadow(trackImage, juce::Colours::black, shadowSize, shadowTransform);
+
+    mescal::Effect::Ptr shadowComposite = new mescal::Effect{ mescal::Effect::Type::composite };
+    shadowComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
+    shadowComposite->setInput(0, trackImage);
+    shadowComposite->setInput(1, shadow);
+
+    juce::Image outputImage{ juce::Image::ARGB, (int)trackArea.getWidth(), (int)trackArea.getHeight(), true };
+    shadowComposite->applyEffect(outputImage, {}, true);
+
+    g.drawImageAt(outputImage, (int)paintOffset.x, (int)paintOffset.y);
+
+    g.setColour(juce::Colour::greyLevel(0.1f));
+    float outlineThickness = trackThickness * 0.05f;
+    auto reducedTrackR = trackArea.reduced(outlineThickness, outlineThickness);
+    g.drawRoundedRectangle(reducedTrackR + paintOffset, (trackThickness - outlineThickness) * 0.5f, outlineThickness);
+
+    return trackArea + paintOffset;
+}
+
+void MescalLookAndFeel::paintSliderThumb(juce::Graphics& g, juce::Rectangle<float> trackArea, juce::Colour thumbColor, float sliderPos, float thumbSize, float sliderThickness, bool horizontal)
+{
+    if (trackArea.isEmpty())
+        return;
+
+    juce::Image thumbImage{ juce::Image::ARGB, (int)sliderThickness, (int)sliderThickness, true };
+
+    {
+        juce::Graphics thumbG{ thumbImage };
+        //thumbG.setColour(thumbColor);
+        auto thumbR = juce::Rectangle<float>{ thumbSize, thumbSize }.withCentre({ sliderThickness * 0.5f, sliderThickness * 0.5f });
+        thumbG.setGradientFill(juce::ColourGradient{ thumbColor, thumbR.getCentre(), thumbColor.darker(), thumbR.getTopLeft(), true });
+        thumbG.fillEllipse(thumbR);
+        //         thumbG.setColour(thumbColor.contrasting());
+        //         thumbG.drawEllipse(thumbR, thumbSize * 0.1f);
+    }
+
+    juce::Image outputImage{ juce::Image::ARGB, (int)sliderThickness, (int)sliderThickness, true };
+
+    auto shadow = addShadow(thumbImage, juce::Colours::black, thumbSize * 0.12f, juce::AffineTransform::scale(1.0f, 1.0f, sliderThickness * 0.5f, sliderThickness * 0.5f).translated(0.0f, thumbSize * 0.1f));
+    shadow->applyEffect(outputImage, {}, true);
+
+    if (horizontal)
+    {
+        g.drawImage(outputImage,
+            juce::Rectangle<float>{sliderPos - sliderThickness * 0.5f, trackArea.getY(), sliderThickness, sliderThickness},
+            juce::RectanglePlacement::doNotResize);
+    }
+    else
+    {
+        g.drawImage(outputImage,
+            juce::Rectangle<float>{trackArea.getX(), sliderPos - sliderThickness * 0.5f, sliderThickness, sliderThickness},
+            juce::RectanglePlacement::doNotResize);
+    }
 }

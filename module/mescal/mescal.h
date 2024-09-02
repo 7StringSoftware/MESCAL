@@ -47,4 +47,5 @@ namespace mescal
     #include "gradients/mescal_MeshGradient_windows.h"
     #include "gradients/mescal_ConicGradient_windows.h"
     #include "effects/mescal_Effects_windows.h"
+    #include "effects/mescal_ImageEffectFilter_windows.h"
 }

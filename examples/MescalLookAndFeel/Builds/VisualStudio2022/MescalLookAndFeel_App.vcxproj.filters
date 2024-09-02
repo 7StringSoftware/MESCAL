@@ -334,6 +334,9 @@
     <ClCompile Include="..\..\Source\MescalLookAndFeel.cpp">
       <Filter>MescalLookAndFeel\Source</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Source\MescalLookAndFeel_Slider.cpp">
+      <Filter>MescalLookAndFeel\Source</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Source\Main.cpp">
       <Filter>MescalLookAndFeel\Source</Filter>
     </ClCompile>

@@ -16,7 +16,7 @@ private:
     MescalLookAndFeel mescalLookAndFeel;
     juce::Slider rotarySlider{ juce::Slider::Rotary, juce::Slider::NoTextBox };
     juce::Slider verticalSlider{ juce::Slider::LinearVertical, juce::Slider::NoTextBox };
-    juce::Slider horizontalSlider{ juce::Slider::LinearHorizontal, juce::Slider::NoTextBox };
+    juce::Slider horizontalSlider{ juce::Slider::LinearHorizontal, juce::Slider::TextBoxRight };
 
     std::vector<std::unique_ptr<juce::TextButton>> buttons;
 

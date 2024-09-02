@@ -10,6 +10,8 @@
             file="Source/WidgetsComponent.h"/>
       <FILE id="fc2R0r" name="MescalLookAndFeel.cpp" compile="1" resource="0"
             file="Source/MescalLookAndFeel.cpp"/>
+      <FILE id="tGJLPI" name="MescalLookAndFeel_Slider.cpp" compile="1" resource="0"
+            file="Source/MescalLookAndFeel_Slider.cpp"/>
       <FILE id="LjbvHO" name="MescalLookAndFeel.h" compile="0" resource="0"
             file="Source/MescalLookAndFeel.h"/>
       <FILE id="fRU9qi" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
