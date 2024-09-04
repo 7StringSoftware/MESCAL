@@ -68,7 +68,7 @@ public:
 
     enum class Placement
     {
-        top, left, bottom, right, unknown = -1
+        top, left, bottom, right, topLeft, bottomLeft, bottomRight, topRight, unknown = -1
     };
 
     struct Vertex
@@ -102,6 +102,17 @@ public:
             std::optional<juce::Point<float>> getControlPoint(Placement placement) const;
             void setControlPoint(Placement placement, juce::Point<float> point);
         } bezier;
+
+        struct InteriorControlPoints
+        {
+            std::optional<juce::Point<float>> topLeftControlPoint;
+            std::optional<juce::Point<float>> bottomLeftControlPoint;
+            std::optional<juce::Point<float>> bottomRightControlPoint;
+            std::optional<juce::Point<float>> topRightControlPoint;
+
+            std::optional<juce::Point<float>> getControlPoint(Placement placement) const;
+            void setControlPoint(Placement placement, juce::Point<float> point);
+        } interior;
     };
 
     int getNumRows() const

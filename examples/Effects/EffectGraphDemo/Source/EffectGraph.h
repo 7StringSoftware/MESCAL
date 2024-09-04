@@ -7,7 +7,14 @@ class EffectGraph
 public:
 	EffectGraph();
 
-	juce::Image sourceImage{ juce::Image::ARGB, 1000, 1000, true, juce::NativeImageType{} };
+    void paintMetallicKnobImage(float angle);
+    void createMetallicKnobEffectGraph();
+    void paint3DButtonImages();
+    void create3DButtonEffectGraph();
+
+    mescal::Effect::Ptr createInnerShadow(juce::Image const& sourceImage, juce::Colour const& shadowColour, float shadowSize);
+
+    std::vector<juce::Image> sourceImages;
 	mescal::Effect::Ptr outputEffect;
 
     void createMetallicKnobGraph();

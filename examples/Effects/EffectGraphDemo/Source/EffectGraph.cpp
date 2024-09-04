@@ -2,38 +2,74 @@
 
 EffectGraph::EffectGraph()
 {
+    //createMetallicKnobEffectGraph();
+    paint3DButtonImages();
+    create3DButtonEffectGraph();
 }
 
-void EffectGraph::createMetallicKnobGraph()
+
+void EffectGraph::paintMetallicKnobImage(float angle)
+{
+    if (sourceImages.size() == 0)
+    {
+        sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, 1000, 1000, true });
+    }
+
+    auto sourceImage = sourceImages.front();
+    juce::Graphics g{ sourceImage };
+
+    g.setColour(juce::Colours::transparentBlack);
+    g.getInternalContext().fillRect(sourceImage.getBounds(), true);
+
+    auto center = sourceImage.getBounds().toFloat().getCentre();
+
+    g.setColour(juce::Colours::black.withAlpha(0.2f));
+    g.fillEllipse(sourceImage.getBounds().toFloat().withSizeKeepingCentre(800.0f, 800.0f));
+
+    g.setColour(juce::Colours::black.withAlpha(0.6f));
+    juce::Path p;
+    p.addStar(center, 10, 360.0f, 400.0f, (float)angle);
+    g.fillPath(p);
+
+    juce::Line<float> line{ center, center.getPointOnCircumference(330.0f, (float)angle) };
+    g.setColour(juce::Colours::black);
+    g.drawLine(line, 30.0f);
+    g.setColour(juce::Colours::white);
+    g.drawLine(line, 20.0f);
+}
+
+void EffectGraph::createMetallicKnobEffectGraph()
 {
     /*
 
-    Build the effect graph demonstration
+        Build the effect graph demonstration
 
-    This graph will take an image drawn with simple geometric objects (rectangles, stars, etc), and add shadow and lighting effects
-    to create a pseudo-3D metallic knob.
+        This graph will take an image drawn with simple geometric objects (rectangles, stars, etc), and add shadow and lighting effects
+        to create a pseudo-3D metallic knob.
 
-    The final image will be a composite: the lighting effect output is layered on top of the original image, which in turn is layered on top
-    the output of the shadow effect.
+            The final image will be a composite: the lighting effect output is layered on top of the original image, which in turn is layered on top
+            the output of the shadow effect.
 
-    Each layer in the composite is painted by a different chain of effects which are ultimately combined by compositing effects.
+        Each layer in the composite is painted by a different chain of effects which are ultimately combined by compositing effects.
 
-    To create the shadow, the source image is fed into a shadow effect. The shadow effect is then chained to a 2D affine transform effect
-    to shift the shadow down and to the right.
+        To create the shadow, the source image is fed into a shadow effect. The shadow effect is then chained to a 2D affine transform effect
+        to shift the shadow down and to the right.
 
-    To create the lighting effect, the source image is fed into a Gaussian blur effect and then a spot specular lighting effect. The output
-    of the spot specular lighting effect is fed into a composite effect.
+        To create the lighting effect, the source image is fed into a Gaussian blur effect and then a spot specular lighting effect. The output
+        of the spot specular lighting effect is fed into a composite effect.
 
-    To further accentuate the metallic look, the output of that composite effect is combined with the original source image using an arithmetic
-    composite effect.
+        To further accentuate the metallic look, the output of that composite effect is combined with the original source image using an arithmetic
+        composite effect.
 
-    The final image is created by a composite effect that combines the	output of the 2D affine transform and the output of the arithmetic
-    composite effect.
+        The final image is created by a composite effect that combines the	output of the 2D affine transform and the output of the arithmetic
+        composite effect.
 
-    Note that there's no need to retain any of the upstream effects; you only need to keep the final output effect. Effects are reference-counted,
-    so the entire graph will be retained until no longer needed.
+        Note that there's no need to retain any of the upstream effects; you only need to keep the final output effect. Effects are reference-counted,
+        so the entire graph will be retained until no longer needed.
 
-*/
+    */
+    auto& sourceImage = sourceImages.front();
+
     auto blurEffect = new mescal::Effect{ mescal::Effect::Type::gaussianBlur };
     blurEffect->setPropertyValue(mescal::Effect::GaussianBlur::standardDeviation, 10.0f);
     blurEffect->setInput(0, sourceImage);
@@ -72,40 +108,171 @@ void EffectGraph::createMetallicKnobGraph()
     outputEffect = shadowCompositeEffect;
 }
 
-void EffectGraph::createSliderGraph()
-{
-    auto innerShadow = createInnerShadow(sourceImage, juce::Colours::black, 30.0f, {});
 
-    auto blend = new mescal::Effect{ mescal::Effect::Type::blend };
-    blend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::multiply);
-    blend->setInput(0, innerShadow);
-    blend->setInput(1, sourceImage);
+void EffectGraph::paint3DButtonImages()
+{
+    /*
+
+    background gradient: #bdc1cc to #e7ebee linearly vertically
+
+    ellipse 185px: 50% gray (#959595), overlaid with gradient #d7dae1 to #cad0d8, inner shadow #c5c8ce, drop shadow #dde0e7
+    ellipse 150px: #5d5d5d, overlaid with a gradient #b0b4bf to #cdd0d7 to #dee1e6 to #f5f6fa
+
+    ellipse 85px: #2c2c2c, overlaid with color #d4d8e3, drop shadow #e4f0ff, inner shadow #b5b5b5
+
+    ellipse 150px copy + clear layer style, then: drop shadow with black
+
+    blank layer above ellipse 185px, clipped to ellipse 185px: upper right quadrant filled with 50%gray (#959
+
+    */
+
+    int imageWidth = 300;
+    sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, imageWidth, imageWidth, true });
+    sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, imageWidth, imageWidth, true });
+    sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, imageWidth, imageWidth, true });
+
+    auto bottomLayerRect = sourceImages.front().getBounds().toFloat().withSizeKeepingCentre(300.0f, 185.0f);
+    float cornerProportion = 0.1f;
+
+    //
+    // Bottom layer
+    //
+    {
+        auto bottomImage = sourceImages.front();
+        juce::Graphics g{ bottomImage };
+
+        g.setColour(juce::Colour{ 0xff959595 });
+        g.fillRoundedRectangle(bottomLayerRect, cornerProportion * bottomLayerRect.getHeight());
+
+        {
+            auto gradient = juce::ColourGradient::vertical(juce::Colour{ 0xffbdc1cc }, 0, juce::Colour{ 0xffe7ebee }, (float)bottomImage.getHeight());
+            g.setGradientFill(gradient);
+            //g.fillEllipse(bottomLayerRect);
+            g.fillRoundedRectangle(bottomLayerRect, cornerProportion * bottomLayerRect.getHeight());
+        }
+    }
+
+    //
+    // Middle layer
+    //
+    {
+        auto middleEllipseImage = sourceImages[1];
+        juce::Graphics g{ middleEllipseImage };
+
+        auto middleLayerRect = bottomLayerRect.reduced(bottomLayerRect.getWidth() * 0.04f);
+
+        g.setColour(juce::Colour{ 0xff5d5d5d });
+        g.fillRoundedRectangle(middleLayerRect, cornerProportion * middleLayerRect.getHeight());
+
+        {
+            juce::Graphics::ScopedSaveState saveState{ g };
+            auto gradient = juce::ColourGradient::vertical(juce::Colour{ 0xffb0b4bf },
+                middleLayerRect.getBottom(),
+                juce::Colour{ 0xfff5f6fa },
+                middleLayerRect.getY());
+            gradient.addColour(0.33f, juce::Colour{ 0xffcdd0d7 });
+            gradient.addColour(0.66f, juce::Colour{ 0xffdee1e6 });
+
+            g.setGradientFill(gradient);
+            g.fillRoundedRectangle(middleLayerRect, cornerProportion * middleLayerRect.getHeight());
+        }
+    }
+
+    //
+    // Top layer
+    //
+    {
+        auto topImage = sourceImages[2];
+        juce::Graphics g{ topImage };
+
+        auto topLayerRect = bottomLayerRect.reduced(bottomLayerRect.getWidth() * 0.08f);
+
+        {
+            auto gradient = juce::ColourGradient::vertical(juce::Colour{ 0xffdcdae1 }, 0, juce::Colour{ 0xffd0d0d8 }, (float)topImage.getHeight());
+            g.setGradientFill(gradient);
+            g.fillRoundedRectangle(topLayerRect, cornerProportion * topLayerRect.getHeight());
+        }
+
+    }
+
+}
+
+void EffectGraph::create3DButtonEffectGraph()
+{
+    auto bottomImage = sourceImages.front();
+    auto middleEllipseImage = sourceImages[1];
+    auto topImage = sourceImages[2];
+
+    //
+    // Middle ellipse outer shadow
+    //
+    auto shadowEffect = new mescal::Effect{ mescal::Effect::Type::shadow };
+    shadowEffect->setInput(0, middleEllipseImage);
+    shadowEffect->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, 10.0f);
+    shadowEffect->setPropertyValue(mescal::Effect::Shadow::color, mescal::colourToVector4(juce::Colours::black));
+
+    auto affineTransformEffect = new mescal::Effect{ mescal::Effect::Type::affineTransform2D };
+    affineTransformEffect->setInput(0, shadowEffect);
+    affineTransformEffect->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, juce::AffineTransform::translation(0.0f, 12.0f));
+
+    auto shadowCompositeEffect = new mescal::Effect{ mescal::Effect::Type::composite };
+    shadowCompositeEffect->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceOver);
+    shadowCompositeEffect->setInput(0, affineTransformEffect);
+    shadowCompositeEffect->setInput(1, middleEllipseImage);
+
+
+#if 0
+    auto floodEffect = new mescal::Effect{ mescal::Effect::Type::flood };
+    floodEffect->setPropertyValue(mescal::Effect::Flood::color, juce::Colours::blue);
+
+    auto arithmeticComposite = new mescal::Effect{ mescal::Effect::Type::arithmeticComposite };
+    arithmeticComposite->setPropertyValue(mescal::Effect::ArithmeticComposite::coefficients, mescal::Vector4{ 0.0f, 1.0f, -1.0f, 0.0f });
+    arithmeticComposite->setInput(0, floodEffect);
+    arithmeticComposite->setInput(1, middleEllipseImage);
+
+    auto innerShadow = new mescal::Effect{ mescal::Effect::Type::shadow };
+    innerShadow->setInput(0, arithmeticComposite);
+    innerShadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, 10.0f);
+    innerShadow->setPropertyValue(mescal::Effect::Shadow::color, mescal::colourToVector4(juce::Colours::black));
+
+    auto alphaMaskEffect = new mescal::Effect{ mescal::Effect::Type::alphaMask };
+    alphaMaskEffect->setInput(0, innerShadow);
+    alphaMaskEffect->setInput(1, middleEllipseImage);
+
+    auto alphaMaskTransform = new mescal::Effect{ mescal::Effect::Type::affineTransform2D };
+    alphaMaskTransform->setInput(0, alphaMaskEffect);
+    alphaMaskTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, juce::AffineTransform::scale(0.8f).translated(30.0f, 30.0f));
+#endif
+
+    mescal::Effect::Ptr middleComposite = new mescal::Effect{ mescal::Effect::Type::composite };
+    middleComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
+    middleComposite->setInput(0, bottomImage);
+    middleComposite->setInput(1, shadowCompositeEffect);
+
+    auto topInnerShadow = createInnerShadow(topImage, juce::Colour{ 0xffc5c8ce }, 10.0f);
+
+    mescal::Effect::Ptr topShadowComposite = new mescal::Effect{ mescal::Effect::Type::composite };
+    topShadowComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::maskInvert);
+    topShadowComposite->setInput(0, topImage);
+    topShadowComposite->setInput(1, topInnerShadow);
+
+#if 0
+    mescal::Effect::Ptr finalComposite = new mescal::Effect{ mescal::Effect::Type::composite };
+    finalComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
+    finalComposite->setInput(0, middleComposite);
+    finalComposite->setInput(1, topInnerShadow);
+#endif
+
+    mescal::Effect::Ptr blend = new mescal::Effect{ mescal::Effect::Type::blend };
+    blend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::colorBurn);
+    blend->setInput(0, middleComposite);
+    blend->setInput(1, topShadowComposite);
 
     outputEffect = blend;
 }
 
-mescal::Effect::Ptr EffectGraph::addShadow(juce::Image const& shadowSourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform)
+mescal::Effect::Ptr EffectGraph::createInnerShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize)
 {
-    auto shadow = new mescal::Effect{ mescal::Effect::Type::shadow };
-    shadow->setInput(0, shadowSourceImage);
-    shadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, shadowSize);
-    shadow->setPropertyValue(mescal::Effect::Shadow::color, mescal::colourToVector4(shadowColor));
-
-    auto shadowTransform = new mescal::Effect{ mescal::Effect::Type::affineTransform2D };
-    shadowTransform->setInput(0, shadow);
-    shadowTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, transform);
-
-    auto composite = new mescal::Effect{ mescal::Effect::Type::composite };
-    composite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceOver);
-    composite->setInput(0, shadowTransform);
-    composite->setInput(1, sourceImage);
-
-    return composite;
-}
-
-mescal::Effect::Ptr EffectGraph::createInnerShadow(juce::Image const& shadowSourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform)
-{
-#if 0
     auto floodEffect = new mescal::Effect{ mescal::Effect::Type::flood };
     floodEffect->setPropertyValue(mescal::Effect::Flood::color, juce::Colours::blue);
 
@@ -125,14 +292,11 @@ mescal::Effect::Ptr EffectGraph::createInnerShadow(juce::Image const& shadowSour
 
     auto alphaMaskTransform = new mescal::Effect{ mescal::Effect::Type::affineTransform2D };
     alphaMaskTransform->setInput(0, alphaMaskEffect);
-    alphaMaskTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, transform);
+    alphaMaskTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, juce::AffineTransform::scale(1.1f).translated(-15.0f, -8.0f));
 
     auto alphaMaskEffect2 = new mescal::Effect{ mescal::Effect::Type::alphaMask };
     alphaMaskEffect2->setInput(0, alphaMaskTransform);
     alphaMaskEffect2->setInput(1, sourceImage);
 
     return alphaMaskEffect2;
-#endif
-
-    return nullptr;
 }

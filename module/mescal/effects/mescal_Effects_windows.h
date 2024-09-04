@@ -124,6 +124,10 @@ public:
 		composite,                  /**< Composite effect */
 		arithmeticComposite,        /**< ArithmeticComposite effect */
 		affineTransform2D,          /**< AffineTransform2D effect */
+        invert,                     /**< Invert effect */
+        flood,                      /**< Flood effect */
+        alphaMask,                  /**< AlphaMask effect */
+        emboss,                     /**< Emboss effect */
 		numEffectTypes              /**< Number of effect types */
 	};
 
@@ -332,6 +336,27 @@ public:
 
         static constexpr int soft = 0;
         static constexpr int hard = 1;
+    };
+
+    /**
+    * Constants for built-in Direct2D 2D affine transform effect
+    *
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/flood
+    */
+    struct Flood
+    {
+        static constexpr int color = 0;
+    };
+
+    /**
+    * Constants for built-in Direct2D 2D emboss effect
+    *
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/emboss
+    */
+    struct Emboss
+    {
+        static constexpr int height = 0;
+        static constexpr int direction = 0;
     };
 
 	/**

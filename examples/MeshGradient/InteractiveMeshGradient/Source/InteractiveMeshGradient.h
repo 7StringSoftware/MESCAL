@@ -23,6 +23,18 @@ private:
         std::function<void(BezierControlComponent&)> onChange;
     };
 
+    struct InteriorControlComponent : public juce::Component
+    {
+        void mouseDown(const juce::MouseEvent& e) override;
+        void mouseDrag(const juce::MouseEvent& e) override;
+        void paint(juce::Graphics& g) override;
+
+        juce::ComponentDragger dragger;
+        std::weak_ptr<mescal::MeshGradient::Vertex> vertex;
+        mescal::MeshGradient::Placement placement = mescal::MeshGradient::Placement::unknown;
+        std::function<void(InteriorControlComponent&)> onChange;
+    };
+
     struct VertexComponent : public juce::Component
     {
         void mouseDown(const juce::MouseEvent& e) override;
@@ -82,6 +94,7 @@ private:
     juce::Image meshImage;
     std::array<VertexComponent, 4> vertexComponents;
     std::array<BezierControlComponent, 8> bezierControlComponents;
+    std::array<InteriorControlComponent, 4> interiorControlComponents;
     std::vector<std::unique_ptr<PatchComponent>> patchComponents;
     juce::Label rowCountLabel{ "Rows", "Rows" }, columnCountLabel{ "Columns", "Columns" };
     juce::Slider rowCountSlider{ juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft };
