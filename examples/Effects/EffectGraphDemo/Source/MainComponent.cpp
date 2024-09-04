@@ -4,7 +4,9 @@ MainComponent::MainComponent()
 {
 	setOpaque(true);
 
-	effectGraphComponent.setOutputEffect(effectGraph.outputEffect, effectGraph.sourceImage.getWidth(), effectGraph.sourceImage.getHeight());
+    paintSourceImage();
+    effectGraph.createSliderGraph();
+    effectGraphComponent.setOutputEffect(effectGraph.outputEffect, effectGraph.sourceImage.getWidth(), effectGraph.sourceImage.getHeight());
 	addAndMakeVisible(effectGraphComponent);
 
 	setBounds(effectGraphComponent.getPreferredSize());
@@ -16,7 +18,6 @@ MainComponent::~MainComponent()
 
 void MainComponent::paint(juce::Graphics& g)
 {
-	paintSourceImage();
 	g.fillAll(juce::Colours::white);
 }
 
