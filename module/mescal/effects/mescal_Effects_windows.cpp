@@ -227,6 +227,7 @@ namespace mescal
             }
 
             case D2D1_PROPERTY_TYPE_ENUM:
+            case D2D1_PROPERTY_TYPE_VECTOR2:
             case D2D1_PROPERTY_TYPE_VECTOR3:
             case D2D1_PROPERTY_TYPE_VECTOR4:
             {
@@ -436,7 +437,8 @@ namespace mescal
             &CLSID_D2D1Invert,
             &CLSID_D2D1Flood,
             &CLSID_D2D1AlphaMask,
-            &CLSID_D2D1Emboss
+            &CLSID_D2D1Emboss,
+            &CLSID_D2D1LuminanceToAlpha
         };
     };
 
@@ -493,6 +495,34 @@ namespace mescal
         return pimpl->inputs;
     }
 
+    void Effect::findInputsRecursive(Effect::Ptr effect, std::vector<Effect::ImageInput>& inputs)
+    {
+        int inputIndex = 0;
+        for (auto const& input : effect->getInputs())
+        {
+            if (std::holds_alternative<Effect::Ptr>(input))
+            {
+                auto upstreamEffect = std::get<Effect::Ptr>(input);
+                findInputsRecursive(upstreamEffect, inputs);
+            }
+            else if (std::holds_alternative<juce::Image>(input) || std::holds_alternative<std::monostate>(input))
+            {
+                inputs.emplace_back(ImageInput{ effect, inputIndex });
+            }
+
+            ++inputIndex;
+        }
+    }
+
+    std::vector<Effect::ImageInput> Effect::getGraphImageInputs()
+    {
+        std::vector<Effect::ImageInput> inputs;
+
+        findInputsRecursive(this, inputs);
+
+        return inputs;
+    }
+
     int Effect::getNumProperties()
     {
         return pimpl->getNumProperties();
@@ -506,6 +536,9 @@ namespace mescal
     void Effect::setPropertyValue(int index, const PropertyValue value)
     {
         pimpl->setProperty(index, value);
+
+        if (onPropertyChange)
+            onPropertyChange(index);
     }
 
     Effect::PropertyValue Effect::getPropertyValue(int index)
@@ -546,4 +579,3 @@ namespace mescal
         pimpl->deviceContext->EndDraw();
     }
 }
-

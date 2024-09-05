@@ -183,8 +183,8 @@ void EffectGraphComponent::EffectComponent::showCallout()
 			getParentComponent()->repaint();
 		};
 	juce::CallOutBox::launchAsynchronously(std::move(content),
-		getBoundsInParent(),
-		getParentComponent());
+		getScreenBounds(),
+		nullptr);
 }
 
 void EffectGraphComponent::ViewportContent::resized()

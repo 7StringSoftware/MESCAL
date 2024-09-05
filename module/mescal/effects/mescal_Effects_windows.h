@@ -128,6 +128,7 @@ public:
         flood,                      /**< Flood effect */
         alphaMask,                  /**< AlphaMask effect */
         emboss,                     /**< Emboss effect */
+        luminanceToAlpha,           /**< Luminance to alpha effect */
 		numEffectTypes              /**< Number of effect types */
 	};
 
@@ -421,6 +422,16 @@ public:
 	*/
 	std::vector<Input> const& getInputs() const noexcept;
 
+    /**
+     * Get an array of all Image inputs for the entire graph
+     */
+    struct ImageInput
+    {
+        juce::ReferenceCountedObjectPtr<Effect> effect;
+        int inputIndex;
+    };
+    std::vector<ImageInput> getGraphImageInputs();
+
 	/**
 	* Set the input at the specified index to a JUCE Image
     *
@@ -479,7 +490,11 @@ public:
 
     using Ptr = juce::ReferenceCountedObjectPtr<Effect>;
 
+    std::function<void(int index)> onPropertyChange;
+
 protected:
+    static void findInputsRecursive(Effect::Ptr effect, std::vector<ImageInput>& inputs);
+
 	/** @internal */
     struct Pimpl;
 	std::unique_ptr<Pimpl> pimpl;

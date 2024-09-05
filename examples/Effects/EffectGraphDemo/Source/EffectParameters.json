@@ -311,7 +311,11 @@
             "x",
             "y",
             "z"
-          ]
+          ],
+          "Range": {
+            "Min": -360.0,
+            "Max": 360.0
+          }
         }
       ]
     },
@@ -399,6 +403,10 @@
 
     {
       "Name": "Emboss"
+    },
+
+    {
+      "Name": "Luminance to alpha"
     }
 
   ]

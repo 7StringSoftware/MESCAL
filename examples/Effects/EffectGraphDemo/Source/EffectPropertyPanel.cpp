@@ -75,7 +75,7 @@ void EffectPropertyPanel::buildPropertyPanel()
 
 		auto getRange = [&](mescal::Effect::PropertyInfo const& propertyInfo, int propertyIndex)
 			{
-				if (propertyInfo.range.has_value())
+				if (propertyInfo.range.has_value() && propertyInfo.range->getLength() > 0.0f)
 					return *(propertyInfo.range);
 
 				auto jsonEffectPropertyObject = jsonEffectPropertiesObject.getObject(propertyIndex);
