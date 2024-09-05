@@ -424,19 +424,19 @@ namespace mescal
 
         static constexpr std::array<GUID const* const, (size_t)Type::numEffectTypes> effectGuids
         {
-            &CLSID_D2D1GaussianBlur,
-            &CLSID_D2D1SpotSpecular,
-            &CLSID_D2D1Shadow,
-            &CLSID_D2D1SpotDiffuse,
-            &CLSID_D2D13DPerspectiveTransform,
+            &CLSID_D2D12DAffineTransform,
+            &CLSID_D2D1AlphaMask,
+            &CLSID_D2D1ArithmeticComposite,
             &CLSID_D2D1Blend,
             &CLSID_D2D1Composite,
-            &CLSID_D2D1ArithmeticComposite,
-            &CLSID_D2D12DAffineTransform,
-            &CLSID_D2D1Invert,
+            &CLSID_D2D1Emboss,
             &CLSID_D2D1Flood,
-            &CLSID_D2D1AlphaMask,
-            &CLSID_D2D1Emboss
+            &CLSID_D2D1GaussianBlur,
+            &CLSID_D2D1Invert,
+            &CLSID_D2D13DPerspectiveTransform,
+            &CLSID_D2D1Shadow,
+            &CLSID_D2D1SpotDiffuse,
+            &CLSID_D2D1SpotSpecular
         };
     };
 

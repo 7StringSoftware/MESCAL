@@ -1,5 +1,87 @@
 {
   "Effects": [
+
+    {
+      "Name": "Affine Transform (2D)",
+      "Properties": [
+        {
+          "Name": "Interpolation mode"
+        },
+        {
+          "Name": "Border mode"
+        },
+        {
+          "Name": "Transform matrix"
+        },
+        {
+          "Name": "Sharpness"
+        }
+      ]
+    },
+
+    {
+      "Name": "AlphaMask"
+    },
+
+    {
+      "Name": "ArithmeticComposite",
+      "Properties": [
+        {
+          "Name": "Coefficients",
+          "Labels": [
+            "C1",
+            "C2",
+            "C3",
+            "C4"
+          ],
+          "Range": {
+            "Min": -100.0,
+            "Max": 100.0
+          }
+        },
+        {
+          "Name": "ClampOutput"
+        }
+      ]
+    },
+
+    {
+      "Name": "Blend",
+      "Properties": [
+        {
+          "Name": "Mode"
+        }
+      ]
+    },
+
+    {
+      "Name": "Composite",
+      "Properties": [
+        {
+          "Name": "Mode"
+        }
+      ]
+    },
+
+    {
+      "Name": "Emboss"
+    },
+
+    {
+      "Name": "Flood",
+      "Properties": [
+        {
+          "Name": "Color",
+          "Labels": [
+            "r",
+            "g",
+            "b",
+            "a"
+          ]
+        }
+      ]
+    },
+
     {
       "Name": "GaussianBlur",
       "Properties": [
@@ -22,97 +104,27 @@
     },
 
     {
-      "Name": "SpotSpecularLighting",
+      "Name": "Invert"
+    },
+
+    {
+      "Name": "3DPerspectiveTransform",
       "Properties": [
         {
-          "Name": "Light position",
-          "Labels": [
-            "x",
-            "y",
-            "z"
-          ],
-          "Range": {
-            "Min": -1000.0,
-            "Max": 1000.0
-          }
+          "Name": "Interpolation mode"
         },
         {
-          "Name": "Focus point position",
-          "Labels": [
-            "x",
-            "y",
-            "z"
-          ],
-          "Range": {
-            "Min": -1000.0,
-            "Max": 1000.0
-          }
+          "Name": "Border mode"
         },
         {
-          "Name": "Focus",
-          "Range": {
-            "Min": -100.0,
-            "Max": 100.0
-          },
-          "Skew": {
-            "Factor": 0.25,
-            "Symmetric": true
-          }
-        },
-        {
-          "Name": "Limiting cone angle",
-          "Range": {
-            "Min": -90.0,
-            "Max": 90.0
-          }
-        },
-        {
-          "Name": "Specular exponent",
-          "Range": {
-            "Min": 0.0,
-            "Max": 128.0
-          },
-          "Skew": {
-            "Factor": 0.25,
-            "Symmetric": true
-          }
-        },
-        {
-          "Name": "Specular constant",
+          "Name": "Depth",
           "Range": {
             "Min": 0.0,
             "Max": 10000.0
-          },
-          "Skew": {
-            "Factor": 0.25,
-            "Symmetric": false
           }
         },
         {
-          "Name": "Surface scale",
-          "Range": {
-            "Min": 0.0,
-            "Max": 10000.0
-          },
-          "Skew": {
-            "Factor": 0.25,
-            "Symmetric": true
-          }
-        },
-        {
-          "Name": "Light color",
-          "Labels": [
-            "r",
-            "g",
-            "b"
-          ],
-          "Range": {
-            "Min": 0.0,
-            "Max": 1.0
-          }
-        },
-        {
-          "Name": "Kernel unit length",
+          "Name": "PerspectiveOrigin",
           "Range": {
             "Min": -100.0,
             "Max": 100.0
@@ -123,10 +135,53 @@
           ]
         },
         {
-          "Name": "Scale mode"
+          "Name": "LocalOffset",
+          "Labels": [
+            "x",
+            "y",
+            "z"
+          ],
+          "Range": {
+            "Min": -1000.0,
+            "Max": 1000.0
+          }
+        },
+        {
+          "Name": "GlobalOffset",
+          "Labels": [
+            "x",
+            "y",
+            "z"
+          ],
+          "Range": {
+            "Min": -1000.0,
+            "Max": 1000.0
+          }
+
+        },
+        {
+          "Name": "Origin",
+          "Labels": [
+            "x",
+            "y",
+            "z"
+          ],
+          "Range": {
+            "Min": -1000.0,
+            "Max": 1000.0
+          }
+        },
+        {
+          "Name": "Rotation",
+          "Labels": [
+            "x",
+            "y",
+            "z"
+          ]
         }
       ]
     },
+
 
     {
       "Name": "Shadow",
@@ -242,23 +297,97 @@
     },
 
     {
-      "Name": "3DPerspectiveTransform",
+      "Name": "SpotSpecularLighting",
       "Properties": [
         {
-          "Name": "Interpolation mode"
-        },
-        {
-          "Name": "Border mode"
-        },
-        {
-          "Name": "Depth",
+          "Name": "Light position",
+          "Labels": [
+            "x",
+            "y",
+            "z"
+          ],
           "Range": {
-            "Min": 0.0,
-            "Max": 10000.0
+            "Min": -1000.0,
+            "Max": 1000.0
           }
         },
         {
-          "Name": "PerspectiveOrigin",
+          "Name": "Focus point position",
+          "Labels": [
+            "x",
+            "y",
+            "z"
+          ],
+          "Range": {
+            "Min": -1000.0,
+            "Max": 1000.0
+          }
+        },
+        {
+          "Name": "Focus",
+          "Range": {
+            "Min": -100.0,
+            "Max": 100.0
+          },
+          "Skew": {
+            "Factor": 0.25,
+            "Symmetric": true
+          }
+        },
+        {
+          "Name": "Limiting cone angle",
+          "Range": {
+            "Min": -90.0,
+            "Max": 90.0
+          }
+        },
+        {
+          "Name": "Specular exponent",
+          "Range": {
+            "Min": 0.0,
+            "Max": 128.0
+          },
+          "Skew": {
+            "Factor": 0.25,
+            "Symmetric": true
+          }
+        },
+        {
+          "Name": "Specular constant",
+          "Range": {
+            "Min": 0.0,
+            "Max": 10000.0
+          },
+          "Skew": {
+            "Factor": 0.25,
+            "Symmetric": false
+          }
+        },
+        {
+          "Name": "Surface scale",
+          "Range": {
+            "Min": 0.0,
+            "Max": 10000.0
+          },
+          "Skew": {
+            "Factor": 0.25,
+            "Symmetric": true
+          }
+        },
+        {
+          "Name": "Light color",
+          "Labels": [
+            "r",
+            "g",
+            "b"
+          ],
+          "Range": {
+            "Min": 0.0,
+            "Max": 1.0
+          }
+        },
+        {
+          "Name": "Kernel unit length",
           "Range": {
             "Min": -100.0,
             "Max": 100.0
@@ -269,136 +398,9 @@
           ]
         },
         {
-          "Name": "LocalOffset",
-          "Labels": [
-            "x",
-            "y",
-            "z"
-          ],
-          "Range": {
-            "Min": -1000.0,
-            "Max": 1000.0
-          }
-        },
-        {
-          "Name": "GlobalOffset",
-          "Labels": [
-            "x",
-            "y",
-            "z"
-          ],
-          "Range": {
-            "Min": -1000.0,
-            "Max": 1000.0
-          }
-
-        },
-        {
-          "Name": "Origin",
-          "Labels": [
-            "x",
-            "y",
-            "z"
-          ],
-          "Range": {
-            "Min": -1000.0,
-            "Max": 1000.0
-          }
-        },
-        {
-          "Name": "Rotation",
-          "Labels": [
-            "x",
-            "y",
-            "z"
-          ]
+          "Name": "Scale mode"
         }
       ]
-    },
-
-    {
-      "Name": "Blend",
-      "Properties": [
-        {
-          "Name": "Mode"
-        }
-      ]
-    },
-
-    {
-      "Name": "Composite",
-      "Properties": [
-        {
-          "Name": "Mode"
-        }
-      ]
-    },
-
-    {
-      "Name": "ArithmeticComposite",
-      "Properties": [
-        {
-          "Name": "Coefficients",
-          "Labels": [
-            "C1",
-            "C2",
-            "C3",
-            "C4"
-          ],
-          "Range": {
-            "Min": -100.0,
-            "Max": 100.0
-          }
-        },
-        {
-          "Name": "ClampOutput"
-        }
-      ]
-    },
-
-    {
-      "Name": "Affine Transform (2D)",
-      "Properties": [
-        {
-          "Name": "Interpolation mode"
-        },
-        {
-          "Name": "Border mode"
-        },
-        {
-          "Name": "Transform matrix"
-        },
-        {
-          "Name": "Sharpness"
-        }
-      ]
-    },
-
-    {
-      "Name": "Invert"
-    },
-
-    {
-      "Name": "Flood",
-      "Properties": [
-        {
-          "Name": "Color",
-          "Labels": [
-            "r",
-            "g",
-            "b",
-            "a"
-          ]
-        }
-      ]
-    },
-
-    {
-      "Name": "AlphaMask"
-    },
-
-    {
-      "Name": "Emboss"
     }
 
   ]

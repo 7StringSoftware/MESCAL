@@ -115,23 +115,139 @@ public:
 	 */
 	enum class Type
 	{
-		gaussianBlur,               /**< GaussianBlur effect */
-		spotSpecularLighting,       /**< SpotSpecularLighting effect */
-		shadow,                     /**< Shadow effect */
-		spotDiffuseLighting,        /**< SpotDiffuseLighting effect */
-		perspectiveTransform3D,     /**< PerspectiveTransform3D effect */
-		blend,                      /**< Blend effect */
-		composite,                  /**< Composite effect */
-		arithmeticComposite,        /**< ArithmeticComposite effect */
-		affineTransform2D,          /**< AffineTransform2D effect */
-        invert,                     /**< Invert effect */
-        flood,                      /**< Flood effect */
+        affineTransform2D,          /**< AffineTransform2D effect */
         alphaMask,                  /**< AlphaMask effect */
+        arithmeticComposite,        /**< ArithmeticComposite effect */
+        blend,                      /**< Blend effect */
+        composite,                  /**< Composite effect */
         emboss,                     /**< Emboss effect */
+        flood,                      /**< Flood effect */
+        gaussianBlur,               /**< GaussianBlur effect */
+        invert,                     /**< Invert effect */
+        perspectiveTransform3D,     /**< PerspectiveTransform3D effect */
+        shadow,                     /**< Shadow effect */
+		spotDiffuseLighting,        /**< SpotDiffuseLighting effect */
+        spotSpecularLighting,       /**< SpotSpecularLighting effect */
 		numEffectTypes              /**< Number of effect types */
 	};
 
-	/**
+    /**
+    * Constants for built-in Direct2D 2D affine transform effect
+    *
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/2d-affine-transform
+    */
+    struct AffineTransform2D
+    {
+        static constexpr int interpolationMode = 0;
+        static constexpr int borderMode = 1;
+        static constexpr int transformMatrix = 2;
+        static constexpr int sharpness = 3;
+
+        static constexpr int nearestNeighbor = 0;
+        static constexpr int linear = 1;
+        static constexpr int cubic = 2;
+        static constexpr int multiSampleLinear = 3;
+        static constexpr int anisotropic = 4;
+        static constexpr int highQualityCubic = 5;
+
+        static constexpr int soft = 0;
+        static constexpr int hard = 1;
+    };
+
+    /**
+    * Constants for built-in Direct2D arithmetic composite effect
+    *
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/arithmetic-composite
+    */
+    struct ArithmeticComposite
+    {
+        static constexpr int coefficients = 0;
+        static constexpr int clampOutput = 1;
+    };
+
+    /**
+    * Constants for built-in Direct2D blend effect
+    *
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/blend
+    */
+    struct Blend
+    {
+        static constexpr int mode = 0;
+
+        static constexpr int multiply = 0;
+        static constexpr int screen = 1;
+        static constexpr int darken = 2;
+        static constexpr int lighten = 3;
+        static constexpr int dissolve = 4;
+        static constexpr int colorBurn = 5;
+        static constexpr int linearBurn = 6;
+        static constexpr int darkerColor = 7;
+        static constexpr int lighterColor = 8;
+        static constexpr int colorDodge = 9;
+        static constexpr int linearDodge = 10;
+        static constexpr int overlay = 11;
+        static constexpr int softLight = 12;
+        static constexpr int hardLight = 13;
+        static constexpr int vividLight = 14;
+        static constexpr int linearLight = 15;
+        static constexpr int pinLight = 16;
+        static constexpr int hardMix = 17;
+        static constexpr int difference = 18;
+        static constexpr int exclusion = 19;
+        static constexpr int hue = 20;
+        static constexpr int saturation = 21;
+        static constexpr int color = 22;
+        static constexpr int luminosity = 23;
+        static constexpr int subtract = 24;
+        static constexpr int division = 25;
+    };
+
+    /**
+    * Constants for built-in Direct2D composite effect
+    *
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/composite
+    */
+    struct Composite
+    {
+        static constexpr int mode = 0;
+
+        static constexpr int sourceOver = 0;
+        static constexpr int destinationOver = 1;
+        static constexpr int sourceIn = 2;
+        static constexpr int destinationIn = 3;
+        static constexpr int sourceOut = 4;
+        static constexpr int destinationOut = 5;
+        static constexpr int sourceAtop = 6;
+        static constexpr int destinationAtop = 7;
+        static constexpr int xor = 8;
+        static constexpr int plus = 9;
+        static constexpr int sourceCopy = 10;
+        static constexpr int boundedSourceCopy = 11;
+        static constexpr int maskInvert = 12;
+    };
+
+    /**
+    * Constants for built-in Direct2D 2D emboss effect
+    *
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/emboss
+    */
+    struct Emboss
+    {
+        static constexpr int height = 0;
+        static constexpr int direction = 0;
+    };
+
+    /**
+    * Constants for built-in Direct2D 2D affine transform effect
+    *
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/flood
+    */
+    struct Flood
+    {
+        static constexpr int color = 0;
+    };
+
+    /**
 	* Constants for built-in Direct2D gaussian blur effect
 	*
 	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/gaussian-blur
@@ -150,30 +266,30 @@ public:
         static constexpr int hard = 1;
     };
 
-	/**
-	* Constants for built-in Direct2D spot specular lighting effect
-	*
-	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/spot-specular-lighting
-	*/
-    struct SpotSpecularLighting
+    /**
+    * Constants for built-in Direct2D 3D perspective transform effect
+    *
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/3d-perspective-transform
+    */
+    struct PerspectiveTransform3D
     {
-        static constexpr int lightPosition = 0;
-        static constexpr int pointsAt = 1;
-        static constexpr int focus = 2;
-        static constexpr int limitingConeAngle = 3;
-        static constexpr int specularExponent = 4;
-        static constexpr int specularConstant = 5;
-        static constexpr int surfaceScale = 6;
-        static constexpr int color = 7;
-        static constexpr int kernelUnitLength = 8;
-        static constexpr int scaleMode = 9;
+        static constexpr int interpolationMode = 0;
+        static constexpr int borderMode = 1;
+        static constexpr int depth = 2;
+        static constexpr int perspectiveOrigin = 3;
+        static constexpr int localOffset = 4;
+        static constexpr int globalOffset = 5;
+        static constexpr int rotationOrigin = 6;
+        static constexpr int rotation = 7;
 
         static constexpr int nearestNeighbor = 0;
         static constexpr int linear = 1;
         static constexpr int cubic = 2;
         static constexpr int multiSampleLinear = 3;
         static constexpr int anisotropic = 4;
-        static constexpr int highQualityCubic = 5;
+
+        static constexpr int soft = 0;
+        static constexpr int hard = 1;
     };
 
 	/**
@@ -217,115 +333,23 @@ public:
         static constexpr int highQualityCubic = 5;
     };
 
-	/**
-	* Constants for built-in Direct2D 3D perspective transform effect
-	*
-	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/3d-perspective-transform
-	*/
-    struct PerspectiveTransform3D
+    /**
+    * Constants for built-in Direct2D spot specular lighting effect
+    *
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/spot-specular-lighting
+    */
+    struct SpotSpecularLighting
     {
-        static constexpr int interpolationMode = 0;
-        static constexpr int borderMode = 1;
-        static constexpr int depth = 2;
-        static constexpr int perspectiveOrigin = 3;
-        static constexpr int localOffset = 4;
-        static constexpr int globalOffset = 5;
-        static constexpr int rotationOrigin = 6;
-        static constexpr int rotation = 7;
-
-        static constexpr int nearestNeighbor = 0;
-        static constexpr int linear = 1;
-        static constexpr int cubic = 2;
-        static constexpr int multiSampleLinear = 3;
-        static constexpr int anisotropic = 4;
-
-        static constexpr int soft = 0;
-        static constexpr int hard = 1;
-    };
-
-	/**
-	* Constants for built-in Direct2D blend effect
-	*
-	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/blend
-	*/
-    struct Blend
-    {
-        static constexpr int mode = 0;
-
-        static constexpr int multiply = 0;
-        static constexpr int screen = 1;
-        static constexpr int darken = 2;
-        static constexpr int lighten = 3;
-        static constexpr int dissolve = 4;
-        static constexpr int colorBurn = 5;
-        static constexpr int linearBurn = 6;
-        static constexpr int darkerColor = 7;
-        static constexpr int lighterColor = 8;
-        static constexpr int colorDodge = 9;
-        static constexpr int linearDodge = 10;
-        static constexpr int overlay = 11;
-        static constexpr int softLight = 12;
-        static constexpr int hardLight = 13;
-        static constexpr int vividLight = 14;
-        static constexpr int linearLight = 15;
-        static constexpr int pinLight = 16;
-        static constexpr int hardMix = 17;
-        static constexpr int difference = 18;
-        static constexpr int exclusion = 19;
-        static constexpr int hue = 20;
-        static constexpr int saturation = 21;
-        static constexpr int color = 22;
-        static constexpr int luminosity = 23;
-        static constexpr int subtract = 24;
-        static constexpr int division = 25;
-    };
-
-	/**
-	* Constants for built-in Direct2D composite effect
-	*
-	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/composite
-	*/
-    struct Composite
-    {
-        static constexpr int mode = 0;
-
-        static constexpr int sourceOver = 0;
-        static constexpr int destinationOver = 1;
-        static constexpr int sourceIn = 2;
-        static constexpr int destinationIn = 3;
-        static constexpr int sourceOut = 4;
-        static constexpr int destinationOut = 5;
-        static constexpr int sourceAtop = 6;
-        static constexpr int destinationAtop = 7;
-        static constexpr int xor = 8;
-        static constexpr int plus = 9;
-        static constexpr int sourceCopy = 10;
-        static constexpr int boundedSourceCopy = 11;
-        static constexpr int maskInvert = 12;
-    };
-
-	/**
-	* Constants for built-in Direct2D arithmetic composite effect
-	*
-	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/arithmetic-composite
-	*/
-    struct ArithmeticComposite
-    {
-        static constexpr int coefficients = 0;
-        static constexpr int clampOutput = 1;
-    };
-
-	/**
-	* Constants for built-in Direct2D 2D affine transform effect
-	*
-	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/2d-affine-transform
-	*/
-    struct AffineTransform2D
-    {
-        static constexpr int interpolationMode = 0;
-        static constexpr int borderMode = 1;
-        static constexpr int transformMatrix = 2;
-        static constexpr int sharpness = 3;
+        static constexpr int lightPosition = 0;
+        static constexpr int pointsAt = 1;
+        static constexpr int focus = 2;
+        static constexpr int limitingConeAngle = 3;
+        static constexpr int specularExponent = 4;
+        static constexpr int specularConstant = 5;
+        static constexpr int surfaceScale = 6;
+        static constexpr int color = 7;
+        static constexpr int kernelUnitLength = 8;
+        static constexpr int scaleMode = 9;
 
         static constexpr int nearestNeighbor = 0;
         static constexpr int linear = 1;
@@ -333,30 +357,6 @@ public:
         static constexpr int multiSampleLinear = 3;
         static constexpr int anisotropic = 4;
         static constexpr int highQualityCubic = 5;
-
-        static constexpr int soft = 0;
-        static constexpr int hard = 1;
-    };
-
-    /**
-    * Constants for built-in Direct2D 2D affine transform effect
-    *
-    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/flood
-    */
-    struct Flood
-    {
-        static constexpr int color = 0;
-    };
-
-    /**
-    * Constants for built-in Direct2D 2D emboss effect
-    *
-    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/emboss
-    */
-    struct Emboss
-    {
-        static constexpr int height = 0;
-        static constexpr int direction = 0;
     };
 
 	/**
