@@ -109,12 +109,16 @@ void EffectGraphComponent::ViewportContent::buildEffectGraphComponentsRecursive(
 	}
 }
 
-void EffectGraphComponent::ViewportContent::positionEffectGraphComponentsRecursive(NodeComponent* nodeComponent, int& y, int depth)
+void EffectGraphComponent::ViewportContent::positionEffectGraphComponentsRecursive(NodeComponent* nodeComponent, int& y, int depth, std::vector<std::vector<juce::Component*>>& columns,
+    int& sequence)
 {
 	int size = 150;
 	int gap = 80;
 	int top = y;
 	int x = (size + gap) * (depth - 1);
+
+	auto column = std::abs(depth);
+	columns[column].push_back(nodeComponent);
 
 	int inputIndex = 0;
 	int inputY = y;
@@ -125,7 +129,7 @@ void EffectGraphComponent::ViewportContent::positionEffectGraphComponentsRecursi
 		{
 			if (connection->outputConnector)
 			{
-				positionEffectGraphComponentsRecursive(&connection->outputConnector->nodeComponent, inputY, depth - 1);
+				positionEffectGraphComponentsRecursive(&connection->outputConnector->nodeComponent, inputY, depth - 1, columns, sequence);
 				inputY += size + gap;
 				++numConnectedInputs;
 			}
@@ -140,6 +144,7 @@ void EffectGraphComponent::ViewportContent::positionEffectGraphComponentsRecursi
 		auto height = inputY - top;
 		y = top + (height - size) / 2;
 	}
+
 	nodeComponent->setBounds(x, y, size, size + NodeComponent::textHeight);
 }
 
@@ -157,11 +162,27 @@ void EffectGraphComponent::ViewportContent::buildEffectGraphComponents(mescal::E
 	buildEffectGraphComponentsRecursive(this, nullptr, -1, newOutputEffect, 0, maxDepth);
 
 	int y = 0;
-	positionEffectGraphComponentsRecursive(effectComponents.front().get(), y, maxDepth);
+	std::vector<std::vector<juce::Component*>> columns{ (size_t)maxDepth + 1 };
+	int sequence = 0;
+	positionEffectGraphComponentsRecursive(effectComponents.front().get(), y, maxDepth, columns, sequence);
 
 	for (auto& effectComponent : effectComponents)
 	{
 		effectComponent->image = juce::Image{ juce::Image::ARGB, imageWidth, imageHeight, true, juce::NativeImageType{} };
+	}
+
+	for (auto& column : columns)
+	{
+		int bottom = 0;
+		for (auto component : column)
+		{
+			if (component->getY() < bottom)
+			{
+				component->setTopLeftPosition(component->getX(), bottom + 10);
+			}
+
+			bottom = component->getBottom();
+		}
 	}
 
 	resized();
@@ -254,10 +275,6 @@ EffectGraphComponent::NodeComponent::NodeComponent(size_t numInputs_) :
 		auto& inputConnector = inputConnectors.emplace_back(std::make_unique<InputConnectorComponent>(*this, inputIndex));
 		addAndMakeVisible(inputConnector.get());
 	}
-}
-
-void EffectGraphComponent::NodeComponent::paint(juce::Graphics&)
-{
 }
 
 void EffectGraphComponent::NodeComponent::resized()

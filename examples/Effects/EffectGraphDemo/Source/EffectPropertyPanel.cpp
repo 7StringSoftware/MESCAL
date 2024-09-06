@@ -8,7 +8,7 @@ EffectPropertyPanel::EffectPropertyPanel(mescal::Effect::Ptr effect_) :
 	setSize(350, propertyPanel.getTotalContentHeight());
 
 #if JUCE_DEBUG
-	printProperties(new mescal::Effect{ mescal::Effect::Type::perspectiveTransform3D });
+	printProperties(effect_);
 #endif
 }
 

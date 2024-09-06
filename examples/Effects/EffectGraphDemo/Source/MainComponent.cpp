@@ -4,9 +4,9 @@ MainComponent::MainComponent()
 {
 	setOpaque(true);
 
-    paintSourceImage();
-    effectGraph.createSliderGraph();
-    effectGraphComponent.setOutputEffect(effectGraph.outputEffect, effectGraph.sourceImage.getWidth(), effectGraph.sourceImage.getHeight());
+	effectGraph.paint3DButtonImages();
+    effectGraph.create3DButtonEffectGraph();
+    effectGraphComponent.setOutputEffect(effectGraph.outputEffect, effectGraph.sourceImages.front().getWidth(), effectGraph.sourceImages.front().getHeight());
 	addAndMakeVisible(effectGraphComponent);
 
 	setBounds(effectGraphComponent.getPreferredSize());

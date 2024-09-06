@@ -47,7 +47,6 @@ private:
         size_t numInputs = 0;
         size_t numOutputs = 1;
 
-        void paint(juce::Graphics&) override;
         void resized() override;
 
         juce::Image image;
@@ -93,7 +92,9 @@ private:
             mescal::Effect::Ptr effect,
             int depth,
             int& maxDepth);
-        static void positionEffectGraphComponentsRecursive(NodeComponent* nodeComponent, int& y, int depth);
+        static void positionEffectGraphComponentsRecursive(NodeComponent* nodeComponent, int& y, int depth, 
+            std::vector<std::vector<juce::Component*>>& columns,
+            int& sequence);
 
         void buildEffectGraphComponents(mescal::Effect::Ptr newOutputEffect, int imageWidth, int imageHeight);
         void resized() override;
