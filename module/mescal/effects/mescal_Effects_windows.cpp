@@ -55,9 +55,9 @@ namespace mescal
                 }
 
                 //
-                // Some effects can accept MAX_INT inputs! Limit the max input count to something more reasonable
+                // Some effects can accept MAX_INT inputs but only the first two seem to be usable
                 //
-                maxNumInputs = juce::jmin(16u, maxNumInputs);
+                maxNumInputs = juce::jmin(2u, maxNumInputs);
 
                 inputs.resize(maxNumInputs);
 
@@ -428,11 +428,16 @@ namespace mescal
             &CLSID_D2D1AlphaMask,
             &CLSID_D2D1ArithmeticComposite,
             &CLSID_D2D1Blend,
+            &CLSID_D2D1ChromaKey,
             &CLSID_D2D1Composite,
+            &CLSID_D2D1Crop,
+            &CLSID_D2D1EdgeDetection,
             &CLSID_D2D1Emboss,
             &CLSID_D2D1Flood,
             &CLSID_D2D1GaussianBlur,
+            &CLSID_D2D1HighlightsShadows,
             &CLSID_D2D1Invert,
+            &CLSID_D2D1LuminanceToAlpha,
             &CLSID_D2D13DPerspectiveTransform,
             &CLSID_D2D1Shadow,
             &CLSID_D2D1SpotDiffuse,

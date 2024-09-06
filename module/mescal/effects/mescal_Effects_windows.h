@@ -50,22 +50,22 @@ inline Vector4 colourToVector4(juce::Colour colour)
  and call applyEffect.
 
  \code{.cpp}
-	juce::Image sourceImage = ...;
-	juce::Image outputImage = juce::Image{ juce::Image::ARGB, sourceImage.getWidth(), sourceImage.getHeight(), true };
-	mescal::Effect blurEffect{ mescal::Effect::Type::gaussianBlur };
-	blurEffect.setInput(0, sourceImage);
-	blurEffect.applyEffect(outputImage, juce::AffineTransform{}, false);
+    juce::Image sourceImage = ...;
+    juce::Image outputImage = juce::Image{ juce::Image::ARGB, sourceImage.getWidth(), sourceImage.getHeight(), true };
+    mescal::Effect blurEffect{ mescal::Effect::Type::gaussianBlur };
+    blurEffect.setInput(0, sourceImage);
+    blurEffect.applyEffect(outputImage, juce::AffineTransform{}, false);
 \endcode
 
  And the same example that also adjusts the blur standard deviation:
 
  \code{.cpp}
-	juce::Image sourceImage = ...;
-	juce::Image outputImage = juce::Image{ juce::Image::ARGB, sourceImage.getWidth(), sourceImage.getHeight(), true };
-	mescal::Effect blurEffect{ mescal::Effect::Type::gaussianBlur };
-	blurEffect.setProperty(mescal::Effect::GaussianBlur::standardDeviation, 5.0f);
-	blurEffect.setInput(0, sourceImage);
-	blurEffect.applyEffect(outputImage, juce::AffineTransform{}, false);
+    juce::Image sourceImage = ...;
+    juce::Image outputImage = juce::Image{ juce::Image::ARGB, sourceImage.getWidth(), sourceImage.getHeight(), true };
+    mescal::Effect blurEffect{ mescal::Effect::Type::gaussianBlur };
+    blurEffect.setProperty(mescal::Effect::GaussianBlur::standardDeviation, 5.0f);
+    blurEffect.setInput(0, sourceImage);
+    blurEffect.applyEffect(outputImage, juce::AffineTransform{}, false);
 \endcode
 
  To chain two effects together, set one effect to be the input of another effect. In this example, a JUCE Image is
@@ -110,26 +110,31 @@ Effects only run in the GPU, so any Image objects used for inputs or outputs mus
 class Effect : public juce::ReferenceCountedObject
 {
 public:
-	/**
-	 * Enumeration of built-in effect types
-	 */
-	enum class Type
-	{
-        affineTransform2D,          /**< AffineTransform2D effect */
-        alphaMask,                  /**< AlphaMask effect */
-        arithmeticComposite,        /**< ArithmeticComposite effect */
+    /**
+     * Enumeration of built-in effect types
+     */
+    enum class Type
+    {
+        affineTransform2D,          /**< Affine Transform 2D effect */
+        alphaMask,                  /**< Alpha mask effect */
+        arithmeticComposite,        /**< Arithmetic composite effect */
         blend,                      /**< Blend effect */
+        chromaKey,                  /**< Chroma key effect */
         composite,                  /**< Composite effect */
+        crop,                       /**< Crop effect */
+        edgeDetect,                 /**< Edge detect effect */
         emboss,                     /**< Emboss effect */
         flood,                      /**< Flood effect */
         gaussianBlur,               /**< GaussianBlur effect */
+        highlightsAndShadows,       /**< Highlights and Shadows effect */
         invert,                     /**< Invert effect */
-        perspectiveTransform3D,     /**< PerspectiveTransform3D effect */
+        luminanceToAlpha,           /**< Luminance to alpha effect */
+        perspectiveTransform3D,     /**< Perspective Transform 3D effect */
         shadow,                     /**< Shadow effect */
-		spotDiffuseLighting,        /**< SpotDiffuseLighting effect */
-        spotSpecularLighting,       /**< SpotSpecularLighting effect */
-		numEffectTypes              /**< Number of effect types */
-	};
+        spotDiffuseLighting,        /**< Spot Diffuse Lighting effect */
+        spotSpecularLighting,       /**< Spot Specular Lighting effect */
+        numEffectTypes              /**< Number of effect types */
+    };
 
     /**
     * Constants for built-in Direct2D 2D affine transform effect
@@ -227,6 +232,17 @@ public:
     };
 
     /**
+    * Constants for built-in Direct2D crop effect
+    * 
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/crop
+    */
+    struct Crop
+    {
+        static constexpr int rect = 0;
+        static constexpr int borderMode = 1;
+    };
+
+    /**
     * Constants for built-in Direct2D 2D emboss effect
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/emboss
@@ -248,10 +264,10 @@ public:
     };
 
     /**
-	* Constants for built-in Direct2D gaussian blur effect
-	*
-	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/gaussian-blur
-	*/
+    * Constants for built-in Direct2D gaussian blur effect
+    *
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/gaussian-blur
+    */
     struct GaussianBlur
     {
         static constexpr int standardDeviation = 0;
@@ -292,11 +308,11 @@ public:
         static constexpr int hard = 1;
     };
 
-	/**
-	* Constants for built-in Direct2D shadow effect
-	*
-	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/shadow
-	*/
+    /**
+    * Constants for built-in Direct2D shadow effect
+    *
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/shadow
+    */
     struct Shadow
     {
         static constexpr int blurStandardDeviation = 0;
@@ -308,11 +324,11 @@ public:
         static constexpr int quality = 2;
     };
 
-	/**
-	* Constants for built-in Direct2D spot diffuse lighting effect
-	*
-	* Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/spot-diffuse-lighting
-	*/
+    /**
+    * Constants for built-in Direct2D spot diffuse lighting effect
+    *
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/spot-diffuse-lighting
+    */
     struct SpotDiffuseLighting
     {
         static constexpr int lightPosition = 0;
@@ -359,20 +375,20 @@ public:
         static constexpr int highQualityCubic = 5;
     };
 
-	/**
+    /**
     * Variant that can hold different types of inputs for an effect.
-	*
-	* Effects have zero or more inputs. Each input can be a JUCE Image or another Effect.
-	* Chaining effects together allows for complex image processing graphs.
-	*/
+    *
+    * Effects have zero or more inputs. Each input can be a JUCE Image or another Effect.
+    * Chaining effects together allows for complex image processing graphs.
+    */
     using Input = std::variant<std::monostate, juce::Image, juce::ReferenceCountedObjectPtr<Effect>>;
 
-	/**
+    /**
     * Variant that can hold different types for getting and setting effect property values
-	*
-	* Effects have properties that configure the effect. Properties can have different types, such as
-	* float, arrays, or text strings. The PropertyValue variant can hold any of these types.
-	*/
+    *
+    * Effects have properties that configure the effect. Properties can have different types, such as
+    * float, arrays, or text strings. The PropertyValue variant can hold any of these types.
+    */
     using PropertyValue = std::variant<std::monostate,
         juce::String,
         bool,
@@ -386,11 +402,11 @@ public:
         juce::AffineTransform,
         juce::Colour>;
 
-	/**
-	* Structure that contains metadata about an effect property
-	*
-	* PropertyInfo contains the name of the property and any relevant range information.
-	*/
+    /**
+    * Structure that contains metadata about an effect property
+    *
+    * PropertyInfo contains the name of the property and any relevant range information.
+    */
     struct PropertyInfo
     {
         juce::String name;
@@ -398,47 +414,47 @@ public:
         juce::StringArray enumeration;
     };
 
-	/**
-	* Constructor for an Effect object
-	*
-	* @param effectType_ The type of effect to create
-	*/
+    /**
+    * Constructor for an Effect object
+    *
+    * @param effectType_ The type of effect to create
+    */
     Effect(Type effectType_);
     Effect(const Effect& other);
     ~Effect();
 
     static juce::ReferenceCountedObjectPtr<Effect> create(Type effectType);
 
-	/**
-	* Get the name of the effect
-	*/
+    /**
+    * Get the name of the effect
+    */
     juce::String getName() const noexcept;
 
-	/**
-	* Get a reference to the effect's array of inputs.
-	*
-	* Effects can have zero, one, or multiple inputs.
-	*/
-	std::vector<Input> const& getInputs() const noexcept;
+    /**
+    * Get a reference to the effect's array of inputs.
+    *
+    * Effects can have zero, one, or multiple inputs.
+    */
+    std::vector<Input> const& getInputs() const noexcept;
 
-	/**
-	* Set the input at the specified index to a JUCE Image
+    /**
+    * Set the input at the specified index to a JUCE Image
     *
     * @param index The index of the input
     * @param image The JUCE Image to use as the input
-	*/
+    */
     void setInput(int index, juce::Image const& image);
 
-	/**
-	* Set the input at the specified index to another Effect. This builds an effect processing graph.
+    /**
+    * Set the input at the specified index to another Effect. This builds an effect processing graph.
     *
     * @param index The index of the input
     * @param image The Effect to use as the input
     */
     void setInput(int index, juce::ReferenceCountedObjectPtr<Effect> otherEffect);
 
-	/**
-	* Run this Effect and paint the output from this Effect onto outputImage.
+    /**
+    * Run this Effect and paint the output from this Effect onto outputImage.
     *
     * If any of the inputs to this Effect are also Effect objects, then this effect will walk up the chain
     * and recursively run any upstream effects in the correct order. You only need to call applyEffect
@@ -447,40 +463,40 @@ public:
     * @param The JUCE Image that will be painted with the output of the effect graph
     * @param transform The affine transform to apply to the effect output before the effect output is painted onto outputImage
     * @param clearDestination If true, outputImage will be cleared before the effect output is painted
-	*/
+    */
     void applyEffect(juce::Image& outputImage, const juce::AffineTransform& transform, bool clearDestination);
 
-	/**
-	* Get the number of properties for the effect
-	*/
+    /**
+    * Get the number of properties for the effect
+    */
     int getNumProperties();
 
-	/**
-	* Get the name of the property at the specified index
-	*/
+    /**
+    * Get the name of the property at the specified index
+    */
     juce::String getPropertyName(int index);
 
-	/**
-	* Set the value of a property
-	*/
+    /**
+    * Set the value of a property
+    */
     void setPropertyValue(int index, const PropertyValue value);
 
-	/**
-	* Get the value of a property
-	*/
+    /**
+    * Get the value of a property
+    */
     PropertyValue getPropertyValue(int index);
 
-	/**
-	* Get metadata for the specified property
-	*/
+    /**
+    * Get metadata for the specified property
+    */
     PropertyInfo getPropertyInfo(int index);
 
-	Type const effectType;
+    Type const effectType;
 
     using Ptr = juce::ReferenceCountedObjectPtr<Effect>;
 
 protected:
-	/** @internal */
+    /** @internal */
     struct Pimpl;
-	std::unique_ptr<Pimpl> pimpl;
+    std::unique_ptr<Pimpl> pimpl;
 };
