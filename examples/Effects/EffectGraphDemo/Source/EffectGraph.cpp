@@ -2,9 +2,9 @@
 
 EffectGraph::EffectGraph()
 {
-    //createMetallicKnobEffectGraph();
-    paint3DButtonImages();
-    create3DButtonEffectGraph();
+    createMetallicKnobEffectGraph();
+    //paint3DButtonImages();
+    //create3DButtonEffectGraph();
 }
 
 
@@ -70,16 +70,14 @@ void EffectGraph::createMetallicKnobEffectGraph()
     */
     auto& sourceImage = sourceImages.front();
 
-    auto blurEffect = new mescal::Effect{ mescal::Effect::Type::gaussianBlur };
-    blurEffect->setPropertyValue(mescal::Effect::GaussianBlur::standardDeviation, 10.0f);
-    blurEffect->setInput(0, sourceImage);
+    auto blurEffect = mescal::Effect::GaussianBlur::create(10.0f) << sourceImage;
 
-    auto lightingEffect = new mescal::Effect{ mescal::Effect::Type::spotSpecularLighting };
-    lightingEffect->setPropertyValue(mescal::Effect::SpotSpecularLighting::lightPosition, mescal::Vector3{ sourceImage.getWidth() * 0.1f, sourceImage.getHeight() * 0.1f, 250.0f });
-    lightingEffect->setPropertyValue(mescal::Effect::SpotSpecularLighting::pointsAt, mescal::Vector3{ sourceImage.getWidth() * 0.5f, sourceImage.getHeight() * 0.5f, 0.0f });
-    lightingEffect->setPropertyValue(mescal::Effect::SpotSpecularLighting::surfaceScale, 30.0f);
-    lightingEffect->setPropertyValue(mescal::Effect::SpotSpecularLighting::color, mescal::Vector3{ 0.9f, 0.95f, 1.0f });
-    lightingEffect->setInput(0, blurEffect);
+    auto lightingEffect = mescal::Effect::SpotSpecularLighting::create()
+        .withLightPosition((float)sourceImage.getWidth() * 0.1f, (float)sourceImage.getHeight() * 0.1f, 250.0f)
+        .withPointsAt((float)sourceImage.getWidth() * 0.5f, (float)sourceImage.getHeight() * 0.5f, 0.0f)
+        .withSurfaceScale(30.0f)
+        .withColor(juce::Colours::cyan)
+        << blurEffect;
 
     auto shadowEffect = new mescal::Effect{ mescal::Effect::Type::shadow };
     shadowEffect->setInput(0, sourceImage);
@@ -230,28 +228,6 @@ void EffectGraph::create3DButtonEffectGraph()
 
     mescal::Effect::Ptr chromaKey = new mescal::Effect{ mescal::Effect::Type::chromaKey };
     chromaKey->setInput(0, emboss);
-
-#if 0
-    auto topInnerShadow = createInnerShadow(topImage, juce::Colour{ 0xffc5c8ce }, 10.0f, {});
-    auto bottomInnerShadow = createInnerShadow(bottomImage, juce::Colour{ 0xffb5b5b5 }, 10.0f, {});
-
-    auto shadowBlend = mescal::Effect::create(mescal::Effect::Type::blend);
-    shadowBlend->setInput(0, topInnerShadow);
-    shadowBlend->setInput(1, bottomInnerShadow);
-    shadowBlend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::colorBurn);
-
-    mescal::Effect::Ptr topShadowComposite = new mescal::Effect{ mescal::Effect::Type::composite };
-    topShadowComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::maskInvert);
-    topShadowComposite->setInput(0, topImage);
-    topShadowComposite->setInput(1, shadowBlend);
-
-#if 0
-    mescal::Effect::Ptr finalComposite = new mescal::Effect{ mescal::Effect::Type::composite };
-    finalComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
-    finalComposite->setInput(0, middleComposite);
-    finalComposite->setInput(1, topInnerShadow);
-#endif
-#endif
 
     mescal::Effect::Ptr blend = new mescal::Effect{ mescal::Effect::Type::blend };
     blend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::subtract);

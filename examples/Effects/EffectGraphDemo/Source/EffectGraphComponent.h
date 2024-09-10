@@ -14,6 +14,8 @@ public:
     void resized() override;
     juce::Rectangle<int> getPreferredSize();
 
+    std::function<void()> onPropertyChange;
+
 private:
     struct NodeComponent;
     struct ConnectionComponent;
@@ -87,12 +89,12 @@ private:
         ViewportContent();
 
         static void buildEffectGraphComponentsRecursive(ViewportContent* parent,
-            NodeComponent* downstreamComponent, 
+            NodeComponent* downstreamComponent,
             int downstreamInputIndex,
             mescal::Effect::Ptr effect,
             int depth,
             int& maxDepth);
-        static void positionEffectGraphComponentsRecursive(NodeComponent* nodeComponent, int& y, int depth, 
+        static void positionEffectGraphComponentsRecursive(NodeComponent* nodeComponent, int& y, int depth,
             std::vector<std::vector<juce::Component*>>& columns,
             int& sequence);
 
