@@ -110,6 +110,26 @@ Effects only run in the GPU, so any Image objects used for inputs or outputs mus
 class Effect : public juce::ReferenceCountedObject
 {
 public:
+
+    struct Ptr : juce::ReferenceCountedObjectPtr<Effect>
+    {
+        Ptr() : juce::ReferenceCountedObjectPtr<Effect>() {}
+        Ptr(Effect* effect) : juce::ReferenceCountedObjectPtr<Effect>(effect) {}
+
+        Ptr operator<< (juce::Image const& image)
+        {
+            get()->addInput(image);
+            return get();
+        }
+
+        Ptr operator<< (Ptr effect)
+        {
+            get()->addInput(effect);
+            return get();
+        }
+    };
+
+
     /**
      * Enumeration of built-in effect types
      */
@@ -159,6 +179,8 @@ public:
         static constexpr int hard = 1;
     };
 
+    static juce::ReferenceCountedObjectPtr<Effect> affineTransform2D(juce::AffineTransform transform);
+
     /**
     * Constants for built-in Direct2D arithmetic composite effect
     *
@@ -170,12 +192,14 @@ public:
         static constexpr int clampOutput = 1;
     };
 
+    static Ptr createArithmeticComposite(float c0, float c1, float c2, float c3);
+
     /**
     * Constants for built-in Direct2D blend effect
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/blend
     */
-    struct Blend
+    struct Blend : public Ptr
     {
         static constexpr int mode = 0;
 
@@ -205,6 +229,14 @@ public:
         static constexpr int luminosity = 23;
         static constexpr int subtract = 24;
         static constexpr int division = 25;
+
+        static Blend create(int initialMode)
+        {
+            auto effect = new Effect{ Effect::Type::composite };
+            effect->setPropertyValue(Blend::mode, initialMode);
+            return { effect };
+        }
+        Blend(Effect* effect) : Ptr(effect) { }
     };
 
     /**
@@ -212,7 +244,7 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/composite
     */
-    struct Composite
+    struct Composite : public Ptr
     {
         static constexpr int mode = 0;
 
@@ -229,6 +261,14 @@ public:
         static constexpr int sourceCopy = 10;
         static constexpr int boundedSourceCopy = 11;
         static constexpr int maskInvert = 12;
+
+        static Composite create(int initialMode)
+        {
+            auto effect = new Effect{ Effect::Type::composite };
+            effect->setPropertyValue(Composite::mode, initialMode);
+            return { effect };
+        }
+        Composite(Effect* effect) : Ptr(effect) { }
     };
 
     /**
@@ -268,7 +308,7 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/gaussian-blur
     */
-    struct GaussianBlur
+    struct GaussianBlur : public Ptr
     {
         static constexpr int standardDeviation = 0;
         static constexpr int optimization = 1;
@@ -280,6 +320,9 @@ public:
 
         static constexpr int soft = 0;
         static constexpr int hard = 1;
+
+        static GaussianBlur create(float standardDeviation);
+        GaussianBlur(Effect* effect) : Ptr(effect) { }
     };
 
     /**
@@ -329,7 +372,7 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/spot-diffuse-lighting
     */
-    struct SpotDiffuseLighting
+    struct SpotDiffuseLighting : public Ptr
     {
         static constexpr int lightPosition = 0;
         static constexpr int pointsAt = 1;
@@ -347,6 +390,16 @@ public:
         static constexpr int multiSampleLinear = 3;
         static constexpr int anisotropic = 4;
         static constexpr int highQualityCubic = 5;
+
+        SpotDiffuseLighting withLightPosition(float x, float y, float z);
+        SpotDiffuseLighting withPointsAt(float x, float y, float z);
+        SpotDiffuseLighting withFocus(float focus);
+        SpotDiffuseLighting withLimitingConeAngle(float angle);
+        SpotDiffuseLighting withDiffuseConstant(float constant);
+        SpotDiffuseLighting withSurfaceScale(float scale);
+        SpotDiffuseLighting withColor(juce::Colour colour);
+        SpotDiffuseLighting withKernelUnitLength(float x, float y);
+        SpotDiffuseLighting withScaleMode(int mode);
     };
 
     /**
@@ -354,7 +407,7 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/spot-specular-lighting
     */
-    struct SpotSpecularLighting
+    struct SpotSpecularLighting : public Ptr
     {
         static constexpr int lightPosition = 0;
         static constexpr int pointsAt = 1;
@@ -373,6 +426,19 @@ public:
         static constexpr int multiSampleLinear = 3;
         static constexpr int anisotropic = 4;
         static constexpr int highQualityCubic = 5;
+
+        static SpotSpecularLighting create();
+        SpotSpecularLighting(Effect* effect) : Ptr(effect) { }
+        SpotSpecularLighting withLightPosition(float x, float y, float z);
+        SpotSpecularLighting withPointsAt(float x, float y, float z);
+        SpotSpecularLighting withFocus(float focus);
+        SpotSpecularLighting withLimitingConeAngle(float angle);
+        SpotSpecularLighting withSpecularExponent(float exponent);
+        SpotSpecularLighting withSpecularConstant(float constant);
+        SpotSpecularLighting withSurfaceScale(float scale);
+        SpotSpecularLighting withColor(juce::Colour colour);
+        SpotSpecularLighting withKernelUnitLength(float x, float y);
+        SpotSpecularLighting withScaleMode(int mode);
     };
 
     /**
@@ -381,7 +447,7 @@ public:
     * Effects have zero or more inputs. Each input can be a JUCE Image or another Effect.
     * Chaining effects together allows for complex image processing graphs.
     */
-    using Input = std::variant<std::monostate, juce::Image, juce::ReferenceCountedObjectPtr<Effect>>;
+    using Input = std::variant<std::monostate, juce::Image, Ptr>;
 
     /**
     * Variant that can hold different types for getting and setting effect property values
@@ -421,9 +487,10 @@ public:
     */
     Effect(Type effectType_);
     Effect(const Effect& other);
+    Effect(const Effect&& other) noexcept ;
     ~Effect();
 
-    static juce::ReferenceCountedObjectPtr<Effect> create(Type effectType);
+    static Ptr create(Type effectType);
 
     /**
     * Get the name of the effect
@@ -444,6 +511,7 @@ public:
     * @param image The JUCE Image to use as the input
     */
     void setInput(int index, juce::Image const& image);
+    void addInput(juce::Image const& image);
 
     /**
     * Set the input at the specified index to another Effect. This builds an effect processing graph.
@@ -451,7 +519,8 @@ public:
     * @param index The index of the input
     * @param image The Effect to use as the input
     */
-    void setInput(int index, juce::ReferenceCountedObjectPtr<Effect> otherEffect);
+    void setInput(int index, Ptr otherEffect);
+    void addInput(Ptr otherEffect);
 
     /**
     * Run this Effect and paint the output from this Effect onto outputImage.
@@ -493,10 +562,10 @@ public:
 
     Type const effectType;
 
-    using Ptr = juce::ReferenceCountedObjectPtr<Effect>;
+    std::function<void(Effect*, int, PropertyValue)> onPropertyChange;
 
 protected:
     /** @internal */
     struct Pimpl;
-    std::unique_ptr<Pimpl> pimpl;
+    std::shared_ptr<Pimpl> pimpl;
 };

@@ -447,16 +447,21 @@ namespace mescal
 
     Effect::Effect(Type effectType_) :
         effectType(effectType_),
-        pimpl(std::make_unique<Pimpl>(effectType_))
+        pimpl(std::make_shared<Pimpl>(effectType_))
     {
         pimpl->createResources();
     }
 
     Effect::Effect(const Effect& other) :
         effectType(other.effectType),
-        pimpl(std::make_unique<Pimpl>(other.effectType))
+        pimpl(other.pimpl)
     {
-        pimpl->createResources();
+    }
+
+    Effect::Effect(const Effect&& other) noexcept :
+        effectType(other.effectType),
+        pimpl(std::move(other.pimpl))
+    {
     }
 
     Effect::~Effect()
@@ -487,9 +492,33 @@ namespace mescal
         pimpl->inputs[index] = image;
     }
 
+    void Effect::addInput(juce::Image const& image)
+    {
+        for (auto& input : pimpl->inputs)
+        {
+            if (std::holds_alternative<std::monostate>(input))
+            {
+                input = image;
+                return;
+            }
+        }
+    }
+
     void Effect::setInput(int index, mescal::Effect::Ptr otherEffect)
     {
         pimpl->inputs[index] = otherEffect;
+    }
+
+    void Effect::addInput(mescal::Effect::Ptr otherEffect)
+    {
+        for (auto& input : pimpl->inputs)
+        {
+            if (std::holds_alternative<std::monostate>(input))
+            {
+                input = otherEffect;
+                return;
+            }
+        }
     }
 
     const std::vector<mescal::Effect::Input>& Effect::getInputs() const noexcept
@@ -510,6 +539,9 @@ namespace mescal
     void Effect::setPropertyValue(int index, const PropertyValue value)
     {
         pimpl->setProperty(index, value);
+
+        if (onPropertyChange)
+            onPropertyChange(this, index, value);
     }
 
     Effect::PropertyValue Effect::getPropertyValue(int index)
@@ -550,5 +582,91 @@ namespace mescal
         [[maybe_unused]] auto hr = pimpl->deviceContext->EndDraw();
         jassert(SUCCEEDED(hr));
     }
-}
 
+    juce::ReferenceCountedObjectPtr<Effect> Effect::affineTransform2D(juce::AffineTransform transform)
+    {
+        auto effect = create(Effect::Type::affineTransform2D);
+        effect->setPropertyValue(AffineTransform2D::transformMatrix, transform);
+        return effect;
+    }
+
+    Effect::Ptr Effect::createArithmeticComposite(float c0, float c1, float c2, float c3)
+    {
+        auto effect = create(Effect::Type::arithmeticComposite);
+        effect->setPropertyValue(ArithmeticComposite::coefficients, Vector4{ c0, c1, c2, c3 });
+        return effect;
+    }
+
+    Effect::GaussianBlur Effect::GaussianBlur::create(float standardDeviationValue)
+    {
+        auto effect = new Effect{ Effect::Type::gaussianBlur };
+        effect->setPropertyValue(standardDeviation, standardDeviationValue);
+        return effect;
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::create()
+    {
+        return new Effect{ Effect::Type::spotSpecularLighting };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withLightPosition(float x, float y, float z)
+    {
+        get()->setPropertyValue(lightPosition, Vector3{ x, y, z });
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withPointsAt(float x, float y, float z)
+    {
+        get()->setPropertyValue(pointsAt, Vector3{ x, y, z });
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withFocus(float focusValue)
+    {
+        get()->setPropertyValue(focus, focusValue);
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withLimitingConeAngle(float angle)
+    {
+        get()->setPropertyValue(limitingConeAngle, angle);
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withSpecularExponent(float exponent)
+    {
+        get()->setPropertyValue(specularExponent, exponent);
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withSpecularConstant(float constant)
+    {
+        get()->setPropertyValue(specularConstant, constant);
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withSurfaceScale(float scale)
+    {
+        get()->setPropertyValue(surfaceScale, scale);
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withColor(juce::Colour colour)
+    {
+        get()->setPropertyValue(color, colour);
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withKernelUnitLength(float x, float y)
+    {
+        get()->setPropertyValue(kernelUnitLength, Vector2{ x, y });
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withScaleMode(int mode)
+    {
+        get()->setPropertyValue(scaleMode, mode);
+        return SpotSpecularLighting{ *this };
+    }
+
+}
