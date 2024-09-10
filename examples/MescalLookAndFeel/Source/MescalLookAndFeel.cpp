@@ -6,7 +6,7 @@ MescalLookAndFeel::MescalLookAndFeel()
     setColour(juce::TextButton::ColourIds::textColourOnId, juce::Colours::black);
     setColour(juce::TextButton::ColourIds::textColourOffId, juce::Colours::black);
     setColour(juce::ComboBox::ColourIds::outlineColourId, juce::Colour{ 0xff959595 });
-    setColour(juce::Slider::ColourIds::trackColourId, juce::Colour::greyLevel(0.5f).withAlpha(0.5f));
+    setColour(juce::Slider::ColourIds::trackColourId, juce::Colour::greyLevel(0.89f));
     setColour(juce::Slider::ColourIds::thumbColourId, juce::Colours::lightsteelblue);
     setColour(juce::Slider::ColourIds::backgroundColourId, juce::Colour::greyLevel(0.85f));
 }
@@ -88,6 +88,47 @@ void MescalLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
 
 void MescalLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button, const juce::Colour& backgroundColour, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
 {
+    mescal::MeshGradient meshGradient{ 3, 3 };
+
+    float xScale = (float)button.getWidth() / (float)(meshGradient.getNumColumns() - 1);
+    float yScale = (float)button.getHeight() / (float)(meshGradient.getNumRows() - 1);
+    for (int column = 0; column < meshGradient.getNumColumns(); ++column)
+    {
+        for (int row = 0; row < meshGradient.getNumRows(); ++row)
+        {
+            auto v = meshGradient.getVertex(row, column);
+            v->position = juce::Point<float>{ column * xScale, row * yScale };
+
+            v->color = backgroundColour;
+
+            {
+                if (shouldDrawButtonAsDown)
+                {
+                    if (row == 0)
+                        v->color = backgroundColour.darker();
+                    else if (row == meshGradient.getNumRows() - 1)
+                        v->color = backgroundColour.brighter();
+                }
+                else
+                {
+                    if (row == 0)
+                        v->color = backgroundColour.brighter();
+                    else if (row == meshGradient.getNumRows() - 1)
+                        v->color = backgroundColour.darker();
+                }
+            }
+        }
+    }
+
+    for (int column = 1; column < meshGradient.getNumColumns() - 1; ++column)
+    {
+        meshGradient.getVertex(meshGradient.getNumRows() / 2, column)->color = backgroundColour;
+    }
+
+    auto target = juce::Image{ juce::Image::PixelFormat::ARGB, button.getWidth(), button.getHeight(), true, juce::NativeImageType{} };
+    meshGradient.draw(target, juce::AffineTransform::identity);
+    g.drawImageAt(target, 0, 0);
+
 #if 0
     images.clear();
 
@@ -319,121 +360,23 @@ mescal::Effect::Ptr MescalLookAndFeel::createInnerShadow(juce::Image const& sour
     auto floodEffect = new mescal::Effect{ mescal::Effect::Type::flood };
     floodEffect->setPropertyValue(mescal::Effect::Flood::color, juce::Colours::blue);
 
-    auto arithmeticComposite = new mescal::Effect{ mescal::Effect::Type::arithmeticComposite };
-    arithmeticComposite->setPropertyValue(mescal::Effect::ArithmeticComposite::coefficients, mescal::Vector4{ 0.0f, 1.0f, -1.0f, 0.0f });
-    arithmeticComposite->setInput(0, floodEffect);
-    arithmeticComposite->setInput(1, sourceImage);
+    auto createArithmeticComposite = new mescal::Effect{ mescal::Effect::Type::arithmeticComposite };
+    createArithmeticComposite->setPropertyValue(mescal::Effect::ArithmeticComposite::coefficients, mescal::Vector4{ 0.0f, 1.0f, -1.0f, 0.0f });
+    createArithmeticComposite->setInput(0, floodEffect);
+    createArithmeticComposite->setInput(1, sourceImage);
 
     auto innerShadow = new mescal::Effect{ mescal::Effect::Type::shadow };
-    innerShadow->setInput(0, arithmeticComposite);
+    innerShadow->setInput(0, createArithmeticComposite);
     innerShadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, shadowSize);
     innerShadow->setPropertyValue(mescal::Effect::Shadow::color, mescal::colourToVector4(shadowColor));
 
-    auto alphaMaskEffect = new mescal::Effect{ mescal::Effect::Type::alphaMask };
-    alphaMaskEffect->setInput(0, innerShadow);
-    alphaMaskEffect->setInput(1, sourceImage);
-
     auto alphaMaskTransform = new mescal::Effect{ mescal::Effect::Type::affineTransform2D };
-    alphaMaskTransform->setInput(0, alphaMaskEffect);
+    alphaMaskTransform->setInput(0, innerShadow);
     alphaMaskTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, transform);
 
-    auto alphaMaskEffect2 = new mescal::Effect{ mescal::Effect::Type::alphaMask };
-    alphaMaskEffect2->setInput(0, alphaMaskTransform);
-    alphaMaskEffect2->setInput(1, sourceImage);
+    auto alphaMaskEffect = new mescal::Effect{ mescal::Effect::Type::alphaMask };
+    alphaMaskEffect->setInput(0, alphaMaskTransform);
+    alphaMaskEffect->setInput(1, sourceImage);
 
-    return alphaMaskEffect2;
-}
-
-juce::Rectangle<float> MescalLookAndFeel::paintSliderTrack(juce::Graphics& g,
-    juce::Point<float> start, juce::Point<float> end,
-    juce::Colour backgroundColor, juce::Colour trackColor,
-    float trackThickness, bool horizontal)
-{
-    juce::Rectangle<float> trackArea{ (end.x - start.x) + trackThickness, trackThickness };
-    auto paintOffset = start - juce::Point<float>{ trackThickness * 0.5f, trackThickness * 0.5f };
-
-    if (!horizontal)
-    {
-        trackArea = { trackThickness, std::abs(end.y - start.y) + trackThickness };
-        paintOffset = end - juce::Point<float>{ trackThickness * 0.5f, trackThickness * 0.5f };
-    }
-
-    auto imageBounds = trackArea.toNearestIntEdges();
-    if (imageBounds.isEmpty())
-        return {};
-
-    juce::Image trackImage{ juce::Image::ARGB, imageBounds.getWidth(), imageBounds.getHeight(), true };
-
-    {
-        juce::Graphics trackG{ trackImage };
-
-        trackColor = juce::Colour::greyLevel(0.95f);
-        auto startColor = trackColor.withMultipliedLightness(1.1f);
-        auto stopColor = trackColor.withMultipliedLightness(horizontal ? 1.0f : 0.8f);
-
-        trackG.setColour(juce::Colour{ 0xff959595 });
-        //trackG.fillRoundedRectangle(r, 0.5f * trackThickness);
-
-        auto gradient = horizontal ? juce::ColourGradient::vertical(startColor, 0.0f, stopColor, trackThickness) :
-            juce::ColourGradient::vertical(startColor, trackThickness, stopColor, 0.0f);
-        trackG.setGradientFill(gradient);
-        trackG.fillRoundedRectangle(trackArea, 0.5f * trackThickness);
-    }
-
-    auto shadowTransform = juce::AffineTransform::scale(2.0f, 2.0f, trackArea.getCentreX(), trackArea.getCentreY()).translated(0.0f, trackThickness * 0.5f);
-    float shadowSize = horizontal ? trackThickness * 0.1f : trackThickness * 0.2f;
-    auto shadow = createInnerShadow(trackImage, juce::Colours::black, shadowSize, shadowTransform);
-
-    mescal::Effect::Ptr shadowComposite = new mescal::Effect{ mescal::Effect::Type::composite };
-    shadowComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
-    shadowComposite->setInput(0, trackImage);
-    shadowComposite->setInput(1, shadow);
-
-    juce::Image outputImage{ juce::Image::ARGB, (int)trackArea.getWidth(), (int)trackArea.getHeight(), true };
-    shadowComposite->applyEffect(outputImage, {}, true);
-
-    g.drawImageAt(outputImage, (int)paintOffset.x, (int)paintOffset.y);
-
-    g.setColour(juce::Colour::greyLevel(0.1f));
-    float outlineThickness = trackThickness * 0.05f;
-    auto reducedTrackR = trackArea.reduced(outlineThickness, outlineThickness);
-    g.drawRoundedRectangle(reducedTrackR + paintOffset, (trackThickness - outlineThickness) * 0.5f, outlineThickness);
-
-    return trackArea + paintOffset;
-}
-
-void MescalLookAndFeel::paintSliderThumb(juce::Graphics& g, juce::Rectangle<float> trackArea, juce::Colour thumbColor, float sliderPos, float thumbSize, float sliderThickness, bool horizontal)
-{
-    if (trackArea.isEmpty())
-        return;
-
-    juce::Image thumbImage{ juce::Image::ARGB, (int)sliderThickness, (int)sliderThickness, true };
-
-    {
-        juce::Graphics thumbG{ thumbImage };
-        //thumbG.setColour(thumbColor);
-        auto thumbR = juce::Rectangle<float>{ thumbSize, thumbSize }.withCentre({ sliderThickness * 0.5f, sliderThickness * 0.5f });
-        thumbG.setGradientFill(juce::ColourGradient{ thumbColor, thumbR.getCentre(), thumbColor.darker(), thumbR.getTopLeft(), true });
-        thumbG.fillEllipse(thumbR);
-        //         thumbG.setColour(thumbColor.contrasting());
-        //         thumbG.drawEllipse(thumbR, thumbSize * 0.1f);
-    }
-
-    juce::Image outputImage{ juce::Image::ARGB, (int)sliderThickness, (int)sliderThickness, true };
-
-    auto shadow = addShadow(thumbImage, juce::Colours::black, thumbSize * 0.12f, juce::AffineTransform::scale(1.0f, 1.0f, sliderThickness * 0.5f, sliderThickness * 0.5f).translated(0.0f, thumbSize * 0.1f));
-    shadow->applyEffect(outputImage, {}, true);
-
-    if (horizontal)
-    {
-        g.drawImage(outputImage,
-            juce::Rectangle<float>{sliderPos - sliderThickness * 0.5f, trackArea.getY(), sliderThickness, sliderThickness},
-            juce::RectanglePlacement::doNotResize);
-    }
-    else
-    {
-        g.drawImage(outputImage,
-            juce::Rectangle<float>{trackArea.getX(), sliderPos - sliderThickness * 0.5f, sliderThickness, sliderThickness},
-            juce::RectanglePlacement::doNotResize);
-    }
+    return alphaMaskEffect;
 }

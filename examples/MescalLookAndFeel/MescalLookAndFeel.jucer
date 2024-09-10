@@ -4,6 +4,18 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" defines="">
   <MAINGROUP id="VYSsCw" name="MescalLookAndFeel">
     <GROUP id="{8B15FD36-06CF-DAD8-A43B-75B5A35F0253}" name="Source">
+      <FILE id="qvyRjo" name="EffectGraphComponent.cpp" compile="1" resource="0"
+            file="../Effects/EffectGraphDemo/Source/EffectGraphComponent.cpp"/>
+      <FILE id="saJf2O" name="EffectGraphComponent.h" compile="0" resource="0"
+            file="../Effects/EffectGraphDemo/Source/EffectGraphComponent.h"/>
+      <FILE id="B9BoiO" name="EffectPropertyPanel.cpp" compile="1" resource="0"
+            file="../Effects/EffectGraphDemo/Source/EffectPropertyPanel.cpp"/>
+      <FILE id="fTU6fo" name="EffectPropertyPanel.h" compile="0" resource="0"
+            file="../Effects/EffectGraphDemo/Source/EffectPropertyPanel.h"/>
+      <FILE id="nLCJuv" name="ContentComponent.cpp" compile="1" resource="0"
+            file="Source/ContentComponent.cpp"/>
+      <FILE id="QWojRu" name="ContentComponent.h" compile="0" resource="0"
+            file="Source/ContentComponent.h"/>
       <FILE id="sAzxfh" name="WidgetsComponent.cpp" compile="1" resource="0"
             file="Source/WidgetsComponent.cpp"/>
       <FILE id="K5rkVz" name="WidgetsComponent.h" compile="0" resource="0"

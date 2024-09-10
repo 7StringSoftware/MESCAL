@@ -328,6 +328,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\Effects\EffectGraphDemo\Source\EffectGraphComponent.cpp">
+      <Filter>MescalLookAndFeel\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Effects\EffectGraphDemo\Source\EffectPropertyPanel.cpp">
+      <Filter>MescalLookAndFeel\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\ContentComponent.cpp">
+      <Filter>MescalLookAndFeel\Source</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Source\WidgetsComponent.cpp">
       <Filter>MescalLookAndFeel\Source</Filter>
     </ClCompile>
@@ -2056,6 +2065,9 @@
     <ClCompile Include="..\..\..\..\module\mescal\effects\mescal_Effects_windows.cpp">
       <Filter>JUCE Modules\mescal\effects</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\module\mescal\effects\mescal_ImageEffectFilter_windows.cpp">
+      <Filter>JUCE Modules\mescal\effects</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\..\module\mescal\gradients\mescal_ConicGradient_windows.cpp">
       <Filter>JUCE Modules\mescal\gradients</Filter>
     </ClCompile>
@@ -2097,6 +2109,15 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\Effects\EffectGraphDemo\Source\EffectGraphComponent.h">
+      <Filter>MescalLookAndFeel\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Effects\EffectGraphDemo\Source\EffectPropertyPanel.h">
+      <Filter>MescalLookAndFeel\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\ContentComponent.h">
+      <Filter>MescalLookAndFeel\Source</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\Source\WidgetsComponent.h">
       <Filter>MescalLookAndFeel\Source</Filter>
     </ClInclude>
@@ -4474,6 +4495,9 @@
       <Filter>JUCE Modules\juce_gui_extra</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\module\mescal\effects\mescal_Effects_windows.h">
+      <Filter>JUCE Modules\mescal\effects</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\module\mescal\effects\mescal_ImageEffectFilter_windows.h">
       <Filter>JUCE Modules\mescal\effects</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\module\mescal\gradients\mescal_ConicGradient_windows.h">

@@ -141,6 +141,9 @@
     <Lib/>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\Effects\EffectGraphDemo\Source\EffectGraphComponent.cpp"/>
+    <ClCompile Include="..\..\..\Effects\EffectGraphDemo\Source\EffectPropertyPanel.cpp"/>
+    <ClCompile Include="..\..\Source\ContentComponent.cpp"/>
     <ClCompile Include="..\..\Source\WidgetsComponent.cpp"/>
     <ClCompile Include="..\..\Source\MescalLookAndFeel.cpp"/>
     <ClCompile Include="..\..\Source\MescalLookAndFeel_Slider.cpp"/>
@@ -1753,6 +1756,9 @@
     <ClCompile Include="..\..\..\..\module\mescal\effects\mescal_Effects_windows.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\module\mescal\effects\mescal_ImageEffectFilter_windows.cpp">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\..\..\module\mescal\gradients\mescal_ConicGradient_windows.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
@@ -1782,6 +1788,9 @@
     <ClCompile Include="..\..\JuceLibraryCode\include_mescal.cpp"/>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\Effects\EffectGraphDemo\Source\EffectGraphComponent.h"/>
+    <ClInclude Include="..\..\..\Effects\EffectGraphDemo\Source\EffectPropertyPanel.h"/>
+    <ClInclude Include="..\..\Source\ContentComponent.h"/>
     <ClInclude Include="..\..\Source\WidgetsComponent.h"/>
     <ClInclude Include="..\..\Source\MescalLookAndFeel.h"/>
     <ClInclude Include="..\..\..\..\..\..\JUCE\modules\juce_core\containers\juce_AbstractFifo.h"/>
@@ -2575,6 +2584,7 @@
     <ClInclude Include="..\..\..\..\..\..\JUCE\modules\juce_gui_extra\native\juce_NSViewFrameWatcher_mac.h"/>
     <ClInclude Include="..\..\..\..\..\..\JUCE\modules\juce_gui_extra\juce_gui_extra.h"/>
     <ClInclude Include="..\..\..\..\module\mescal\effects\mescal_Effects_windows.h"/>
+    <ClInclude Include="..\..\..\..\module\mescal\effects\mescal_ImageEffectFilter_windows.h"/>
     <ClInclude Include="..\..\..\..\module\mescal\gradients\mescal_ConicGradient_windows.h"/>
     <ClInclude Include="..\..\..\..\module\mescal\gradients\mescal_MeshGradient_windows.h"/>
     <ClInclude Include="..\..\..\..\module\mescal\json\mescal_JSON.h"/>
