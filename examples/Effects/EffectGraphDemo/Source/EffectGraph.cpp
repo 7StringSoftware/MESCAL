@@ -126,12 +126,12 @@ void EffectGraph::paint3DButtonImages()
 
     */
 
-    int imageWidth = 300;
+    int imageWidth = 60;
     sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, imageWidth, imageWidth, true });
     sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, imageWidth, imageWidth, true });
     sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, imageWidth, imageWidth, true });
 
-    auto bottomLayerRect = sourceImages.front().getBounds().toFloat().withSizeKeepingCentre(300.0f, 185.0f);
+    auto bottomLayerRect = sourceImages.front().getBounds().toFloat().withSizeKeepingCentre((float)imageWidth, (185.0f / 300.0f) * (float)imageWidth);
     float cornerProportion = 0.1f;
 
     //
@@ -192,9 +192,7 @@ void EffectGraph::paint3DButtonImages()
             g.setGradientFill(gradient);
             g.fillRoundedRectangle(topLayerRect, cornerProportion * topLayerRect.getHeight());
         }
-
     }
-
 }
 
 void EffectGraph::create3DButtonEffectGraph()
@@ -226,9 +224,11 @@ void EffectGraph::create3DButtonEffectGraph()
     middleComposite->setInput(1, shadowCompositeEffect);
 
     auto emboss = new mescal::Effect{ mescal::Effect::Type::emboss };
+    emboss->setPropertyValue(mescal::Effect::Emboss::direction, 90.0f);
     emboss->setInput(0, topImage);
 
     mescal::Effect::Ptr chromaKey = new mescal::Effect{ mescal::Effect::Type::chromaKey };
+    chromaKey->setPropertyValue(mescal::Effect::ChromaKey::color, mescal::Vector3{ 0.765f, 0.765f, 0.765f });
     chromaKey->setInput(0, emboss);
 
 #if 0
@@ -254,7 +254,7 @@ void EffectGraph::create3DButtonEffectGraph()
 #endif
 
     mescal::Effect::Ptr blend = new mescal::Effect{ mescal::Effect::Type::blend };
-    blend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::subtract);
+    blend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::dissolve);
     blend->setInput(0, middleComposite);
     blend->setInput(1, chromaKey);
 
@@ -279,7 +279,7 @@ mescal::Effect::Ptr EffectGraph::createInnerShadow(juce::Image const& sourceImag
     auto shadowTransform = new mescal::Effect{ mescal::Effect::Type::affineTransform2D };
     shadowTransform->setInput(0, innerShadow);
     shadowTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, transform);
-    
+
     auto alphaMaskEffect = new mescal::Effect{ mescal::Effect::Type::alphaMask };
     alphaMaskEffect->setInput(0, shadowTransform);
     alphaMaskEffect->setInput(1, sourceImage);
