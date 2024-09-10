@@ -11,18 +11,22 @@ namespace mescal
 
         static void setInputRecursive(Effect::Ptr effect, juce::Image& sourceImage)
         {
-            for (auto it = effect->getInputs().begin() + 1; it != effect->getInputs().end(); ++it)
+            auto inputs = effect->getInputs();
+            for (int index = 0; index < inputs.size(); ++index)
             {
-                if (std::holds_alternative<mescal::Effect::Ptr>(*it))
+                auto& input = inputs[index];
+                if (std::holds_alternative<mescal::Effect::Ptr>(input))
                 {
-                    if (auto upstreamEffect = std::get<mescal::Effect::Ptr>(*it))
+                    if (auto upstreamEffect = std::get<mescal::Effect::Ptr>(input))
                     {
                         setInputRecursive(upstreamEffect, sourceImage);
                     }
                 }
+                else if (std::holds_alternative <std::monostate>(input))
+                {
+                    effect->setInput(index, sourceImage);
+                }
             }
-
-            effect->setInput(0, sourceImage);
         }
 
         Effect::Ptr effect;
