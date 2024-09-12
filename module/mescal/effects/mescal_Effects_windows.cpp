@@ -325,6 +325,11 @@ namespace mescal
                 auto color = std::get<juce::Colour>(value);
                 d2dEffect->SetValue(index, D2D1_VECTOR_4F{ color.getFloatRed(), color.getFloatGreen(), color.getFloatBlue(), color.getFloatAlpha() });
             }
+            else if (std::holds_alternative<juce::Rectangle<float>>(value))
+            {
+                auto& rect = std::get<juce::Rectangle<float>>(value);
+                d2dEffect->SetValue(index, D2D1_VECTOR_4F{ rect.getX(), rect.getY(), rect.getRight(), rect.getBottom() });
+            }
             else
             {
                 jassertfalse;
@@ -595,6 +600,13 @@ namespace mescal
         auto effect = create(Effect::Type::arithmeticComposite);
         effect->setPropertyValue(ArithmeticComposite::coefficients, Vector4{ c0, c1, c2, c3 });
         return effect;
+    }
+
+    Effect::Crop Effect::Crop::create(juce::Rectangle<float> cropArea)
+    {
+        auto effect = new Effect{ Effect::Type::crop };
+        effect->setPropertyValue(Crop::rect, cropArea);
+        return { effect };
     }
 
     Effect::GaussianBlur Effect::GaussianBlur::create(float standardDeviationValue)
