@@ -48,7 +48,7 @@ void EffectGraphComponent::setOutputEffect(mescal::Effect::Ptr outputEffect, int
 
 void EffectGraphComponent::paint(juce::Graphics& g)
 {
-	g.fillAll(juce::Colours::white);
+	g.fillAll(juce::Colour{ 0xffd1d1d1 });
 }
 
 void EffectGraphComponent::resized()
@@ -139,7 +139,7 @@ void EffectGraphComponent::ViewportContent::buildEffectGraphComponentsRecursive(
 void EffectGraphComponent::ViewportContent::positionEffectGraphComponentsRecursive(NodeComponent* nodeComponent, int& y, int depth, std::vector<std::vector<juce::Component*>>& columns,
     int& sequence)
 {
-	int size = 150;
+	int size = 300;
 	int gap = 80;
 	int top = y;
 	int x = (size + gap) * (depth - 1);

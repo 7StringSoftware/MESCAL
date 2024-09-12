@@ -2,11 +2,57 @@
 
 EffectGraph::EffectGraph()
 {
-    createMetallicKnobEffectGraph();
+    //createMetallicKnobEffectGraph();
     //paint3DButtonImages();
     //create3DButtonEffectGraph();
 }
 
+
+void EffectGraph::paintSlider()
+{
+    sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, 500, 500, true });
+
+    {
+        juce::Graphics g{ sourceImages.front() };
+        g.setColour(juce::Colour{ 0xffcccccc });
+        auto r = g.getClipBounds().toFloat().withSizeKeepingCentre(300, 50.0f);
+        g.fillRoundedRectangle(r, r.getHeight() * 0.5f);
+    }
+}
+
+
+void EffectGraph::createSliderEffectGraph()
+{
+    auto& sourceImage = sourceImages.front();
+
+    auto innerDarkShadow = createInnerShadow(sourceImage, juce::Colours::black.withAlpha(1.0f), 10.0f, juce::AffineTransform::scale(1.1f, 2.0f, (float)sourceImage.getWidth() * 0.5f, (float)sourceImage.getHeight() * 0.5f).translated(0.0f, 10.0f));
+    //auto darkShadowComposite = mescal::Effect::create(mescal::Effect::Type::arithmeticComposite) << innerDarkShadow << sourceImage;
+    //darkShadowComposite->setPropertyValue(mescal::Effect::ArithmeticComposite::coefficients, mescal::Vector4{ 0.0f, 1.0f, 1.0f, 0.0f });
+
+    auto innerLightShadow = createInnerShadow(sourceImage, juce::Colours::white.withAlpha(1.0f), 10.0f, juce::AffineTransform::scale(1.1f, 2.0f, (float)sourceImage.getWidth() * 0.5f, (float)sourceImage.getHeight() * 0.5f).translated(0.0f, -10.0f));
+
+    auto r = sourceImage.getBounds().toFloat().withSizeKeepingCentre(300, 50.0f);
+//     auto innerLightShadowCrop = mescal::Effect::create(mescal::Effect::Type::crop) << innerLightShadow;
+//     innerLightShadowCrop->setPropertyValue(mescal::Effect::Crop::rect, juce::Rectangle<float>{ r }.removeFromBottom(r.getHeight() * 0.5f));
+
+//     auto lightShadowComposite = mescal::Effect::create(mescal::Effect::Type::arithmeticComposite) << innerLightShadow << darkShadowComposite;
+//     lightShadowComposite->setPropertyValue(mescal::Effect::ArithmeticComposite::coefficients, mescal::Vector4{ 0.0f, 1.0f, 1.0f, 0.0f });
+//     auto lightShadowComposite = mescal::Effect::create(mescal::Effect::Type::blend) << innerLightShadow << darkShadowComposite;
+//     lightShadowComposite->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::multiply);
+//     auto lightShadowComposite = mescal::Effect::create(mescal::Effect::Type::composite) << innerLightShadowCrop << innerDarkShadow;
+//     lightShadowComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::plus);
+
+    auto lightShadowComposite = mescal::Effect::create(mescal::Effect::Type::blend) << innerDarkShadow << innerLightShadow;
+    lightShadowComposite->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::linearLight);
+
+//     auto finalComposite = mescal::Effect::create(mescal::Effect::Type::composite) << sourceImage << lightShadowComposite;
+//     finalComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
+
+    auto finalComposite = mescal::Effect::create(mescal::Effect::Type::blend) << sourceImage << lightShadowComposite;
+    finalComposite->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::linearLight);
+
+    outputEffect = finalComposite;
+}
 
 void EffectGraph::paintMetallicKnobImage(float angle)
 {
@@ -190,9 +236,7 @@ void EffectGraph::paint3DButtonImages()
             g.setGradientFill(gradient);
             g.fillRoundedRectangle(topLayerRect, cornerProportion * topLayerRect.getHeight());
         }
-
     }
-
 }
 
 void EffectGraph::create3DButtonEffectGraph()
@@ -260,8 +304,5 @@ mescal::Effect::Ptr EffectGraph::createInnerShadow(juce::Image const& sourceImag
     alphaMaskEffect->setInput(0, shadowTransform);
     alphaMaskEffect->setInput(1, sourceImage);
 
-    auto crop = new mescal::Effect{ mescal::Effect::Type::crop };
-    crop->setInput(0, alphaMaskEffect);
-
-    return crop;
+    return alphaMaskEffect;
 }

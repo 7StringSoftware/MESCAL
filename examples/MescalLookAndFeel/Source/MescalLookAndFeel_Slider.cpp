@@ -50,26 +50,37 @@ void MescalLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int wi
             }
 
             trackRect.setCentre(trackImage.getBounds().toFloat().getCentre());
+            auto trackColor = slider.findColour(Slider::trackColourId);
 
             {
                 juce::Graphics trackG{ trackImage };
-                trackG.setColour(slider.findColour(Slider::trackColourId));
+                //trackG.setColour();
+                auto gradient = juce::ColourGradient::vertical(trackColor,
+                    0.0f,
+                    trackColor.brighter(),
+                    trackRect.getHeight());
+                trackG.setGradientFill(gradient);
                 trackG.fillRoundedRectangle(trackRect, trackThickness * 0.5f);
             }
 
-            auto upperInnerShadow = createInnerShadow(trackImage, Colours::white, trackThickness * 0.1f, juce::AffineTransform::scale(1.2f, 1.0f, (float)trackImage.getWidth() * 0.5f, (float)trackImage.getHeight() * 0.5f).translated(0.0f, -trackThickness * 0.2f));
-            auto lowerInnerShadow = createInnerShadow(trackImage, Colours::black, trackThickness * 0.1f, juce::AffineTransform::scale(1.0f, 1.0f, (float)trackImage.getWidth() * 0.5f, (float)trackImage.getHeight() * 0.5f).translated(0.0f, trackThickness * 0.2f));
+            auto innerUpperShadow = createInnerShadow(trackImage, trackColor.darker(2.0f), trackThickness * 0.05f,
+                juce::AffineTransform::scale(1.0f, 1.0f, (float)trackImage.getWidth() * 0.5f, (float)trackImage.getHeight() * 0.5f).translated(0.0f, trackThickness * 0.05f));
+            auto innerUpperBlend = mescal::Effect::Blend::create(mescal::Effect::Blend::multiply) << trackImage << innerUpperShadow;
 
-            auto shadowBlend = mescal::Effect::Blend::create(mescal::Effect::Blend::multiply) << upperInnerShadow << lowerInnerShadow;
+            auto innerLowerShadow = createInnerShadow(trackImage, trackColor.brighter(2.0f).withAlpha(0.5f), trackThickness * 0.1f,
+                juce::AffineTransform::scale(1.0f, 1.0f,
+                    (float)trackImage.getWidth() * 0.5f, (float)trackImage.getHeight() * 0.5f)
+                    .translated(0.0f, trackThickness * -0.1f));
+            auto crop = mescal::Effect::Crop::create(trackRect.removeFromBottom(trackThickness * 0.1f)) << innerLowerShadow;
 
-            auto innerShadowComposite = mescal::Effect::Composite::create(mescal::Effect::Composite::sourceAtop) << trackImage << shadowBlend;
+            auto lowerBlend = mescal::Effect::Blend::create(mescal::Effect::Blend::multiply) << innerUpperBlend << crop;
 
             outputImage = juce::Image{ juce::Image::ARGB, trackImage.getWidth(), trackImage.getHeight(), true };
-            innerShadowComposite->applyEffect(outputImage, {}, false);
+            lowerBlend->applyEffect(outputImage, {}, false);
             g.drawImageAt(outputImage, imageOrigin.x, imageOrigin.y);
 
-            g.setColour(slider.findColour(Slider::rotarySliderOutlineColourId));
-            g.drawRoundedRectangle(trackRect.reduced(2.0f) + imageOrigin.toFloat(), trackThickness * 0.5f, 1.0f);
+            g.setColour(trackColor);
+            g.drawRoundedRectangle(trackRect + imageOrigin.toFloat(), trackThickness * 0.5f, 1.0f);
         }
     }
 }
