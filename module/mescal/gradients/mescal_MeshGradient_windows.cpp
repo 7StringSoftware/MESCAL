@@ -365,7 +365,8 @@ namespace mescal
                         pimpl->deviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
                         pimpl->deviceContext->Clear(juce::D2DUtilities::toCOLOR_F(backgroundColor));
                         pimpl->deviceContext->DrawGradientMesh(pimpl->gradientMesh.get());
-                        pimpl->deviceContext->EndDraw();
+                        [[maybe_unused]] auto hr = pimpl->deviceContext->EndDraw();
+                        jassert(SUCCEEDED(hr));
                         pimpl->deviceContext->SetTarget(nullptr);
                     }
                 }
