@@ -208,6 +208,19 @@ public:
     };
 
     /**
+    * Constants for built-in Direct2D chroma key effect
+    *
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/chroma-key
+    */
+    struct ChromaKey
+    {
+        static constexpr int color = 0;
+        static constexpr int tolerance = 1;
+        static constexpr int invertAlpha = 2;
+        static constexpr int feather = 3;
+    };
+
+    /**
     * Constants for built-in Direct2D composite effect
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/composite
@@ -233,7 +246,7 @@ public:
 
     /**
     * Constants for built-in Direct2D crop effect
-    * 
+    *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/crop
     */
     struct Crop
@@ -250,7 +263,7 @@ public:
     struct Emboss
     {
         static constexpr int height = 0;
-        static constexpr int direction = 0;
+        static constexpr int direction = 1;
     };
 
     /**

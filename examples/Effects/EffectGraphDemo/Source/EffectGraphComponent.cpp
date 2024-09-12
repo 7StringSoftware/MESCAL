@@ -6,7 +6,6 @@ EffectGraphComponent::EffectGraphComponent()
 	viewport.setViewedComponent(&viewportContent, false);
 	addAndMakeVisible(viewport);
 
-
     setTransform(juce::AffineTransform::scale(1.0f));
 }
 
@@ -235,7 +234,8 @@ void EffectGraphComponent::EffectComponent::paint(juce::Graphics& g)
 	// Process the entire effect graph. Note that only the final effect needs to be applied.
 	//
 	effect->applyEffect(image, {}, true);
-	g.drawImage(image, getLocalBounds().withTrimmedBottom(textHeight).toFloat());
+    auto dest = getLocalBounds().withTrimmedBottom(textHeight).toFloat();
+    g.drawImageWithin(image, dest.getX(), dest.getY(), dest.getWidth(), dest.getHeight(), juce::RectanglePlacement::centred | juce::RectanglePlacement::doNotResize, false);
 
 	g.setColour(juce::Colours::white.withAlpha(0.8f));
 	auto r = getLocalBounds().removeFromBottom(textHeight);
@@ -261,7 +261,8 @@ EffectGraphComponent::InputImageComponent::InputImageComponent(juce::Image image
 
 void EffectGraphComponent::InputImageComponent::paint(juce::Graphics& g)
 {
-	g.drawImage(image, getLocalBounds().withTrimmedBottom(textHeight).toFloat());
+    auto dest = getLocalBounds().withTrimmedBottom(textHeight).toFloat();
+    g.drawImageWithin(image, dest.getX(), dest.getY(), dest.getWidth(), dest.getHeight(), juce::RectanglePlacement::centred | juce::RectanglePlacement::doNotResize, false);
 }
 
 EffectGraphComponent::NodeComponent::NodeComponent(size_t numInputs_) :
