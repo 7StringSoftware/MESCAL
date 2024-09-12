@@ -110,7 +110,6 @@ Effects only run in the GPU, so any Image objects used for inputs or outputs mus
 class Effect : public juce::ReferenceCountedObject
 {
 public:
-
     struct Ptr : juce::ReferenceCountedObjectPtr<Effect>
     {
         Ptr() : juce::ReferenceCountedObjectPtr<Effect>() {}
@@ -128,7 +127,6 @@ public:
             return get();
         }
     };
-
 
     /**
      * Enumeration of built-in effect types
@@ -232,7 +230,7 @@ public:
 
         static Blend create(int initialMode)
         {
-            auto effect = new Effect{ Effect::Type::composite };
+            auto effect = new Effect{ Effect::Type::blend };
             effect->setPropertyValue(Blend::mode, initialMode);
             return { effect };
         }
@@ -276,10 +274,13 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/crop
     */
-    struct Crop
+    struct Crop : public Ptr
     {
         static constexpr int rect = 0;
         static constexpr int borderMode = 1;
+
+        static Crop create(juce::Rectangle<float> cropArea);
+        Crop(Effect* effect) : Ptr(effect) {}
     };
 
     /**
@@ -466,7 +467,8 @@ public:
         Vector4,
         Enumeration,
         juce::AffineTransform,
-        juce::Colour>;
+        juce::Colour,
+        juce::Rectangle<float>>;
 
     /**
     * Structure that contains metadata about an effect property
