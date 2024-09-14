@@ -27,7 +27,7 @@ void MescalLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int wi
         // Paint the slider track
         //
         float thumbRadius = (float)getSliderThumbRadius(slider);
-        float trackThickness = thumbRadius * 2.0f;
+        float trackThickness = thumbRadius * 0.9f;
         juce::Image trackImage, outputImage;
         {
             float trackLength = 0.0f;
@@ -54,15 +54,34 @@ void MescalLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int wi
 
             {
                 juce::Graphics trackG{ trackImage };
-                //trackG.setColour();
-                auto gradient = juce::ColourGradient::vertical(trackColor,
-                    0.0f,
-                    trackColor.brighter(),
-                    trackRect.getHeight());
-                trackG.setGradientFill(gradient);
+                trackG.setColour(trackColor);
                 trackG.fillRoundedRectangle(trackRect, trackThickness * 0.5f);
             }
 
+
+            auto outerLowerDropShadow = mescal::Effect::create(mescal::Effect::Type::shadow) << trackImage;
+            outerLowerDropShadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, 2.0f);
+            outerLowerDropShadow->setPropertyValue(mescal::Effect::Shadow::color, mescal::colourToVector4(juce::Colours::white));
+
+            auto outerLowerDropShadowTransform = mescal::Effect::create(mescal::Effect::Type::affineTransform2D) << outerLowerDropShadow;
+            outerLowerDropShadowTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, juce::AffineTransform::translation(0.0f, 4.0f));
+
+            float innerShadowSize = trackThickness * 0.2f;
+            auto innerDarkShadow = createInnerShadow(trackImage, juce::Colours::black.withAlpha(1.0f), innerShadowSize, juce::AffineTransform::scale(1.1f, 2.0f, (float)trackImage.getWidth() * 0.5f, (float)trackImage.getHeight() * 0.5f).translated(0.0f, innerShadowSize * 2.0f));
+            auto innerLightShadow = createInnerShadow(trackImage, juce::Colours::white.withAlpha(1.0f), innerShadowSize, juce::AffineTransform::scale(1.1f, 2.0f, (float)trackImage.getWidth() * 0.5f, (float)trackImage.getHeight() * 0.5f).translated(0.0f, -innerShadowSize * 2.0f));
+
+            auto innerShadowComposite = mescal::Effect::create(mescal::Effect::Type::blend) << innerDarkShadow << innerLightShadow;
+            innerShadowComposite->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::linearLight);
+
+            auto innerShadowSourceImageComposite = mescal::Effect::create(mescal::Effect::Type::blend) << trackImage << innerShadowComposite;
+            innerShadowSourceImageComposite->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::linearLight);
+
+            auto outerShadowComposite = mescal::Effect::create(mescal::Effect::Type::composite) << innerShadowSourceImageComposite << outerLowerDropShadowTransform;
+            outerShadowComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::destinationOver);
+
+
+
+#if 0
             auto innerUpperShadow = createInnerShadow(trackImage, trackColor.darker(2.0f), trackThickness * 0.05f,
                 juce::AffineTransform::scale(1.0f, 1.0f, (float)trackImage.getWidth() * 0.5f, (float)trackImage.getHeight() * 0.5f).translated(0.0f, trackThickness * 0.05f));
             auto innerUpperBlend = mescal::Effect::Blend::create(mescal::Effect::Blend::multiply) << trackImage << innerUpperShadow;
@@ -74,13 +93,11 @@ void MescalLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int wi
             auto crop = mescal::Effect::Crop::create(trackRect.removeFromBottom(trackThickness * 0.1f)) << innerLowerShadow;
 
             auto lowerBlend = mescal::Effect::Blend::create(mescal::Effect::Blend::multiply) << innerUpperBlend << crop;
+#endif
 
             outputImage = juce::Image{ juce::Image::ARGB, trackImage.getWidth(), trackImage.getHeight(), true };
-            lowerBlend->applyEffect(outputImage, {}, false);
+            outerShadowComposite->applyEffect(outputImage, {}, false);
             g.drawImageAt(outputImage, imageOrigin.x, imageOrigin.y);
-
-            g.setColour(trackColor);
-            g.drawRoundedRectangle(trackRect + imageOrigin.toFloat(), trackThickness * 0.5f, 1.0f);
         }
     }
 }

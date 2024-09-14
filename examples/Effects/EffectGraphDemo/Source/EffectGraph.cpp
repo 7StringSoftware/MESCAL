@@ -17,6 +17,10 @@ void EffectGraph::paintSlider()
         g.setColour(juce::Colour{ 0xffcccccc });
         auto r = g.getClipBounds().toFloat().withSizeKeepingCentre(300, 50.0f);
         g.fillRoundedRectangle(r, r.getHeight() * 0.5f);
+//
+//         g.setColour(juce::Colour{ 0xff202020 });
+//         r.reduce(30.0f, 20.0f);
+//         g.fillRoundedRectangle(r, r.getHeight() * 0.5f);
     }
 }
 
@@ -25,33 +29,28 @@ void EffectGraph::createSliderEffectGraph()
 {
     auto& sourceImage = sourceImages.front();
 
-    auto innerDarkShadow = createInnerShadow(sourceImage, juce::Colours::black.withAlpha(1.0f), 10.0f, juce::AffineTransform::scale(1.1f, 2.0f, (float)sourceImage.getWidth() * 0.5f, (float)sourceImage.getHeight() * 0.5f).translated(0.0f, 10.0f));
-    //auto darkShadowComposite = mescal::Effect::create(mescal::Effect::Type::arithmeticComposite) << innerDarkShadow << sourceImage;
-    //darkShadowComposite->setPropertyValue(mescal::Effect::ArithmeticComposite::coefficients, mescal::Vector4{ 0.0f, 1.0f, 1.0f, 0.0f });
+    auto outerLowerDropShadow = mescal::Effect::create(mescal::Effect::Type::shadow) << sourceImage;
+    outerLowerDropShadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, 2.0f);
+    outerLowerDropShadow->setPropertyValue(mescal::Effect::Shadow::color, mescal::colourToVector4(juce::Colours::white));
 
+    auto outerLowerDropShadowTransform = mescal::Effect::create(mescal::Effect::Type::affineTransform2D) << outerLowerDropShadow;
+    outerLowerDropShadowTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, juce::AffineTransform::translation(0.0f, 4.0f));
+
+    auto innerDarkShadow = createInnerShadow(sourceImage, juce::Colours::black.withAlpha(1.0f), 10.0f, juce::AffineTransform::scale(1.1f, 2.0f, (float)sourceImage.getWidth() * 0.5f, (float)sourceImage.getHeight() * 0.5f).translated(0.0f, 10.0f));
     auto innerLightShadow = createInnerShadow(sourceImage, juce::Colours::white.withAlpha(1.0f), 10.0f, juce::AffineTransform::scale(1.1f, 2.0f, (float)sourceImage.getWidth() * 0.5f, (float)sourceImage.getHeight() * 0.5f).translated(0.0f, -10.0f));
 
     auto r = sourceImage.getBounds().toFloat().withSizeKeepingCentre(300, 50.0f);
-//     auto innerLightShadowCrop = mescal::Effect::create(mescal::Effect::Type::crop) << innerLightShadow;
-//     innerLightShadowCrop->setPropertyValue(mescal::Effect::Crop::rect, juce::Rectangle<float>{ r }.removeFromBottom(r.getHeight() * 0.5f));
 
-//     auto lightShadowComposite = mescal::Effect::create(mescal::Effect::Type::arithmeticComposite) << innerLightShadow << darkShadowComposite;
-//     lightShadowComposite->setPropertyValue(mescal::Effect::ArithmeticComposite::coefficients, mescal::Vector4{ 0.0f, 1.0f, 1.0f, 0.0f });
-//     auto lightShadowComposite = mescal::Effect::create(mescal::Effect::Type::blend) << innerLightShadow << darkShadowComposite;
-//     lightShadowComposite->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::multiply);
-//     auto lightShadowComposite = mescal::Effect::create(mescal::Effect::Type::composite) << innerLightShadowCrop << innerDarkShadow;
-//     lightShadowComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::plus);
+    auto innerShadowComposite = mescal::Effect::create(mescal::Effect::Type::blend) << innerDarkShadow << innerLightShadow;
+    innerShadowComposite->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::linearLight);
 
-    auto lightShadowComposite = mescal::Effect::create(mescal::Effect::Type::blend) << innerDarkShadow << innerLightShadow;
-    lightShadowComposite->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::linearLight);
+    auto innerShadowSourceImageComposite = mescal::Effect::create(mescal::Effect::Type::blend) << sourceImage << innerShadowComposite;
+    innerShadowSourceImageComposite->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::linearLight);
 
-//     auto finalComposite = mescal::Effect::create(mescal::Effect::Type::composite) << sourceImage << lightShadowComposite;
-//     finalComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
+    auto outerShadowComposite = mescal::Effect::create(mescal::Effect::Type::composite) << innerShadowSourceImageComposite << outerLowerDropShadowTransform;
+    outerShadowComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::destinationOver);
 
-    auto finalComposite = mescal::Effect::create(mescal::Effect::Type::blend) << sourceImage << lightShadowComposite;
-    finalComposite->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::linearLight);
-
-    outputEffect = finalComposite;
+    outputEffect = outerShadowComposite;
 }
 
 void EffectGraph::paintMetallicKnobImage(float angle)
