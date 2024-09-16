@@ -20,14 +20,18 @@ public:
             switch (slider.getTextBoxPosition())
             {
             case juce::Slider::NoTextBox:
+                radius = (float)slider.getHeight() * 12.0f / 22.0f;
+                break;
+
             case juce::Slider::TextBoxLeft:
             case juce::Slider::TextBoxRight:
-                radius = (float)slider.getHeight() * 0.28f;
+                radius = (float)slider.getHeight() * 12.0f / 22.0f;
                 break;
 
             case juce::Slider::TextBoxAbove:
             case juce::Slider::TextBoxBelow:
-                radius = (float)slider.getHeight() * 0.1f;
+                radius = (float)slider.getHeight() * 0.28f;
+                break;
             }
         }
         else
@@ -43,6 +47,7 @@ public:
             case juce::Slider::TextBoxAbove:
             case juce::Slider::TextBoxBelow:
                 radius = (float)slider.getWidth() * 0.125f;
+                break;
             }
         }
 
@@ -52,6 +57,7 @@ public:
 private:
     static mescal::Effect::Ptr addShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform);
     static mescal::Effect::Ptr createInnerShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform);
+    static mescal::Effect::Ptr createInnerGlow(juce::Image const& sourceImage, float glowSize, juce::AffineTransform transform);
 
     void paint3DButtonImages(juce::Colour backgroundColor, bool buttonHighlighted, bool buttonDown);
     mescal::Effect::Ptr create3DButtonEffectGraph(bool buttonDown, bool buttonHighlighted);

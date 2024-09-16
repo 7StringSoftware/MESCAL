@@ -28,6 +28,9 @@ public:
         mescalLookAndFeel->setColour(juce::DrawableButton::ColourIds::textColourOnId, juce::Colours::white);
         LookAndFeel::setDefaultLookAndFeel(mescalLookAndFeel.get());
 
+//         lookAndFeelV4 = std::make_unique<juce::LookAndFeel_V4>();
+//         LookAndFeel::setDefaultLookAndFeel(lookAndFeelV4.get());
+
         mainWindow = std::make_unique<MainWindow>(getApplicationName());
     }
 
@@ -101,13 +104,13 @@ public:
         }
 
     private:
-        //juce::LookAndFeel_V4 lookAndFeelV4;
         std::unique_ptr<mescal::MescalImageEffectFilter> imageEffectFilter;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };
 
 private:
+    std::unique_ptr<juce::LookAndFeel_V4> lookAndFeelV4;
     std::unique_ptr<MescalLookAndFeel> mescalLookAndFeel;
     std::unique_ptr<MainWindow> mainWindow;
 };

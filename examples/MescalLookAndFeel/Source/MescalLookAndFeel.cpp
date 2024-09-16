@@ -6,85 +6,12 @@ MescalLookAndFeel::MescalLookAndFeel()
     setColour(juce::TextButton::ColourIds::textColourOnId, juce::Colours::black);
     setColour(juce::TextButton::ColourIds::textColourOffId, juce::Colours::black);
     setColour(juce::ComboBox::ColourIds::outlineColourId, juce::Colour{ 0x00000000 });
-    setColour(juce::Slider::ColourIds::trackColourId, juce::Colour{ 0xffdddddd });
-    setColour(juce::Slider::ColourIds::thumbColourId, juce::Colours::lightsteelblue);
-    setColour(juce::Slider::ColourIds::backgroundColourId, juce::Colour::greyLevel(0.85f));
+    setColour(juce::Slider::ColourIds::backgroundColourId, juce::Colour::greyLevel(0.9f));
+    setColour(juce::Slider::ColourIds::thumbColourId, juce::Colours::skyblue);
+        //juce::Colours::lightgrey);
+    setColour(juce::Slider::ColourIds::trackColourId, juce::Colours::orange.withAlpha(1.0f));
+        //juce::Colour::greyLevel(0.85f));
     setColour(juce::ComboBox::outlineColourId, juce::Colours::transparentBlack);
-}
-
-void MescalLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPosProportional, float rotaryStartAngle, float rotaryEndAngle, juce::Slider& slider)
-{
-#if 0
-    auto bounds = juce::Rectangle<int>(x, y, width, height).toFloat().reduced(10);
-    auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.45f;
-    auto toAngle = rotaryStartAngle + sliderPosProportional * (rotaryEndAngle - rotaryStartAngle);
-    auto lineW = juce::jmin(8.0f, radius * 0.5f);
-    auto arcRadius = radius - lineW * 0.5f;
-
-    juce::Path backgroundArc;
-    backgroundArc.addCentredArc(bounds.getCentreX(),
-        bounds.getCentreY(),
-        arcRadius,
-        arcRadius,
-        0.0f,
-        rotaryStartAngle,
-        rotaryEndAngle,
-        true);
-    juce::PathStrokeType backgroundArcStrokeType{ lineW, juce::PathStrokeType::curved, juce::PathStrokeType::rounded };
-    juce::Path strokedBackgroundArc;
-    backgroundArcStrokeType.createStrokedPath(strokedBackgroundArc, backgroundArc);
-
-    auto outline = slider.findColour(juce::Slider::rotarySliderOutlineColourId);
-    g.setColour(outline);
-    g.fillPath(strokedBackgroundArc);
-
-    mescal::ConicGradient conicGradient;
-    conicGradient.setRadiusRange({ arcRadius - lineW, arcRadius + lineW });
-
-    float maxStopAngle = juce::MathConstants<float>::twoPi / 32.0f;
-    size_t numStops = (size_t)(std::ceil((toAngle - rotaryStartAngle) / maxStopAngle)) + 1;
-    numStops = juce::jmax(numStops, (size_t)2);
-    std::vector<mescal::ConicGradient::Stop> stops{ numStops + 1 };
-    float angleStep = (toAngle - rotaryStartAngle) / (float)(numStops - 2);
-    float angle = rotaryStartAngle - angleStep;
-    float color = 0.0f;
-    float colorStep = 1.0f / (float)(numStops - 2);
-    for (int stop = 0; stop < numStops; ++stop)
-    {
-        stops[stop] = { angle, mescal::Color128{ juce::Colour::greyLevel(color)} };
-        angle += angleStep;
-        color += colorStep;
-    }
-    stops.back().angle = angle;
-    stops.back().color128 = mescal::Color128{ juce::Colours::white };
-
-    conicGradient.addStops(stops);
-
-    if (inputScratchpad.getWidth() < width || inputScratchpad.getHeight() < height)
-    {
-        inputScratchpad = juce::Image(juce::Image::PixelFormat::ARGB, width, height, false);
-    }
-
-    if (outputScratchpad.getWidth() < width || outputScratchpad.getHeight() < height)
-    {
-        outputScratchpad = juce::Image(juce::Image::PixelFormat::ARGB, width, height, false);
-    }
-
-    conicGradient.draw(inputScratchpad, juce::AffineTransform::translation(width * 0.5f, height * 0.5f));
-
-    mescal::Effect effect{ mescal::Effect::Type::shadow };
-    effect.setPropertyValue(mescal::Effect::Shadow::color, juce::Colour::fromFloatRGBA(0.0f, 0.5f, 0.5f, 1.0f));
-    effect.setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, lineW);
-    effect.setInput(0, inputScratchpad);
-    effect.applyEffect(outputScratchpad, {}, true);
-    g.drawImageAt(outputScratchpad, 0, 0);
-
-    {
-        juce::Graphics::ScopedSaveState saveState{ g };
-        g.reduceClipRegion(strokedBackgroundArc);
-        g.drawImageAt(inputScratchpad, x, y);
-    }
-#endif
 }
 
 void MescalLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button, const juce::Colour& backgroundColour, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
@@ -92,6 +19,96 @@ void MescalLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& bu
     juce::Image buttonImage{ juce::Image::ARGB, button.getWidth(), button.getHeight(), true };
     juce::Image outputImage{ juce::Image::ARGB, button.getWidth(), button.getHeight(), true };
 
+#if 1
+    auto r = buttonImage.getBounds().toFloat().reduced(2.0f);
+
+    auto cornerProportion = 0.2f;
+
+    {
+        juce::Graphics imageG{ buttonImage };
+        auto topColor = juce::Colour{ 0xffb0b4bf };
+        auto c1 = juce::Colour{ 0xffcdd0d7 };
+        auto c2 = juce::Colour{ 0xffdee1e6 };
+        auto bottomColor = juce::Colour{ 0xfff5f6fa };
+
+        float start = r.getBottom();
+        float end = r.getY();
+
+        if (shouldDrawButtonAsDown || button.getToggleState())
+        {
+            std::swap(topColor, bottomColor);
+            std::swap(c1, c2);
+        }
+
+        auto gradient = juce::ColourGradient::vertical(topColor,
+            start,
+            bottomColor,
+            end);
+
+        gradient.addColour(0.33f, c1);
+        gradient.addColour(0.66f, c2);
+
+        imageG.setGradientFill(gradient);
+        imageG.fillRoundedRectangle(r, cornerProportion * r.getHeight());
+    }
+
+    mescal::Effect::Ptr outputEffect;
+
+    juce::Colour innerUpperLeftShadowColor = juce::Colours::white.withAlpha(0.5f);
+    juce::Colour innerLowerRightShadowColor = juce::Colours::black.withAlpha(0.5f);
+    float innerShadowSize = (float)button.getHeight() * 0.025f;
+
+    if (button.getToggleState() || shouldDrawButtonAsDown)
+    {
+        std::swap(innerUpperLeftShadowColor, innerLowerRightShadowColor);
+        innerShadowSize *= 2.0f;
+    }
+
+    {
+        auto innerUpperLeftShadow = createInnerShadow(buttonImage,
+            innerUpperLeftShadowColor,
+            innerShadowSize,
+            juce::AffineTransform::scale(1.0f, 1.0f).translated(innerShadowSize, innerShadowSize));
+        auto innerLowerRightShadow = createInnerShadow(buttonImage,
+            innerLowerRightShadowColor,
+            innerShadowSize,
+            juce::AffineTransform::scale(1.0f, 1.0f).translated(-innerShadowSize, -innerShadowSize));
+
+        auto innerShadowBlend = mescal::Effect::create(mescal::Effect::Type::blend) << innerLowerRightShadow << innerUpperLeftShadow;
+        innerShadowBlend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::multiply);
+
+        auto innerShadowSourceImageBlend = mescal::Effect::create(mescal::Effect::Type::blend) << buttonImage << innerShadowBlend;
+        innerShadowSourceImageBlend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::linearLight);
+
+        outputEffect = innerShadowSourceImageBlend;
+    }
+
+    if (button.getToggleState() || shouldDrawButtonAsDown)
+    {
+        auto innerGlow = createInnerShadow(buttonImage, backgroundColour, (float)button.getHeight() * 0.25f, {});
+        auto innerGlowBlend = mescal::Effect::Blend::create(mescal::Effect::Blend::multiply) << outputEffect << innerGlow;
+
+        outputEffect = innerGlowBlend;
+    }
+
+    outputEffect->applyEffect(outputImage, {}, false);
+    g.drawImageAt(outputImage, 0, 0);
+#endif
+
+#if 0
+    auto emboss = new mescal::Effect{ mescal::Effect::Type::emboss };
+    emboss->setInput(0, topImage);
+
+    mescal::Effect::Ptr chromaKey = new mescal::Effect{ mescal::Effect::Type::chromaKey };
+    chromaKey->setInput(0, emboss);
+
+    mescal::Effect::Ptr blend = new mescal::Effect{ mescal::Effect::Type::blend };
+    blend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::subtract);
+    blend->setInput(0, middleComposite);
+    blend->setInput(1, chromaKey);
+#endif
+
+#if 0
     auto baseColour = backgroundColour.withMultipliedSaturation(button.hasKeyboardFocus(true) ? 1.3f : 0.9f)
         .withMultipliedAlpha(button.isEnabled() ? 1.0f : 0.5f);
 
@@ -153,6 +170,8 @@ void MescalLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& bu
 
     innerShadowSourceImageComposite->applyEffect(outputImage, {}, false);
     g.drawImageAt(outputImage, 0, 0);
+
+#endif
 }
 
 void MescalLookAndFeel::paint3DButtonImages(juce::Colour backgroundColor, bool buttonHighlighted, bool buttonDown)
@@ -371,13 +390,13 @@ mescal::Effect::Ptr MescalLookAndFeel::createInnerShadow(juce::Image const& sour
     auto floodEffect = new mescal::Effect{ mescal::Effect::Type::flood };
     floodEffect->setPropertyValue(mescal::Effect::Flood::color, juce::Colours::blue);
 
-    auto createArithmeticComposite = new mescal::Effect{ mescal::Effect::Type::arithmeticComposite };
-    createArithmeticComposite->setPropertyValue(mescal::Effect::ArithmeticComposite::coefficients, mescal::Vector4{ 0.0f, 1.0f, -1.0f, 0.0f });
-    createArithmeticComposite->setInput(0, floodEffect);
-    createArithmeticComposite->setInput(1, sourceImage);
+    auto arithmeticComposite = new mescal::Effect{ mescal::Effect::Type::arithmeticComposite };
+    arithmeticComposite->setPropertyValue(mescal::Effect::ArithmeticComposite::coefficients, mescal::Vector4{ 0.0f, 1.0f, -1.0f, 0.0f });
+    arithmeticComposite->setInput(0, floodEffect);
+    arithmeticComposite->setInput(1, sourceImage);
 
     auto innerShadow = new mescal::Effect{ mescal::Effect::Type::shadow };
-    innerShadow->setInput(0, createArithmeticComposite);
+    innerShadow->setInput(0, arithmeticComposite);
     innerShadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, shadowSize);
     innerShadow->setPropertyValue(mescal::Effect::Shadow::color, mescal::colourToVector4(shadowColor));
 
@@ -390,4 +409,21 @@ mescal::Effect::Ptr MescalLookAndFeel::createInnerShadow(juce::Image const& sour
     alphaMaskEffect->setInput(1, sourceImage);
 
     return alphaMaskEffect;
+}
+
+mescal::Effect::Ptr MescalLookAndFeel::createInnerGlow(juce::Image const& sourceImage, float glowSize, juce::AffineTransform transform)
+{
+    auto floodEffect = new mescal::Effect{ mescal::Effect::Type::flood };
+    floodEffect->setPropertyValue(mescal::Effect::Flood::color, juce::Colours::limegreen);
+
+    auto arithmeticComposite = new mescal::Effect{ mescal::Effect::Type::arithmeticComposite };
+    arithmeticComposite->setPropertyValue(mescal::Effect::ArithmeticComposite::coefficients, mescal::Vector4{ 0.0f, 1.0f, -1.0f, 0.0f });
+    arithmeticComposite->setInput(0, floodEffect);
+    arithmeticComposite->setInput(1, sourceImage);
+
+    auto blur = mescal::Effect::GaussianBlur::create(glowSize) << arithmeticComposite;
+
+    auto lumnianceToAlpha = mescal::Effect::create(mescal::Effect::Type::luminanceToAlpha) << blur;
+
+    return mescal::Effect::create(mescal::Effect::Type::alphaMask) << lumnianceToAlpha << sourceImage;
 }
