@@ -588,20 +588,6 @@ namespace mescal
         jassert(SUCCEEDED(hr));
     }
 
-    juce::ReferenceCountedObjectPtr<Effect> Effect::affineTransform2D(juce::AffineTransform transform)
-    {
-        auto effect = create(Effect::Type::affineTransform2D);
-        effect->setPropertyValue(AffineTransform2D::transformMatrix, transform);
-        return effect;
-    }
-
-    Effect::Ptr Effect::createArithmeticComposite(float c0, float c1, float c2, float c3)
-    {
-        auto effect = create(Effect::Type::arithmeticComposite);
-        effect->setPropertyValue(ArithmeticComposite::coefficients, Vector4{ c0, c1, c2, c3 });
-        return effect;
-    }
-
     Effect::Crop Effect::Crop::create(juce::Rectangle<float> cropArea)
     {
         auto effect = new Effect{ Effect::Type::crop };

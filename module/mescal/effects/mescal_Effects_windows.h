@@ -159,7 +159,7 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/2d-affine-transform
     */
-    struct AffineTransform2D
+    struct AffineTransform2D : public Ptr
     {
         static constexpr int interpolationMode = 0;
         static constexpr int borderMode = 1;
@@ -175,22 +175,48 @@ public:
 
         static constexpr int soft = 0;
         static constexpr int hard = 1;
+
+        static AffineTransform2D create(juce::AffineTransform transform)
+        {
+            auto effect = new Effect{ Effect::Type::affineTransform2D };
+            effect->setPropertyValue(AffineTransform2D::transformMatrix, transform);
+            return { effect };
+        }
+        AffineTransform2D(Effect* effect) : Ptr(effect) {}
     };
 
-    static juce::ReferenceCountedObjectPtr<Effect> affineTransform2D(juce::AffineTransform transform);
+    /**
+    * Built-in Direct2D alpha mask effect
+    *
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/alpha-mask
+    */
+    struct AlphaMask : public Ptr
+    {
+        static AlphaMask create()
+        {
+            return { new Effect{ Effect::Type::alphaMask } };
+        }
+        AlphaMask(Effect* effect) : Ptr(effect) { }
+    };
 
     /**
     * Constants for built-in Direct2D arithmetic composite effect
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/arithmetic-composite
     */
-    struct ArithmeticComposite
+    struct ArithmeticComposite : public Ptr
     {
         static constexpr int coefficients = 0;
         static constexpr int clampOutput = 1;
-    };
 
-    static Ptr createArithmeticComposite(float c0, float c1, float c2, float c3);
+        static ArithmeticComposite create(float c0, float c1, float c2, float c3)
+        {
+            auto effect = new Effect{ Effect::Type::arithmeticComposite };
+            effect->setPropertyValue(ArithmeticComposite::coefficients, Vector4{ c0, c1, c2, c3 });
+            return { effect };
+        }
+        ArithmeticComposite(Effect* effect) : Ptr(effect) { }
+    };
 
     /**
     * Constants for built-in Direct2D blend effect
@@ -299,9 +325,17 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/flood
     */
-    struct Flood
+    struct Flood : public Ptr
     {
         static constexpr int color = 0;
+
+        static Flood create(juce::Colour floodColor)
+        {
+            auto effect = new Effect{ Effect::Type::flood };
+            effect->setPropertyValue(Flood::color, floodColor);
+            return { effect };
+        }
+        Flood(Effect* effect) : Ptr(effect) {}
     };
 
     /**
@@ -357,7 +391,7 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/shadow
     */
-    struct Shadow
+    struct Shadow : public Ptr
     {
         static constexpr int blurStandardDeviation = 0;
         static constexpr int color = 1;
@@ -366,6 +400,15 @@ public:
         static constexpr int speed = 0;
         static constexpr int balanced = 1;
         static constexpr int quality = 2;
+
+        static Shadow create(float standardDeviation, juce::Colour color)
+        {
+            auto effect = new Effect{ Effect::Type::shadow };
+            effect->setPropertyValue(Shadow::blurStandardDeviation, standardDeviation);
+            effect->setPropertyValue(Shadow::color, color);
+            return { effect };
+        }
+        Shadow(Effect* effect) : Ptr(effect) {}
     };
 
     /**
@@ -489,7 +532,7 @@ public:
     */
     Effect(Type effectType_);
     Effect(const Effect& other);
-    Effect(const Effect&& other) noexcept ;
+    Effect(const Effect&& other) noexcept;
     ~Effect();
 
     static Ptr create(Type effectType);

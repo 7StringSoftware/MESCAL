@@ -411,19 +411,26 @@ mescal::Effect::Ptr MescalLookAndFeel::createInnerShadow(juce::Image const& sour
     return alphaMaskEffect;
 }
 
-mescal::Effect::Ptr MescalLookAndFeel::createInnerGlow(juce::Image const& sourceImage, float glowSize, juce::AffineTransform transform)
+mescal::Effect::Ptr MescalLookAndFeel::create3DInnerShadow(juce::Image const& sourceImage,
+    juce::Colour topColor,
+    juce::AffineTransform topShadowTransform,
+    juce::Colour bottomColor,
+    juce::AffineTransform bottomShadowTransform,
+    float shadowSize)
 {
-    auto floodEffect = new mescal::Effect{ mescal::Effect::Type::flood };
-    floodEffect->setPropertyValue(mescal::Effect::Flood::color, juce::Colours::limegreen);
+    auto flood = mescal::Effect::Flood::create(juce::Colours::blue) << sourceImage;
 
-    auto arithmeticComposite = new mescal::Effect{ mescal::Effect::Type::arithmeticComposite };
-    arithmeticComposite->setPropertyValue(mescal::Effect::ArithmeticComposite::coefficients, mescal::Vector4{ 0.0f, 1.0f, -1.0f, 0.0f });
-    arithmeticComposite->setInput(0, floodEffect);
-    arithmeticComposite->setInput(1, sourceImage);
+    auto arithmeticComposite = mescal::Effect::ArithmeticComposite::create(0.0f, 1.0f, -1.0f, 0.0f) << flood << sourceImage;
 
-    auto blur = mescal::Effect::GaussianBlur::create(glowSize) << arithmeticComposite;
+    auto upperShadow = mescal::Effect::Shadow::create(shadowSize, topColor) << arithmeticComposite;
+    auto upperTransform = mescal::Effect::AffineTransform2D::create(topShadowTransform) << upperShadow;
 
-    auto lumnianceToAlpha = mescal::Effect::create(mescal::Effect::Type::luminanceToAlpha) << blur;
+    auto lowerShadow = mescal::Effect::Shadow::create(shadowSize, bottomColor) << arithmeticComposite;
+    auto lowerTransform = mescal::Effect::AffineTransform2D::create(bottomShadowTransform) << lowerShadow;
 
-    return mescal::Effect::create(mescal::Effect::Type::alphaMask) << lumnianceToAlpha << sourceImage;
+    auto blend = mescal::Effect::Blend::create(mescal::Effect::Blend::multiply) << upperTransform << lowerTransform;
+
+    auto alphaMask = mescal::Effect::AlphaMask::create() << blend << sourceImage;
+
+    return alphaMask;
 }

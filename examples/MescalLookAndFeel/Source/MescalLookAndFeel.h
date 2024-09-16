@@ -57,7 +57,13 @@ public:
 private:
     static mescal::Effect::Ptr addShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform);
     static mescal::Effect::Ptr createInnerShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform);
-    static mescal::Effect::Ptr createInnerGlow(juce::Image const& sourceImage, float glowSize, juce::AffineTransform transform);
+
+    static mescal::Effect::Ptr create3DInnerShadow(juce::Image const& sourceImage,
+        juce::Colour topColor,
+        juce::AffineTransform topShadowTransform,
+        juce::Colour bottomColor,
+        juce::AffineTransform bottomShadowTransform,
+        float shadowSize);
 
     void paint3DButtonImages(juce::Colour backgroundColor, bool buttonHighlighted, bool buttonDown);
     mescal::Effect::Ptr create3DButtonEffectGraph(bool buttonDown, bool buttonHighlighted);
