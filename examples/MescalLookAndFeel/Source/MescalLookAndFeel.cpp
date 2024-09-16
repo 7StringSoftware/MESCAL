@@ -7,10 +7,8 @@ MescalLookAndFeel::MescalLookAndFeel()
     setColour(juce::TextButton::ColourIds::textColourOffId, juce::Colours::black);
     setColour(juce::ComboBox::ColourIds::outlineColourId, juce::Colour{ 0x00000000 });
     setColour(juce::Slider::ColourIds::backgroundColourId, juce::Colour::greyLevel(0.9f));
-    setColour(juce::Slider::ColourIds::thumbColourId, juce::Colours::skyblue);
-        //juce::Colours::lightgrey);
-    setColour(juce::Slider::ColourIds::trackColourId, juce::Colours::orange.withAlpha(1.0f));
-        //juce::Colour::greyLevel(0.85f));
+    setColour(juce::Slider::ColourIds::thumbColourId, juce::Colours::lightcyan);
+    setColour(juce::Slider::ColourIds::trackColourId, juce::Colour{ 0xffB6CFCF });
     setColour(juce::ComboBox::outlineColourId, juce::Colours::transparentBlack);
 }
 
@@ -19,7 +17,6 @@ void MescalLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& bu
     juce::Image buttonImage{ juce::Image::ARGB, button.getWidth(), button.getHeight(), true };
     juce::Image outputImage{ juce::Image::ARGB, button.getWidth(), button.getHeight(), true };
 
-#if 1
     auto r = buttonImage.getBounds().toFloat().reduced(2.0f);
 
     auto cornerProportion = 0.2f;
@@ -93,85 +90,7 @@ void MescalLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& bu
 
     outputEffect->applyEffect(outputImage, {}, false);
     g.drawImageAt(outputImage, 0, 0);
-#endif
 
-#if 0
-    auto emboss = new mescal::Effect{ mescal::Effect::Type::emboss };
-    emboss->setInput(0, topImage);
-
-    mescal::Effect::Ptr chromaKey = new mescal::Effect{ mescal::Effect::Type::chromaKey };
-    chromaKey->setInput(0, emboss);
-
-    mescal::Effect::Ptr blend = new mescal::Effect{ mescal::Effect::Type::blend };
-    blend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::subtract);
-    blend->setInput(0, middleComposite);
-    blend->setInput(1, chromaKey);
-#endif
-
-#if 0
-    auto baseColour = backgroundColour.withMultipliedSaturation(button.hasKeyboardFocus(true) ? 1.3f : 0.9f)
-        .withMultipliedAlpha(button.isEnabled() ? 1.0f : 0.5f);
-
-    if (shouldDrawButtonAsDown || shouldDrawButtonAsHighlighted)
-        baseColour = baseColour.contrasting(shouldDrawButtonAsDown ? 0.2f : 0.05f);
-
-    {
-        juce::Graphics buttonGraphics{ buttonImage };
-
-        auto cornerSize = 6.0f;
-        auto bounds = button.getLocalBounds().toFloat().reduced(0.5f, 0.5f);
-
-        buttonGraphics.setColour(baseColour);
-
-        auto flatOnLeft = button.isConnectedOnLeft();
-        auto flatOnRight = button.isConnectedOnRight();
-        auto flatOnTop = button.isConnectedOnTop();
-        auto flatOnBottom = button.isConnectedOnBottom();
-
-        if (flatOnLeft || flatOnRight || flatOnTop || flatOnBottom)
-        {
-            juce::Path path;
-            path.addRoundedRectangle(bounds.getX(), bounds.getY(),
-                bounds.getWidth(), bounds.getHeight(),
-                cornerSize, cornerSize,
-                !(flatOnLeft || flatOnTop),
-                !(flatOnRight || flatOnTop),
-                !(flatOnLeft || flatOnBottom),
-                !(flatOnRight || flatOnBottom));
-
-            buttonGraphics.fillPath(path);
-        }
-        else
-        {
-            buttonGraphics.fillRoundedRectangle(bounds, cornerSize);
-        }
-    }
-
-    float innerShadowSize = (float)button.getHeight() * 0.2f;
-
-    juce::Colour topShadowColor = baseColour.brighter();
-    juce::Colour bottomShadowColor = baseColour.darker();
-    if (shouldDrawButtonAsDown)
-    {
-        std::swap(topShadowColor, bottomShadowColor);
-    }
-
-    auto innerTopShadow = createInnerShadow(buttonImage, topShadowColor, innerShadowSize,
-        juce::AffineTransform::scale(2.0f, 2.0f, (float)buttonImage.getWidth() * 0.5f, (float)buttonImage.getHeight() * 0.5f).translated(0.0f, innerShadowSize * 2.0f));
-
-    auto innerBottomShadow = createInnerShadow(buttonImage, bottomShadowColor, innerShadowSize,
-        juce::AffineTransform::scale(2.0f, 2.0f, (float)buttonImage.getWidth() * 0.5f, (float)buttonImage.getHeight() * 0.5f).translated(0.0f, -innerShadowSize * 2.0f));
-
-    auto innerShadowComposite = mescal::Effect::create(mescal::Effect::Type::blend) << innerBottomShadow << innerTopShadow;
-    innerShadowComposite->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::linearLight);
-
-    auto innerShadowSourceImageComposite = mescal::Effect::create(mescal::Effect::Type::blend) << buttonImage << innerShadowComposite;
-    innerShadowSourceImageComposite->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::multiply);
-
-    innerShadowSourceImageComposite->applyEffect(outputImage, {}, false);
-    g.drawImageAt(outputImage, 0, 0);
-
-#endif
 }
 
 void MescalLookAndFeel::paint3DButtonImages(juce::Colour backgroundColor, bool buttonHighlighted, bool buttonDown)
