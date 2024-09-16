@@ -46,7 +46,7 @@ public:
 
             case juce::Slider::TextBoxAbove:
             case juce::Slider::TextBoxBelow:
-                radius = (float)slider.getWidth() * 0.125f;
+                radius = (float)slider.getWidth() * 0.25f;
                 break;
             }
         }

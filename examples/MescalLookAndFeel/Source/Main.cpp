@@ -28,8 +28,8 @@ public:
         mescalLookAndFeel->setColour(juce::DrawableButton::ColourIds::textColourOnId, juce::Colours::white);
         LookAndFeel::setDefaultLookAndFeel(mescalLookAndFeel.get());
 
-//         lookAndFeelV4 = std::make_unique<juce::LookAndFeel_V4>();
-//         LookAndFeel::setDefaultLookAndFeel(lookAndFeelV4.get());
+         //lookAndFeelV4 = std::make_unique<juce::LookAndFeel_V4>();
+         //LookAndFeel::setDefaultLookAndFeel(lookAndFeelV4.get());
 
         mainWindow = std::make_unique<MainWindow>(getApplicationName());
     }
