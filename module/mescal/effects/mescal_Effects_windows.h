@@ -401,11 +401,11 @@ public:
         static constexpr int balanced = 1;
         static constexpr int quality = 2;
 
-        static Shadow create(float standardDeviation, juce::Colour color)
+        static Shadow create(float standardDeviation, juce::Colour shadowColor)
         {
             auto effect = new Effect{ Effect::Type::shadow };
             effect->setPropertyValue(Shadow::blurStandardDeviation, standardDeviation);
-            effect->setPropertyValue(Shadow::color, color);
+            effect->setPropertyValue(Shadow::color, shadowColor);
             return { effect };
         }
         Shadow(Effect* effect) : Ptr(effect) {}
