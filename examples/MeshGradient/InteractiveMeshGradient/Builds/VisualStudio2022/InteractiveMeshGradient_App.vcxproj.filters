@@ -317,9 +317,6 @@
     <Filter Include="JUCE Modules\mescal\json">
       <UniqueIdentifier>{4635C68B-ACED-F291-1E6B-16E616E12783}</UniqueIdentifier>
     </Filter>
-    <Filter Include="JUCE Modules\mescal\sprites">
-      <UniqueIdentifier>{F13FFB4B-F854-D621-A621-6B64783A835A}</UniqueIdentifier>
-    </Filter>
     <Filter Include="JUCE Modules\mescal">
       <UniqueIdentifier>{A70386C7-1093-63E7-B81E-B26871EEC759}</UniqueIdentifier>
     </Filter>
@@ -2050,9 +2047,6 @@
     <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_gui_extra\juce_gui_extra.mm">
       <Filter>JUCE Modules\juce_gui_extra</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\..\module\mescal\effects\mescal_CustomEffect_windows.cpp">
-      <Filter>JUCE Modules\mescal\effects</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\..\..\..\module\mescal\effects\mescal_Effects_windows.cpp">
       <Filter>JUCE Modules\mescal\effects</Filter>
     </ClCompile>
@@ -2064,12 +2058,6 @@
     </ClCompile>
     <ClCompile Include="..\..\..\..\..\module\mescal\json\mescal_JSON.cpp">
       <Filter>JUCE Modules\mescal\json</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\..\module\mescal\sprites\mescal_ScatterEffect_windows.cpp">
-      <Filter>JUCE Modules\mescal\sprites</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\..\module\mescal\sprites\mescal_SpriteBatch_windows.cpp">
-      <Filter>JUCE Modules\mescal\sprites</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\..\module\mescal\mescal.cpp">
       <Filter>JUCE Modules\mescal</Filter>
@@ -4476,9 +4464,6 @@
     <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_gui_extra\juce_gui_extra.h">
       <Filter>JUCE Modules\juce_gui_extra</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\..\module\mescal\effects\mescal_CustomEffect_windows.h">
-      <Filter>JUCE Modules\mescal\effects</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\..\..\..\module\mescal\effects\mescal_Effects_windows.h">
       <Filter>JUCE Modules\mescal\effects</Filter>
     </ClInclude>
@@ -4490,12 +4475,6 @@
     </ClInclude>
     <ClInclude Include="..\..\..\..\..\module\mescal\json\mescal_JSON.h">
       <Filter>JUCE Modules\mescal\json</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\..\module\mescal\sprites\mescal_ScatterEffect_windows.h">
-      <Filter>JUCE Modules\mescal\sprites</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\..\module\mescal\sprites\mescal_SpriteBatch_windows.h">
-      <Filter>JUCE Modules\mescal\sprites</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\..\module\mescal\mescal.h">
       <Filter>JUCE Modules\mescal</Filter>

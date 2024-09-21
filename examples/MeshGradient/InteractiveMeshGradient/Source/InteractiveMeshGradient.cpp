@@ -2,21 +2,25 @@
 
 InteractiveMeshGradient::InteractiveMeshGradient()
 {
+    auto placementIterator = mescal::MeshGradient::cornerPlacements.begin();
     for (auto& c : vertexComponents)
     {
         c.setSize(30, 30);
         addChildComponent(c);
+        c.placement = *placementIterator;
+        ++placementIterator;
         c.onChange = [this](VertexComponent& vertexComponent)
             {
-                if (auto vertex = vertexComponent.vertex.lock())
+                if (auto patch = vertexComponent.patch.lock())
                 {
-                    vertex->position = vertexComponent.getBounds().toFloat().getCentre();
-                    buildPatches();
+                    patch->setCornerPosition(vertexComponent.placement, vertexComponent.getBounds().toFloat().getCentre());
+                    updatePatchComponents();
                     repaint();
                 }
             };
     }
 
+#if 0
     for (auto& c : bezierControlComponents)
     {
         c.setSize(20, 20);
@@ -46,30 +50,32 @@ InteractiveMeshGradient::InteractiveMeshGradient()
                 }
             };
     }
+#endif
 
     rowCountLabel.attachToComponent(&rowCountSlider, true);
     addAndMakeVisible(rowCountLabel);
     addAndMakeVisible(rowCountSlider);
-    rowCountSlider.setRange(juce::Range<double>{ 2.0, 20.0 }, 1.0);
+    rowCountSlider.setRange(juce::Range<double>{ 1.0, 20.0 }, 1.0);
     rowCountSlider.onValueChange = [this]()
         {
             mesh = nullptr;
             selectPatch(nullptr);
             createMesh();
             createComponents();
-            buildPatches();
+            updatePatchComponents();
             resized();
+            repaint();
         };
-    rowCountSlider.setValue(4.0, juce::dontSendNotification);
+    rowCountSlider.setValue(1.0, juce::dontSendNotification);
 
     columnCountLabel.attachToComponent(&columnCountSlider, true);
     addAndMakeVisible(columnCountLabel);
     addAndMakeVisible(columnCountSlider);
-    columnCountSlider.setRange(juce::Range<double>{ 2.0, 20.0 }, 1.0);
+    columnCountSlider.setRange(juce::Range<double>{ 1.0, 20.0 }, 1.0);
     columnCountSlider.onValueChange = rowCountSlider.onValueChange;
-    columnCountSlider.setValue(4.0, juce::dontSendNotification);
+    columnCountSlider.setValue(1.0, juce::dontSendNotification);
 
-	showControlsToggle.setToggleState(true, juce::dontSendNotification);
+    showControlsToggle.setToggleState(true, juce::dontSendNotification);
 	showControlsToggle.onClick = [this]
 		{
 			bool visible = showControlsToggle.getToggleState();
@@ -95,36 +101,7 @@ void InteractiveMeshGradient::resized()
 {
     createMesh();
     createComponents();
-    buildPatches();
-
-    for (auto& vertexComponent : vertexComponents)
-    {
-        if (auto lock = vertexComponent.vertex.lock())
-        {
-            auto center = lock->position.toInt();
-            vertexComponent.setCentrePosition({ center.x, center.y });
-        }
-    }
-
-    for (auto& controlComponent : bezierControlComponents)
-    {
-        if (auto lock = controlComponent.vertex.lock())
-        {
-            auto controlPoint = lock->bezier.getControlPoint(controlComponent.placement);
-            if (controlPoint.has_value())
-                controlComponent.setCentrePosition(controlPoint->toInt());
-        }
-    }
-
-    for (auto& controlComponent : interiorControlComponents)
-    {
-        if (auto lock = controlComponent.vertex.lock())
-        {
-            auto controlPoint = lock->interior.getControlPoint(controlComponent.placement);
-            if (controlPoint.has_value())
-                controlComponent.setCentrePosition(controlPoint->toInt());
-        }
-    }
+    updatePatchComponents();
 
     for (auto& patchComponent : patchComponents)
     {
@@ -149,43 +126,22 @@ void InteractiveMeshGradient::createMesh()
         int numColumns = (int)columnCountSlider.getValue();
         mesh = std::make_unique<mescal::MeshGradient>(numRows, numColumns, getLocalBounds().toFloat().reduced(100.0f));
 
-        std::array<mescal::MeshGradient::Placement, 4> cornerPlacements
+        for (auto patch : mesh->getPatches())
         {
-            mescal::MeshGradient::Placement::top,
-            mescal::MeshGradient::Placement::left,
-            mescal::MeshGradient::Placement::bottom,
-            mescal::MeshGradient::Placement::right
-        };
+            patch->setColor(mescal::MeshGradient::CornerPlacement::topLeft, juce::Colours::red);
+            patch->setColor(mescal::MeshGradient::CornerPlacement::bottomLeft, juce::Colours::blue);
+            patch->setColor(mescal::MeshGradient::CornerPlacement::bottomRight, juce::Colours::yellow);
+            patch->setColor(mescal::MeshGradient::CornerPlacement::topRight, juce::Colours::green);
 
-        std::array<mescal::MeshGradient::Placement, 4> interiorControlPlacements
-        {
-            mescal::MeshGradient::Placement::topLeft,
-            mescal::MeshGradient::Placement::bottomLeft,
-            mescal::MeshGradient::Placement::bottomRight,
-            mescal::MeshGradient::Placement::topRight
-        };
-
-        juce::Point<float> center{ (float)numRows * 0.5f, (float)numColumns * 0.5f };
-        for (auto& vertex : mesh->getVertices())
-        {
-            juce::Point<float> point{ (float)vertex->row, (float)vertex->column };
-
-            float red = (float)vertex->row / ((float)numRows - 1);
-            float green = (float)vertex->column / ((float)numColumns - 1);
-            float blue = center.getDistanceFrom(point) / center.getDistanceFrom({ 0.0f, 0.0f });
-            vertex->color = mescal::Color128{ red, green, blue, 1.0f };
-
-            for (auto placement : cornerPlacements)
+            for (auto edgePlacement : mescal::MeshGradient::edgePlacements)
             {
-                if (auto adjacentVertex = vertex->getAdjacentVertex(placement))
-                {
-                    juce::Line<float> line{ vertex->position, adjacentVertex->position };
+                auto edge = patch->getEdge(edgePlacement);
 
-                    auto controlPoint = line.getPointAlongLineProportionally(0.33f)
-                        .getPointOnCircumference(line.getLength() * 0.2f, line.getAngle() + juce::MathConstants<float>::halfPi);
-
-                    vertex->bezier.setControlPoint(placement, controlPoint);
-                }
+                juce::Line<float> line{ edge.tail, edge.head };
+                auto angle = line.getAngle();
+                edge.bezierControlPoints.first = line.getPointAlongLineProportionally(0.33f).getPointOnCircumference(20.0f, angle + juce::MathConstants<float>::halfPi);
+                edge.bezierControlPoints.second = line.getPointAlongLineProportionally(0.66f).getPointOnCircumference(20.0f, angle - juce::MathConstants<float>::halfPi);
+                patch->setEdge(edgePlacement, edge);
             }
         }
     }
@@ -198,19 +154,18 @@ void InteractiveMeshGradient::createComponents()
         int numRows = (int)rowCountSlider.getValue();
         int numColumns = (int)columnCountSlider.getValue();
 
-        if (patchComponents.size() == (numRows - 1) * (numColumns - 1))
+        if (patchComponents.size() == numRows * numColumns)
         {
             return;
         }
 
         patchComponents.clear();
 
-        for (int row = 0; row < numRows - 1; ++row)
+        for (int row = 0; row < numRows; ++row)
         {
-            for (int column = 0; column < numColumns - 1; ++column)
+            for (int column = 0; column < numColumns; ++column)
             {
-                auto topLeftVertex = mesh->getVertex(row, column);
-                auto patchComponent = std::make_unique<PatchComponent>(row, column);
+                auto patchComponent = std::make_unique<PatchComponent>(mesh->getPatch(row, column));
                 addAndMakeVisible(patchComponent.get());
                 patchComponent->toBack();
                 patchComponent->onSelect = [this](PatchComponent* patchComponent)
@@ -223,12 +178,11 @@ void InteractiveMeshGradient::createComponents()
     }
 }
 
-void InteractiveMeshGradient::buildPatches()
+void InteractiveMeshGradient::updatePatchComponents()
 {
-    for (auto& patch : patchComponents)
+    for (auto& patchComponent : patchComponents)
     {
-        auto topLeftVertex = mesh->getVertex(patch->row, patch->column);
-        patch->build(topLeftVertex);
+        patchComponent->updateOutlinePath();
     }
 }
 
@@ -241,7 +195,7 @@ void InteractiveMeshGradient::paintMesh(juce::Graphics& g)
     g.drawImageAt(meshImage, 0, 0);
 }
 
-void InteractiveMeshGradient::selectPatch(PatchComponent* patch)
+void InteractiveMeshGradient::selectPatch(PatchComponent* selectedPatchComponent)
 {
     for (auto& patchComponent : patchComponents)
     {
@@ -264,16 +218,73 @@ void InteractiveMeshGradient::selectPatch(PatchComponent* patch)
         interiorControlComponent.setVisible(false);
     }
 
-    if (!patch)
+    if (!selectedPatchComponent)
         return;
 
-    patch->toFront(true);
-    patch->selected = true;
+    selectedPatchComponent->toFront(true);
+    selectedPatchComponent->selected = true;
 
     auto vertexComponentIterator = vertexComponents.begin();
     auto bezierControlComponentIterator = bezierControlComponents.begin();
 
-    auto tail = mesh->getVertex(patch->row, patch->column);
+    auto patch = selectedPatchComponent->patch;
+    
+    for (auto placement : mescal::MeshGradient::cornerPlacements)
+    {
+        auto position = patch->getCornerPosition(placement);
+
+        (*vertexComponentIterator).patch = patch;
+        (*vertexComponentIterator).setCentrePosition(position.roundToInt());
+        (*vertexComponentIterator).setVisible(true);
+        (*vertexComponentIterator).toFront(true);
+        vertexComponentIterator++;
+
+#if 0
+        {
+            auto bezierControlPoint = vertex->bezier.getControlPoint(placement);
+            if (bezierControlPoint.has_value())
+            {
+                (*bezierControlComponentIterator).vertex = vertex;
+                (*bezierControlComponentIterator).placement = placement;
+                (*bezierControlComponentIterator).setCentrePosition(bezierControlPoint.value().toInt());
+                (*bezierControlComponentIterator).setVisible(true);
+                (*bezierControlComponentIterator).toFront(true);
+                bezierControlComponentIterator++;
+            }
+        }
+#endif
+    }
+
+#if 0
+    for (auto placement :
+        {
+            mescal::MeshGradient::EdgePlacement::left,
+            mescal::MeshGradient::EdgePlacement::bottom,
+            mescal::MeshGradient::EdgePlacement::right,
+            mescal::MeshGradient::EdgePlacement::top
+        })
+    {
+        auto bezierControlPoints = patch.getEdgeBezierControlPoints(placement);
+        if (!bezierControlPoints.has_value())
+            return;
+
+        auto bezierControlPoint0 = bezierControlPoints.value().first;
+        auto bezierControlPoint1 = bezierControlPoints.value().second;
+
+        (*bezierControlComponentIterator).setCentrePosition(bezierControlPoint0.toInt());
+        (*bezierControlComponentIterator).setVisible(true);
+        (*bezierControlComponentIterator).toFront(true);
+        bezierControlComponentIterator++;
+
+        (*bezierControlComponentIterator).setCentrePosition(bezierControlPoint1.toInt());
+        (*bezierControlComponentIterator).setVisible(true);
+        (*bezierControlComponentIterator).toFront(true);
+        bezierControlComponentIterator++;
+    }
+#endif
+
+#if 0
+    auto tail = mesh->getVertex(selectedPatchComponent->row, selectedPatchComponent->column);
 
     for (auto placement :
         {
@@ -325,6 +336,7 @@ void InteractiveMeshGradient::selectPatch(PatchComponent* patch)
 
         tail = head;
     }
+#endif
 
     repaint();
 }
@@ -348,6 +360,7 @@ void InteractiveMeshGradient::VertexComponent::mouseDrag(const juce::MouseEvent&
 
 void InteractiveMeshGradient::VertexComponent::mouseUp(const juce::MouseEvent& e)
 {
+#if 0
     if (!e.mouseWasDraggedSinceMouseDown())
     {
         if (auto v = vertex.lock())
@@ -363,6 +376,7 @@ void InteractiveMeshGradient::VertexComponent::mouseUp(const juce::MouseEvent& e
             juce::CallOutBox::launchAsynchronously(std::move(content), getScreenBounds(), nullptr);
         }
     }
+#endif
 }
 
 void InteractiveMeshGradient::VertexComponent::paint(juce::Graphics& g)
@@ -373,9 +387,9 @@ void InteractiveMeshGradient::VertexComponent::paint(juce::Graphics& g)
     g.setColour(juce::Colours::black);
     g.drawEllipse(r, 2.0f);
 
-    if (auto v = vertex.lock())
+    if (auto p = patch.lock())
     {
-        g.setColour(v->color.toColour());
+        g.setColour(p->getColor(placement).toColour());
         g.fillEllipse(r.reduced(4.0f));
     }
 }
@@ -401,8 +415,8 @@ void InteractiveMeshGradient::BezierControlComponent::paint(juce::Graphics& g)
     g.drawEllipse(r, 2.0f);
 }
 
-InteractiveMeshGradient::PatchComponent::PatchComponent(int row_, int column_) :
-    row(row_), column(column_)
+InteractiveMeshGradient::PatchComponent::PatchComponent(std::shared_ptr<mescal::MeshGradient::Patch> patch_) :
+    patch(patch_)
 {
     setRepaintsOnMouseActivity(true);
 }
@@ -457,36 +471,17 @@ void InteractiveMeshGradient::PatchComponent::paint(juce::Graphics& g)
     }
 }
 
-void InteractiveMeshGradient::PatchComponent::build(std::shared_ptr<mescal::MeshGradient::Vertex> topLeftVertex)
+void InteractiveMeshGradient::PatchComponent::buildPatch()
 {
     juce::Path outline;
 
-    auto tail = topLeftVertex;
+    auto tail = patch->getCornerPosition(mescal::MeshGradient::CornerPlacement::topRight);
+    outline.startNewSubPath(tail);
 
-    outline.startNewSubPath(topLeftVertex->position);
-
-    for (auto placement :
-        {
-            mescal::MeshGradient::Placement::bottom,
-            mescal::MeshGradient::Placement::right,
-            mescal::MeshGradient::Placement::top,
-            mescal::MeshGradient::Placement::left
-        })
+    for (auto placement : mescal::MeshGradient::cornerPlacements)
     {
-        auto head = tail->getAdjacentVertex(placement);
-
-        auto bezeirControlPoint0 = tail->bezier.getControlPoint(placement);
-        auto bezierControlPoint1 = head->bezier.getControlPoint(mescal::MeshGradient::opposite(placement));
-
-        if (bezeirControlPoint0.has_value() && bezierControlPoint1.has_value())
-        {
-            outline.cubicTo(bezeirControlPoint0.value(), bezierControlPoint1.value(), head->position);
-        }
-        else
-        {
-            outline.lineTo(head->position);
-        }
-
+        auto head = patch->getCornerPosition(placement);
+        outline.lineTo(head);
         tail = head;
     }
 
@@ -499,4 +494,23 @@ void InteractiveMeshGradient::PatchComponent::mouseUp(const juce::MouseEvent&)
     {
         onSelect(this);
     }
+}
+
+void InteractiveMeshGradient::InteriorControlComponent::mouseDown(const juce::MouseEvent& e)
+{
+
+}
+
+void InteractiveMeshGradient::InteriorControlComponent::mouseDrag(const juce::MouseEvent& e)
+{
+
+}
+
+void InteractiveMeshGradient::InteriorControlComponent::paint(juce::Graphics& g)
+{
+    auto r = getLocalBounds().toFloat().reduced(2);
+    g.setColour(juce::Colours::white);
+    g.fillEllipse(r);
+    g.setColour(juce::Colours::black);
+    g.drawEllipse(r, 2.0f);
 }

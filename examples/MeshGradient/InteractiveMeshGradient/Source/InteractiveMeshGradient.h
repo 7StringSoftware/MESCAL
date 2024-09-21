@@ -18,8 +18,7 @@ private:
         void paint(juce::Graphics& g) override;
 
         juce::ComponentDragger dragger;
-        std::weak_ptr<mescal::MeshGradient::Vertex> vertex;
-        mescal::MeshGradient::Placement placement = mescal::MeshGradient::Placement::unknown;
+        std::weak_ptr<mescal::MeshGradient::Patch> patch;
         std::function<void(BezierControlComponent&)> onChange;
     };
 
@@ -30,8 +29,8 @@ private:
         void paint(juce::Graphics& g) override;
 
         juce::ComponentDragger dragger;
-        std::weak_ptr<mescal::MeshGradient::Vertex> vertex;
-        mescal::MeshGradient::Placement placement = mescal::MeshGradient::Placement::unknown;
+//         std::weak_ptr<mescal::MeshGradient::Vertex> vertex;
+//         mescal::MeshGradient::Placement placement = mescal::MeshGradient::Placement::unknown;
         std::function<void(InteriorControlComponent&)> onChange;
     };
 
@@ -43,20 +42,21 @@ private:
         void paint(juce::Graphics& g) override;
 
         juce::ComponentDragger dragger;
-        std::weak_ptr<mescal::MeshGradient::Vertex> vertex;
+        std::weak_ptr<mescal::MeshGradient::Patch> patch;
+        mescal::MeshGradient::CornerPlacement placement = mescal::MeshGradient::CornerPlacement::unknown;
         std::function<void(VertexComponent&)> onChange;
     };
 
     struct PatchComponent : public juce::Component
     {
-        PatchComponent(int row_, int column_);
+        PatchComponent(std::shared_ptr<mescal::MeshGradient::Patch> patch_);
         bool hitTest(int x, int y) override;
         void paint(juce::Graphics& g) override;
-        void build(std::shared_ptr<mescal::MeshGradient::Vertex> topLeftVertex);
         void mouseUp(const juce::MouseEvent& e) override;
+        void updateOutlinePath();
 
-        int const row, column;
         juce::Path path;
+        std::shared_ptr<mescal::MeshGradient::Patch> patch;
         bool selected = false;
         std::function<void(PatchComponent*)> onSelect;
     };
@@ -103,7 +103,7 @@ private:
 
     void createMesh();
     void createComponents();
-    void buildPatches();
+    void updatePatchComponents();
     void paintMesh(juce::Graphics& g);
     void selectPatch(PatchComponent* patch);
     VertexComponent& getVertexComponent(int row, int column);

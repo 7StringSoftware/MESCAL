@@ -3,7 +3,7 @@ namespace mescal
 
 #ifdef __INTELLISENSE__
 
-#include "mescal_GradientMesh_windows.h"
+#include "mescal_MeshGradient_windows.h"
 
 #endif
 
@@ -36,7 +36,7 @@ namespace mescal
             }
         }
 
-        void draw(juce::Span<Stop> stops, juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor)
+        void draw(juce::Span<Stop> stops, juce::Image image, juce::AffineTransform transform, std::optional<juce::Colour> backgroundColor)
         {
             auto toPOINT_2F = [](juce::Point<float> p)
                 {
@@ -169,7 +169,10 @@ namespace mescal
                             deviceContext->SetTarget(bitmap);
                             deviceContext->BeginDraw();
                             deviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
-                            deviceContext->Clear(juce::D2DUtilities::toCOLOR_F(backgroundColor));
+                            if (backgroundColor.has_value())
+                            {
+                                deviceContext->Clear(juce::D2DUtilities::toCOLOR_F(*backgroundColor));
+                            }
 
                             deviceContext->DrawGradientMesh(gradientMesh.get());
 
@@ -215,7 +218,7 @@ namespace mescal
         sortStops();
     }
 
-    void ConicGradient::draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor)
+    void ConicGradient::draw(juce::Image image, juce::AffineTransform transform, std::optional<juce::Colour> backgroundColor)
     {
         pimpl->draw(stops, image, transform, backgroundColor);
     }

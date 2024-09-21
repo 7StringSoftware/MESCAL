@@ -62,57 +62,79 @@ struct Color128
 class MeshGradient
 {
 public:
-    MeshGradient(int numRows_, int numColumns_, std::optional<juce::Rectangle<float>> bounds = {});
+    MeshGradient(int numRows_, int numColumns_, std::optional<juce::Rectangle<float>> bounds_);
     MeshGradient() = default;
     ~MeshGradient();
 
-    enum class Placement
+    enum class EdgePlacement
     {
-        top, left, bottom, right, topLeft, bottomLeft, bottomRight, topRight, unknown = -1
+        left, bottom, right, top
     };
 
-    struct Vertex
+    enum class CornerPlacement
     {
-        Vertex(MeshGradient& owner_, int row_, int column_, juce::Point<float> position_) :
-            owner(owner_),
-            row(row_), column(column_),
-            position(position_)
-        {
-        }
+        topLeft, bottomLeft, bottomRight, topRight, unknown = -1
+    };
 
-        bool operator== (const Vertex& other) const
-        {
-            return juce::approximatelyEqual(position.x, other.position.x) && juce::approximatelyEqual(position.y, other.position.y);
-        }
+    static constexpr std::array<EdgePlacement, 4> edgePlacements
+    {
+        EdgePlacement::left,
+        EdgePlacement::bottom,
+        EdgePlacement::right,
+        EdgePlacement::top
+    };
 
-        std::shared_ptr<Vertex> getAdjacentVertex(Placement placement) const;
+    static constexpr std::array<CornerPlacement, 4> cornerPlacements
+    {
+        CornerPlacement::topLeft,
+        CornerPlacement::bottomLeft,
+        CornerPlacement::bottomRight,
+        CornerPlacement::topRight
+    };
 
-        MeshGradient& owner;
+    static constexpr std::array<size_t, 4> cornerIndices
+    {
+        0, 4 * 3 + 0, 4 * 3 + 3, 4 * 0 + 3
+    };
+
+    struct MatrixPosition
+    {
+        int row, column;
+    };
+
+    using BezierControlPair = std::pair<juce::Point<float>, juce::Point<float>>;
+
+    struct Edge
+    {
+        juce::Point<float> tail;
+        BezierControlPair bezierControlPoints;
+        juce::Point<float> head;
+    };
+
+    struct Patch
+    {
+        Patch(MeshGradient& owner_, int row_, int column_);
+
         int const row, column;
-        juce::Point<float> position;
-        Color128 color;
+        MeshGradient& owner;
 
-        struct BezierControlPoints
-        {
-            std::optional<juce::Point<float>> topControlPoint;
-            std::optional<juce::Point<float>> leftControlPoint;
-            std::optional<juce::Point<float>> bottomControlPoint;
-            std::optional<juce::Point<float>> rightControlPoint;
+        void setBounds(juce::Rectangle<float> rect);
 
-            std::optional<juce::Point<float>> getControlPoint(Placement placement) const;
-            void setControlPoint(Placement placement, juce::Point<float> point);
-        } bezier;
+        juce::Point<float> getPosition(int matrixRow, int matrixColumn) const noexcept;
+        juce::Point<float> getCornerPosition(CornerPlacement placement) const noexcept;
+        void setPosition(int matrixRow, int matrixColumn, juce::Point<float> position);
+        void setCornerPosition(CornerPlacement placement, juce::Point<float> position);
 
-        struct InteriorControlPoints
-        {
-            std::optional<juce::Point<float>> topLeftControlPoint;
-            std::optional<juce::Point<float>> bottomLeftControlPoint;
-            std::optional<juce::Point<float>> bottomRightControlPoint;
-            std::optional<juce::Point<float>> topRightControlPoint;
+        void setColor(CornerPlacement placement, juce::Colour color);
+        Color128 getColor(CornerPlacement placement) const noexcept;
 
-            std::optional<juce::Point<float>> getControlPoint(Placement placement) const;
-            void setControlPoint(Placement placement, juce::Point<float> point);
-        } interior;
+        void setEdge(EdgePlacement placement, Edge edge);
+        Edge getEdge(EdgePlacement placement) const noexcept;
+
+        std::array<juce::Point<float>, 16> points;
+        std::array<Color128, 4> colors;
+
+        static constexpr size_t numMatrixColumns = 4;
     };
 
     int getNumRows() const
@@ -125,6 +147,7 @@ public:
         return numColumns;
     }
 
+#if 0
     static Placement opposite(Placement placement)
     {
         return static_cast<Placement>((static_cast<int>(placement) + 2) % 4);
@@ -134,6 +157,17 @@ public:
     auto const& getVertices() const
     {
         return vertices;
+    }
+#endif
+
+    auto const& getPatches() const noexcept
+    {
+        return patches;
+    }
+
+    std::shared_ptr<Patch> getPatch(int row, int column)
+    {
+        return patches[row * numColumns + column];
     }
 
     juce::Rectangle<float> getBounds() const noexcept;
@@ -146,7 +180,7 @@ private:
     int const numRows;
     int const numColumns;
 
-    std::vector<std::shared_ptr<Vertex>> vertices;
+    std::vector<std::shared_ptr<Patch>> patches;
 
     struct Pimpl;
     std::unique_ptr<Pimpl> pimpl;

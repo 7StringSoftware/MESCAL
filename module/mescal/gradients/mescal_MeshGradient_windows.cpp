@@ -31,8 +31,8 @@ namespace mescal
                 P01
             /
             P00--------------------P03
-        / |                    / | \
-        P10  |                  P02 |  P13
+        /   |                    / | \
+        P10 |                  P02 |  P13
             |                      |
             |     P11     P12      |
             |                      |
@@ -49,7 +49,7 @@ namespace mescal
 
 #ifdef __INTELLISENSE__
 
-#include "mescal_GradientMesh_windows.h"
+#include "mescal_MeshGradient_windows.h"
 
 #endif
 
@@ -93,31 +93,41 @@ namespace mescal
         numRows(numRows_),
         numColumns(numColumns_)
     {
-        jassert(numRows_ > 1);
-        jassert(numColumns_ > 1);
+        jassert(numRows_ > 0);
+        jassert(numColumns_ > 0);
 
         float rowHeight = 1.0f;
         float columnWidth = 1.0f;
-        auto numVertices = numRows_ * numColumns_;
-        vertices.clear();
-        vertices.reserve(numVertices);
+
+        for (int row = 0; row < numRows_; ++row)
+        {
+            for (int column = 0; column < numColumns_; ++column)
+            {
+                patches.emplace_back(std::make_shared<Patch>(*this, row, column));
+            }
+        }
+
         float startX = 0.0f, startY = 0.0f;
 
         if (bounds.has_value())
         {
             startX = bounds->getX();
             startY = bounds->getY();
-            rowHeight = bounds->getHeight() / (numRows_ - 1);
-            columnWidth = bounds->getWidth() / (numColumns_ - 1);
-        }
+            rowHeight = bounds->getHeight() / numRows_;
+            columnWidth = bounds->getWidth() / numColumns_;
 
-        for (int row = 0; row < numRows_; ++row)
-        {
-            for (int column = 0; column < numColumns_; ++column)
+            float y = startY;
+            for (int row = 0; row < numRows_; ++row)
             {
-                auto x = column * columnWidth + startX;
-                auto y = row * rowHeight + startY;
-                vertices.push_back(std::make_shared<Vertex>(*this, row, column, juce::Point<float>{x, y}));
+                float x = startX;
+                for (int column = 0; column < numColumns_; ++column)
+                {
+                    getPatch(row, column)->setBounds({ x, y, columnWidth, rowHeight });
+
+                    x += columnWidth;
+                }
+
+                y += rowHeight;
             }
         }
     }
@@ -131,162 +141,65 @@ namespace mescal
         jassertfalse;
     }
 
-    std::shared_ptr<MeshGradient::Vertex> MeshGradient::getVertex(int row, int column)
+    MeshGradient::Patch::Patch(MeshGradient& owner_, int row_, int column_) :
+        owner(owner_),
+        row(row_),
+        column(column_)
     {
-        if (row < 0 || row >= numRows || column < 0 || column >= numColumns)
-            return {};
-
-        return vertices[row * numColumns + column];
     }
 
-    std::shared_ptr<MeshGradient::Vertex> MeshGradient::Vertex::getAdjacentVertex(Placement placement) const
+    void MeshGradient::Patch::setBounds(juce::Rectangle<float> rect)
     {
-        switch (placement)
-        {
-        case Placement::top:
-            return owner.getVertex(row - 1, column);
-
-        case Placement::left:
-            return owner.getVertex(row, column - 1);
-
-        case Placement::bottom:
-            return owner.getVertex(row + 1, column);
-
-        case Placement::right:
-            return owner.getVertex(row, column + 1);
-        }
-
-        jassertfalse;
-        return {};
+        setCornerPosition(mescal::MeshGradient::CornerPlacement::topLeft, rect.getTopLeft());
+        setCornerPosition(mescal::MeshGradient::CornerPlacement::topRight, rect.getTopRight());
+        setCornerPosition(mescal::MeshGradient::CornerPlacement::bottomLeft, rect.getBottomLeft());
+        setCornerPosition(mescal::MeshGradient::CornerPlacement::bottomRight, rect.getBottomRight());
     }
 
-    std::optional<juce::Point<float>> MeshGradient::Vertex::BezierControlPoints::getControlPoint(Placement placement) const
+    juce::Point<float> MeshGradient::Patch::getPosition(int matrixRow, int matrixColumn) const noexcept
     {
-        switch (placement)
-        {
-        case Placement::top:
-            return topControlPoint;
-
-        case Placement::left:
-            return leftControlPoint;
-
-        case Placement::bottom:
-            return bottomControlPoint;
-
-        case Placement::right:
-            return rightControlPoint;
-        }
-
-        jassertfalse;
-        return {};
+        return points[matrixRow * numMatrixColumns + matrixColumn];
     }
 
-    void MeshGradient::Vertex::BezierControlPoints::setControlPoint(Placement placement, juce::Point<float> point)
+    juce::Point<float> MeshGradient::Patch::getCornerPosition(CornerPlacement placement) const noexcept
     {
-        switch (placement)
-        {
-        case Placement::top:
-            topControlPoint = point;
-            break;
-
-        case Placement::left:
-            leftControlPoint = point;
-            break;
-
-        case Placement::bottom:
-            bottomControlPoint = point;
-            break;
-
-        case Placement::right:
-            rightControlPoint = point;
-            break;
-
-        default:
-            jassertfalse;
-            break;
-        }
+        auto index = cornerIndices[(size_t)placement];
+        return points[index];
     }
 
-    std::optional<juce::Point<float>> MeshGradient::Vertex::InteriorControlPoints::getControlPoint(Placement placement) const
+    void MeshGradient::Patch::setPosition(int matrixRow, int matrixColumn, juce::Point<float> position)
     {
-        switch (placement)
-        {
-        case Placement::topLeft:
-            return topLeftControlPoint;
-
-        case Placement::bottomLeft:
-            return bottomLeftControlPoint;
-
-        case Placement::bottomRight:
-            return bottomRightControlPoint;
-
-        case Placement::topRight:
-            return topRightControlPoint;
-        }
-
-        jassertfalse;
-        return {};
+        points[matrixRow * numMatrixColumns + matrixColumn] = position;
     }
 
-    void MeshGradient::Vertex::InteriorControlPoints::setControlPoint(Placement placement, juce::Point<float> point)
+    void MeshGradient::Patch::setCornerPosition(CornerPlacement placement, juce::Point<float> position)
     {
-        switch (placement)
-        {
-        case Placement::topLeft:
-            topLeftControlPoint = point;
-            break;
+        auto index = cornerIndices[(size_t)placement];
+        points[index] = position;
+    }
 
-        case Placement::bottomLeft:
-            bottomLeftControlPoint = point;
-            break;
+    Color128 MeshGradient::Patch::getColor(CornerPlacement placement) const noexcept
+    {
+        return colors[(size_t)placement];
+    }
 
-        case Placement::bottomRight:
-            bottomRightControlPoint = point;
-            break;
+    void MeshGradient::Patch::setColor(CornerPlacement placement, juce::Colour color)
+    {
+        colors[(size_t)placement] = color;
+    }
 
-        case MeshGradient::Placement::topRight:
-            topRightControlPoint = point;
-            break;
-        }
+    void MeshGradient::Patch::setEdge(EdgePlacement placement, Edge edge)
+    {
+        
+    }
+
+    MeshGradient::Edge MeshGradient::Patch::getEdge(EdgePlacement placement) const noexcept
+    {
+
     }
 
     void MeshGradient::draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor)
     {
-        auto vertexToPOINT_2F = [&](int row, int column)
-            {
-                auto vertex = getVertex(row, column);
-                auto transformedPoint = vertex->position.transformedBy(transform);
-                return D2D1_POINT_2F{ transformedPoint.x, transformedPoint.y };
-            };
-
-        auto bezierToPOINT_2F = [&](std::shared_ptr<Vertex> vertex, Placement placement, D2D1_POINT_2F& point2F)
-            {
-                auto controlPoint = vertex->bezier.getControlPoint(placement);
-                if (controlPoint.has_value())
-                {
-                    auto transformedPoint = controlPoint.value().transformedBy(transform);
-                    point2F = D2D1_POINT_2F{ transformedPoint.x, transformedPoint.y };
-                }
-                else
-                {
-                    point2F = D2D1_POINT_2F{ vertex->position.x, vertex->position.y };
-                }
-            };
-
-        auto interiorToPOINT_2F = [&](std::shared_ptr<Vertex> vertex, Placement placement, D2D1_POINT_2F& point2F)
-            {
-                auto controlPoint = vertex->interior.getControlPoint(placement);
-                if (controlPoint.has_value())
-                {
-                    auto transformedPoint = controlPoint.value().transformedBy(transform);
-                    point2F = D2D1_POINT_2F{ transformedPoint.x, transformedPoint.y };
-                }
-                else
-                {
-                    point2F = D2D1_POINT_2F{ vertex->position.x, vertex->position.y };
-                }
-            };
-
         auto pointToPOINT_2F = [&](juce::Point<float> p)
             {
                 p = p.transformedBy(transform);
@@ -298,52 +211,49 @@ namespace mescal
                 return D2D1::ColorF(color.red, color.green, color.blue, color.alpha);
             };
 
-        std::vector<D2D1_GRADIENT_MESH_PATCH> d2dPatches;
-        d2dPatches.reserve(numRows * numColumns);
-        for (int row = 0; row < numRows - 1; ++row)
+        std::vector<D2D1_GRADIENT_MESH_PATCH> d2dPatches{ patches.size(), D2D1_GRADIENT_MESH_PATCH{} };
+        auto d2dPatchIterator = d2dPatches.begin();
+        for (auto const patch : patches)
         {
-            for (int column = 0; column < numColumns - 1; ++column)
+            auto& d2dPatch = *d2dPatchIterator++;
+            std::array<D2D1_POINT_2F*, 16> d2dPoints
             {
-                d2dPatches.emplace_back(D2D1_GRADIENT_MESH_PATCH{});
-                auto& d2dPatch = d2dPatches.back();
-                auto vertex = getVertex(row, column);
+                &d2dPatch.point00, &d2dPatch.point01, &d2dPatch.point02, &d2dPatch.point03,
+                &d2dPatch.point10, &d2dPatch.point11, &d2dPatch.point12, &d2dPatch.point13,
+                &d2dPatch.point20, &d2dPatch.point21, &d2dPatch.point22, &d2dPatch.point23,
+                &d2dPatch.point30, &d2dPatch.point31, &d2dPatch.point32, &d2dPatch.point33
+            };
 
-                auto topLeft = getVertex(row, column);
-                auto topRight = getVertex(row, column + 1);
-                auto bottomRight = getVertex(row + 1, column + 1);
-                auto bottomLeft = getVertex(row + 1, column);
+            auto pointIterator = d2dPoints.begin();
+            for (auto point : patch->points)
+            {
+                **pointIterator++ = pointToPOINT_2F(point);
+            }
 
-                d2dPatch.point00 = pointToPOINT_2F(topLeft->position);
-                d2dPatch.point03 = pointToPOINT_2F(topRight->position);
-                d2dPatch.point30 = pointToPOINT_2F(bottomLeft->position);
-                d2dPatch.point33 = pointToPOINT_2F(bottomRight->position);
+            d2dPatch.point01 = d2dPatch.point00;
+            d2dPatch.point02 = d2dPatch.point03;
+            d2dPatch.point10 = d2dPatch.point00;
+            d2dPatch.point20 = d2dPatch.point30;
+            d2dPatch.point13 = d2dPatch.point03;
+            d2dPatch.point23 = d2dPatch.point33;
+            d2dPatch.point31 = d2dPatch.point30;
+            d2dPatch.point32 = d2dPatch.point33;
 
-                bezierToPOINT_2F(topLeft, Placement::right, d2dPatch.point01);
-                bezierToPOINT_2F(topLeft, Placement::bottom, d2dPatch.point10);
+            d2dPatch.point11 = d2dPatch.point00;
+            d2dPatch.point12 = d2dPatch.point03;
+            d2dPatch.point21 = d2dPatch.point30;
+            d2dPatch.point22 = d2dPatch.point33;
 
-                bezierToPOINT_2F(topRight, Placement::left, d2dPatch.point02);
-                bezierToPOINT_2F(topRight, Placement::bottom, d2dPatch.point13);
+            std::array < D2D1_COLOR_F*, 4> d2dColors
+            {
+                &d2dPatch.color00, &d2dPatch.color30, &d2dPatch.color33, &d2dPatch.color03
+            };
 
-                bezierToPOINT_2F(bottomLeft, Placement::top, d2dPatch.point20);
-                bezierToPOINT_2F(bottomLeft, Placement::right, d2dPatch.point31);
-
-                bezierToPOINT_2F(bottomRight, Placement::top, d2dPatch.point23);
-                bezierToPOINT_2F(bottomRight, Placement::left, d2dPatch.point32);
-
-                interiorToPOINT_2F(topLeft, Placement::bottomRight, d2dPatch.point11);
-                interiorToPOINT_2F(bottomLeft, Placement::topRight, d2dPatch.point12);
-                interiorToPOINT_2F(bottomRight, Placement::topLeft, d2dPatch.point21);
-                interiorToPOINT_2F(topRight, Placement::bottomLeft, d2dPatch.point22);
-
-                d2dPatch.color00 = toCOLOR_F(topLeft->color);
-                d2dPatch.color03 = toCOLOR_F(topRight->color);
-                d2dPatch.color30 = toCOLOR_F(bottomLeft->color);
-                d2dPatch.color33 = toCOLOR_F(bottomRight->color);
-
-                d2dPatch.topEdgeMode = (row == 0) ? D2D1_PATCH_EDGE_MODE_ANTIALIASED : D2D1_PATCH_EDGE_MODE_ALIASED;
-                d2dPatch.leftEdgeMode = (column == 0) ? D2D1_PATCH_EDGE_MODE_ANTIALIASED : D2D1_PATCH_EDGE_MODE_ALIASED;
-                d2dPatch.bottomEdgeMode = (row >= numRows - 2) ? D2D1_PATCH_EDGE_MODE_ANTIALIASED : D2D1_PATCH_EDGE_MODE_ALIASED;
-                d2dPatch.rightEdgeMode = (column >= numColumns - 2) ? D2D1_PATCH_EDGE_MODE_ANTIALIASED : D2D1_PATCH_EDGE_MODE_ALIASED;
+            auto colorIterator = d2dColors.begin();
+            for (auto color : patch->colors)
+            {
+                **colorIterator = toCOLOR_F(color);
+                colorIterator++;
             }
         }
 
@@ -433,8 +343,8 @@ namespace mescal
         */
 
 
-}
+    }
 #endif
 
 
-    } // namespace mescal
+} // namespace mescal
