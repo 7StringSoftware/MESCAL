@@ -13,32 +13,17 @@ namespace mescal
         {
         }
 
-        void createResources()
+        void createD2DEffect()
         {
-            juce::SharedResourcePointer<juce::DirectX> directX;
-
-            if (!adapter)
+            if (auto hr = resources->create(); FAILED(hr))
             {
-                adapter = directX->adapters.getDefaultAdapter();
+                jassertfalse;
+                return;
             }
 
-            if (adapter && !deviceContext)
+            if (!d2dEffect)
             {
-                winrt::com_ptr<ID2D1DeviceContext1> deviceContext1;
-                if (const auto hr = adapter->direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS,
-                    deviceContext1.put());
-                    FAILED(hr))
-                {
-                    jassertfalse;
-                    return;
-                }
-
-                deviceContext = deviceContext1.as<ID2D1DeviceContext2>();
-            }
-
-            if (deviceContext && !d2dEffect)
-            {
-                if (const auto hr = deviceContext->CreateEffect(*effectGuids[(size_t)effectType], d2dEffect.put());
+                if (const auto hr = resources->deviceContext->CreateEffect(*effectGuids[(size_t)effectType], d2dEffect.put());
                     FAILED(hr))
                 {
                     jassertfalse;
@@ -60,19 +45,6 @@ namespace mescal
                 maxNumInputs = juce::jmin(2u, maxNumInputs);
 
                 inputs.resize(maxNumInputs);
-
-#if 0
-                if (effectType == Type::spotSpecularLighting)
-                {
-                    static bool go = true;
-                    if (go)
-                    {
-                        go = false;
-                        dumpPropertiesRecursive(d2dEffect.get(), SpotSpecular::lightPosition);
-
-                    }
-                }
-#endif
             }
         }
 
@@ -179,7 +151,7 @@ namespace mescal
         int getNumProperties()
         {
             if (!d2dEffect)
-                createResources();
+                createD2DEffect();
 
             if (!d2dEffect)
                 return 0;
@@ -192,7 +164,7 @@ namespace mescal
             WCHAR nameBuffer[256];
 
             if (!d2dEffect)
-                createResources();
+                createD2DEffect();
 
             if (!d2dEffect)
                 return {};
@@ -282,7 +254,7 @@ namespace mescal
             [[maybe_unused]] HRESULT hr = S_OK;
 
             if (!d2dEffect)
-                createResources();
+                createD2DEffect();
 
             if (!d2dEffect)
                 return;
@@ -341,7 +313,7 @@ namespace mescal
         PropertyValue getProperty(int index)
         {
             if (!d2dEffect)
-                createResources();
+                createD2DEffect();
 
             if (!d2dEffect)
                 return {};
@@ -422,8 +394,44 @@ namespace mescal
         }
 
         Type effectType;
-        juce::DxgiAdapter::Ptr adapter;
-        winrt::com_ptr<ID2D1DeviceContext2> deviceContext;
+
+        struct Resources
+        {
+            HRESULT create()
+            {
+                if (!adapter)
+                {
+                    adapter = directX->adapters.getDefaultAdapter();
+                }
+
+                if (adapter && !deviceContext)
+                {
+                    winrt::com_ptr<ID2D1DeviceContext1> deviceContext1;
+                    if (const auto hr = adapter->direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS,
+                        deviceContext1.put());
+                        FAILED(hr))
+                    {
+                        jassertfalse;
+                        return hr;
+                    }
+
+                    deviceContext = deviceContext1.as<ID2D1DeviceContext2>();
+                }
+
+                return S_OK;
+            }
+
+            void release()
+            {
+                deviceContext = nullptr;
+                adapter = nullptr;
+            }
+
+            juce::SharedResourcePointer<juce::DirectX> directX;
+            juce::DxgiAdapter::Ptr adapter;
+            winrt::com_ptr<ID2D1DeviceContext2> deviceContext;
+        };
+        juce::SharedResourcePointer<Resources> resources;
         winrt::com_ptr<ID2D1Effect> d2dEffect;
         std::vector<Effect::Input> inputs;
 
@@ -454,7 +462,7 @@ namespace mescal
         effectType(effectType_),
         pimpl(std::make_shared<Pimpl>(effectType_))
     {
-        pimpl->createResources();
+        pimpl->createD2DEffect();
     }
 
     Effect::Effect(const Effect& other) :
@@ -480,7 +488,7 @@ namespace mescal
 
     juce::String Effect::getName() const noexcept
     {
-        pimpl->createResources();
+        pimpl->createD2DEffect();
 
         if (pimpl->d2dEffect)
         {
@@ -561,8 +569,8 @@ namespace mescal
 
     void Effect::applyEffect(juce::Image& outputImage, const juce::AffineTransform& transform, bool clearDestination)
     {
-        pimpl->createResources();
-        if (!pimpl->deviceContext || !pimpl->adapter || !pimpl->adapter->dxgiAdapter || !pimpl->d2dEffect)
+        pimpl->createD2DEffect();
+        if (!pimpl->d2dEffect)
         {
             return;
         }
@@ -575,16 +583,16 @@ namespace mescal
 
         Pimpl::setInputsRecursive(pimpl.get());
 
-        pimpl->deviceContext->SetTarget(outputPixelData->getAdapterD2D1Bitmap());
-        pimpl->deviceContext->BeginDraw();
+        pimpl->resources->deviceContext->SetTarget(outputPixelData->getAdapterD2D1Bitmap());
+        pimpl->resources->deviceContext->BeginDraw();
         if (clearDestination)
-            pimpl->deviceContext->Clear();
+            pimpl->resources->deviceContext->Clear();
 
         if (!transform.isIdentity())
-            pimpl->deviceContext->SetTransform(juce::D2DUtilities::transformToMatrix(transform));
+            pimpl->resources->deviceContext->SetTransform(juce::D2DUtilities::transformToMatrix(transform));
 
-        pimpl->deviceContext->DrawImage(pimpl->d2dEffect.get());
-        [[maybe_unused]] auto hr = pimpl->deviceContext->EndDraw();
+        pimpl->resources->deviceContext->DrawImage(pimpl->d2dEffect.get());
+        [[maybe_unused]] auto hr = pimpl->resources->deviceContext->EndDraw();
         jassert(SUCCEEDED(hr));
     }
 

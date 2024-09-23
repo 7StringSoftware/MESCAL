@@ -54,9 +54,10 @@ public:
         return juce::roundToInt(radius);
     }
 
+    void drawLabel(juce::Graphics& g, juce::Label& label) override;
+
 private:
     static mescal::Effect::Ptr addShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform);
-    static mescal::Effect::Ptr createInnerShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform);
 
     static mescal::Effect::Ptr create3DInnerShadow(juce::Image const& sourceImage,
         juce::Colour topColor,
@@ -65,8 +66,54 @@ private:
         juce::AffineTransform bottomShadowTransform,
         float shadowSize);
 
-    void paint3DButtonImages(juce::Colour backgroundColor, bool buttonHighlighted, bool buttonDown);
-    mescal::Effect::Ptr create3DButtonEffectGraph(bool buttonDown, bool buttonHighlighted);
+    std::vector<juce::Image> images;
+    juce::Image& getImage(int index, juce::Rectangle<int> size);
+    juce::Image& getImage(int index, juce::Rectangle<float> size)
+    {
+        return getImage(index, size.toNearestIntEdges());
+    }
+
+    void clearImage(juce::Graphics& g);
+
+    juce::Image trackImage{ juce::Image::ARGB, 1024, 1024, true };
+    juce::Image outputImage{ juce::Image::ARGB, 1024, 1024, true };
+
+    struct InnerShadow
+    {
+        mescal::Effect::Ptr flood = mescal::Effect::create(mescal::Effect::Type::flood);
+        mescal::Effect::Ptr arithmeticComposite = mescal::Effect::create(mescal::Effect::Type::arithmeticComposite);
+        mescal::Effect::Ptr upperShadow = mescal::Effect::create(mescal::Effect::Type::shadow);
+        mescal::Effect::Ptr upperTransform = mescal::Effect::create(mescal::Effect::Type::affineTransform2D);
+        mescal::Effect::Ptr lowerShadow = mescal::Effect::create(mescal::Effect::Type::shadow);
+        mescal::Effect::Ptr lowerTransform = mescal::Effect::create(mescal::Effect::Type::affineTransform2D);
+        mescal::Effect::Ptr  blend = mescal::Effect::create(mescal::Effect::Type::blend);
+        mescal::Effect::Ptr alphaMask = mescal::Effect::create(mescal::Effect::Type::alphaMask);
+
+        void configure(juce::Image const& sourceImage,
+            juce::Colour topColor,
+            juce::AffineTransform topShadowTransform,
+            juce::Colour bottomColor,
+            juce::AffineTransform bottomShadowTransform,
+            float shadowSize);
+
+        auto getEffect() const
+        {
+            return alphaMask;
+        }
+    } innerShadow;
+
+    struct DropShadow
+    {
+        mescal::Effect::Ptr shadow = mescal::Effect::create(mescal::Effect::Type::shadow);
+        mescal::Effect::Ptr transformEffect = mescal::Effect::create(mescal::Effect::Type::affineTransform2D);
+
+        void configure(juce::Image const& sourceImage, juce::Colour shadowColor, float shadowSize, juce::AffineTransform transform);
+
+        auto getEffect() const
+        {
+            return transformEffect;
+        }
+    } dropShadow;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MescalLookAndFeel)
 };

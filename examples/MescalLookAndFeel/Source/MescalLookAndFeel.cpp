@@ -14,6 +14,9 @@ MescalLookAndFeel::MescalLookAndFeel()
 
 void MescalLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button, const juce::Colour& backgroundColour, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
 {
+    return juce::LookAndFeel_V4::drawButtonBackground(g, button, backgroundColour, shouldDrawButtonAsHighlighted, shouldDrawButtonAsDown);
+
+#if 0
     juce::Image buttonImage{ juce::Image::ARGB, button.getWidth(), button.getHeight(), true };
     juce::Image outputImage{ juce::Image::ARGB, button.getWidth(), button.getHeight(), true };
 
@@ -90,200 +93,55 @@ void MescalLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& bu
 
     outputEffect->applyEffect(outputImage, {}, false);
     g.drawImageAt(outputImage, 0, 0);
-
-}
-
-void MescalLookAndFeel::paint3DButtonImages(juce::Colour backgroundColor, bool buttonHighlighted, bool buttonDown)
-{
-#if 0
-    /*
-
-    background gradient: #bdc1cc to #e7ebee linearly vertically
-
-    ellipse 185px: 50% gray (#959595), overlaid with gradient #d7dae1 to #cad0d8, inner shadow #c5c8ce, drop shadow #dde0e7
-    ellipse 150px: #5d5d5d, overlaid with a gradient #b0b4bf to #cdd0d7 to #dee1e6 to #f5f6fa
-
-    ellipse 85px: #2c2c2c, overlaid with color #d4d8e3, drop shadow #e4f0ff, inner shadow #b5b5b5
-
-    ellipse 150px copy + clear layer style, then: drop shadow with black
-
-    blank layer above ellipse 185px, clipped to ellipse 185px: upper right quadrant filled with 50%gray (#959
-
-    */
-    auto bottomLayerRect = images.front().getBounds().toFloat();
-    float cornerProportion = 0.1f;
-
-    //
-    // Bottom layer
-    //
-    auto middleLayerXReduction = bottomLayerRect.getWidth() * 0.03f;
-    auto middleLayerYReduction = bottomLayerRect.getHeight() * 0.06f;
-
-    {
-        auto bottomImage = images.front();
-        juce::Graphics g{ bottomImage };
-        auto outlineColor = findColour(juce::ComboBox::ColourIds::outlineColourId);
-
-        if (middleLayerXReduction >= 2.0f && middleLayerYReduction >= 2.0f)
-        {
-            g.setColour(juce::Colours::transparentBlack);
-            g.getInternalContext().fillRect(bottomImage.getBounds(), true);
-
-            //g.setColour(juce::Colour{ 0xff959595 });
-            //g.fillRoundedRectangle(bottomLayerRect, cornerProportion * bottomLayerRect.getHeight());
-
-            {
-                //auto gradient = ;
-                auto topColor = outlineColor.withMultipliedLightness(1.0f);
-                auto bottomColor = outlineColor.withMultipliedLightness(1.2f);
-                g.setGradientFill(juce::ColourGradient::vertical(topColor, 0, bottomColor, (float)bottomImage.getHeight()));
-                //g.fillEllipse(bottomLayerRect);
-                g.fillRoundedRectangle(bottomLayerRect, cornerProportion * bottomLayerRect.getHeight());
-            }
-        }
-        else
-        {
-            g.setColour(outlineColor);
-            g.getInternalContext().fillRect(bottomImage.getBounds(), true);
-
-            middleLayerXReduction = 0.0f;
-            middleLayerYReduction = 0.0f;
-        }
-    }
-
-    //
-    // Middle layer
-    //
-    if (buttonDown)
-        bottomLayerRect.reduce(bottomLayerRect.proportionOfWidth(0.025f), bottomLayerRect.proportionOfHeight(0.025f));
-
-    {
-        auto middleEllipseImage = images[1];
-        juce::Graphics g{ middleEllipseImage };
-        g.setColour(juce::Colours::transparentBlack);
-        g.getInternalContext().fillRect(middleEllipseImage.getBounds(), true);
-
-        auto middleLayerRect = bottomLayerRect.reduced(middleLayerXReduction, middleLayerYReduction);
-
-        auto midColor = backgroundColor;
-
-        g.setColour(backgroundColor);
-        g.fillRoundedRectangle(middleLayerRect, cornerProportion * middleLayerRect.getHeight());
-
-        //         auto topColor = juce::Colour{ 0xfff5f6fa };//color.withMultipliedBrightness(3.0f);
-        //         auto topMidColor = juce::Colour{ 0xffdee1e6 };
-        //         auto bottomMidColor = juce::Colour{ 0xffcdd0d7 };
-        //         auto bottomColor = juce::Colour{ 0xffb0b4bf };
-                //b0b4bf to #cdd0d7 to #dee1e6 to #f5f6fa
-
-        auto topColor = midColor.withMultipliedBrightness(1.1f);
-        auto topMidColor = midColor.withMultipliedBrightness(1.05f);
-        auto bottomMidColor = midColor.withMultipliedBrightness(0.95f);
-        auto bottomColor = midColor.withMultipliedBrightness(0.9f);
-
-        {
-            juce::Graphics::ScopedSaveState saveState{ g };
-            auto gradient = juce::ColourGradient::vertical(
-                topColor, 0,
-                bottomColor, (float)middleEllipseImage.getHeight());
-
-            gradient.addColour(0.33f, topMidColor);
-            gradient.addColour(0.66f, bottomMidColor);
-            g.setGradientFill(gradient);
-            g.fillRoundedRectangle(middleLayerRect, cornerProportion * middleLayerRect.getHeight());
-        }
-    }
-
-    //
-    // Top layer
-    //
-    {
-        auto topImage = images[2];
-        juce::Graphics g{ topImage };
-
-        auto topLayerRect = bottomLayerRect.reduced(bottomLayerRect.getWidth() * 0.08f);
-
-        {
-            auto topColor = juce::Colour{ 0xffdcdae1 };
-            auto bottomColor = juce::Colour{ 0xffd0d0d8 };
-
-            auto gradient = juce::ColourGradient::vertical(topColor, 0, bottomColor, (float)topImage.getHeight());
-            g.setGradientFill(gradient);
-            g.fillRoundedRectangle(topLayerRect, cornerProportion * topLayerRect.getHeight());
-        }
-    }
 #endif
+
 }
 
-
-mescal::Effect::Ptr  MescalLookAndFeel::create3DButtonEffectGraph(bool buttonDown, bool buttonHighlighted)
+void MescalLookAndFeel::drawLabel(juce::Graphics& g, juce::Label& label)
 {
-#if 0
-    auto bottomImage = images.front();
-    auto middleLayerImage = images[1];
-    auto topImage = images[2];
+    juce::Image sliderImage{ juce::Image::ARGB, label.getWidth(), label.getHeight(), true };
 
-    //
-    // Middle layer outer shadow
-    //
-    auto outlineColor = findColour(juce::ComboBox::ColourIds::outlineColourId);
-    auto shadowColor = outlineColor.withMultipliedBrightness(0.1f);
-    auto shadowTranslate = (float)middleLayerImage.getHeight() * 0.08f;
-
-    mescal::Effect::Ptr shadowEffect = new mescal::Effect{ mescal::Effect::Type::shadow };
-    shadowEffect->setInput(0, middleLayerImage);
-    shadowEffect->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, (float)middleLayerImage.getHeight() * 0.08f);
-    shadowEffect->setPropertyValue(mescal::Effect::Shadow::color, mescal::colourToVector4(shadowColor));
-
-    mescal::Effect::Ptr middleLayerOuterShadowTransform = new mescal::Effect{ mescal::Effect::Type::affineTransform2D };
-    middleLayerOuterShadowTransform->setInput(0, shadowEffect);
-    middleLayerOuterShadowTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, juce::AffineTransform::translation(0.0f, shadowTranslate));
-
-    mescal::Effect::Ptr middleLayerShadowComposite = new mescal::Effect{ mescal::Effect::Type::composite };
-    middleLayerShadowComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceOver);
-    middleLayerShadowComposite->setInput(0, middleLayerOuterShadowTransform);
-    middleLayerShadowComposite->setInput(1, middleLayerImage);
-
-    mescal::Effect::Ptr bottomMiddleComposite = new mescal::Effect{ mescal::Effect::Type::composite };
-    bottomMiddleComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
-    bottomMiddleComposite->setInput(0, bottomImage);
-
-    if (buttonHighlighted)
     {
-        mescal::Effect::Ptr glow = new mescal::Effect{ mescal::Effect::Type::shadow };
-        glow->setInput(0, middleLayerShadowComposite);
-        glow->setPropertyValue(mescal::Effect::Shadow::color, outlineColor.contrasting());
-
-        mescal::Effect::Ptr highlightComposite = new mescal::Effect{ mescal::Effect::Type::composite };
-        highlightComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
-        highlightComposite->setInput(0, glow);
-        highlightComposite->setInput(1, middleLayerShadowComposite);
-
-        bottomMiddleComposite->setInput(1, highlightComposite);
-    }
-    else
-    {
-        bottomMiddleComposite->setInput(1, middleLayerShadowComposite);
+        juce::Graphics imageG{ sliderImage };
+        label.findColour(juce::Label::backgroundColourId);
+        imageG.fillRect(sliderImage.getBounds());
     }
 
-    auto shadowTransform = juce::AffineTransform::scale(1.1f, 1.f, (float)topImage.getWidth() * 0.5f, (float)topImage.getHeight() * 0.5f);
-    auto innerShadow = createInnerShadow(topImage, juce::Colour{ 0xffb5b5b5 }, (float)topImage.getHeight() * 0.15f, shadowTransform);
+    auto innerShadowSize = 1.0f;
+    innerShadow.configure(sliderImage,
+        juce::Colours::black.withAlpha(0.25f),
+        juce::AffineTransform::translation(innerShadowSize * 2.0f, innerShadowSize * 2.0f),
+        juce::Colours::white,
+        juce::AffineTransform::translation(-innerShadowSize, -innerShadowSize),
+        innerShadowSize);
 
-    mescal::Effect::Ptr topLayerComposite = new mescal::Effect{ mescal::Effect::Type::composite };
-    topLayerComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceOver);
-    topLayerComposite->setInput(0, topImage);
-    topLayerComposite->setInput(1, innerShadow);
+    juce::Image outputImage{ juce::Image::ARGB, label.getWidth(), label.getHeight(), true };
+    innerShadow.getEffect()->applyEffect(outputImage, {}, false);
+    g.drawImageAt(outputImage, 0, 0);
 
-    mescal::Effect::Ptr finalComposite = new mescal::Effect{ mescal::Effect::Type::composite };
-    finalComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
-    finalComposite->setInput(0, bottomMiddleComposite);
-    finalComposite->setInput(1, topLayerComposite);
+    if (!label.isBeingEdited())
+    {
+        auto alpha = label.isEnabled() ? 1.0f : 0.5f;
+        const juce::Font font(getLabelFont(label));
 
-    return finalComposite;
-#endif
-    return nullptr;
+        g.setColour(label.findColour(juce::Label::textColourId).withMultipliedAlpha(alpha));
+        g.setFont(font);
+
+        auto textArea = getLabelBorderSize(label).subtractedFrom(label.getLocalBounds());
+
+        g.drawFittedText(label.getText(), textArea, label.getJustificationType(),
+            juce::jmax(1, (int)((float)textArea.getHeight() / font.getHeight())),
+            label.getMinimumHorizontalScale());
+
+        g.setColour(label.findColour(juce::Label::outlineColourId).withMultipliedAlpha(alpha));
+    }
+    else if (label.isEnabled())
+    {
+        g.setColour(label.findColour(juce::Label::outlineColourId));
+    }
+
+    //g.drawRect(label.getLocalBounds().reduced(2));
 }
-
 
 mescal::Effect::Ptr MescalLookAndFeel::addShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform)
 {
@@ -302,32 +160,6 @@ mescal::Effect::Ptr MescalLookAndFeel::addShadow(juce::Image const& sourceImage,
     composite->setInput(1, sourceImage);
 
     return composite;
-}
-
-mescal::Effect::Ptr MescalLookAndFeel::createInnerShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform)
-{
-    auto floodEffect = new mescal::Effect{ mescal::Effect::Type::flood };
-    floodEffect->setPropertyValue(mescal::Effect::Flood::color, juce::Colours::blue);
-
-    auto arithmeticComposite = new mescal::Effect{ mescal::Effect::Type::arithmeticComposite };
-    arithmeticComposite->setPropertyValue(mescal::Effect::ArithmeticComposite::coefficients, mescal::Vector4{ 0.0f, 1.0f, -1.0f, 0.0f });
-    arithmeticComposite->setInput(0, floodEffect);
-    arithmeticComposite->setInput(1, sourceImage);
-
-    auto innerShadow = new mescal::Effect{ mescal::Effect::Type::shadow };
-    innerShadow->setInput(0, arithmeticComposite);
-    innerShadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, shadowSize);
-    innerShadow->setPropertyValue(mescal::Effect::Shadow::color, mescal::colourToVector4(shadowColor));
-
-    auto alphaMaskTransform = new mescal::Effect{ mescal::Effect::Type::affineTransform2D };
-    alphaMaskTransform->setInput(0, innerShadow);
-    alphaMaskTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, transform);
-
-    auto alphaMaskEffect = new mescal::Effect{ mescal::Effect::Type::alphaMask };
-    alphaMaskEffect->setInput(0, alphaMaskTransform);
-    alphaMaskEffect->setInput(1, sourceImage);
-
-    return alphaMaskEffect;
 }
 
 mescal::Effect::Ptr MescalLookAndFeel::create3DInnerShadow(juce::Image const& sourceImage,
@@ -352,4 +184,66 @@ mescal::Effect::Ptr MescalLookAndFeel::create3DInnerShadow(juce::Image const& so
     auto alphaMask = mescal::Effect::AlphaMask::create() << blend << sourceImage;
 
     return alphaMask;
+}
+
+juce::Image& MescalLookAndFeel::getImage(int index, juce::Rectangle<int> size)
+{
+    if (images.size() < index + 1)
+    {
+        images.emplace_back(juce::Image::ARGB, size.getWidth(), size.getHeight(), true);
+        return images.back();
+    }
+
+    auto& image = images[index];
+    if (image.getWidth() != size.getWidth() || image.getHeight() != size.getHeight())
+    {
+        image = juce::Image{ juce::Image::ARGB, size.getWidth(), size.getHeight(), true };
+    }
+    return image;
+}
+
+void MescalLookAndFeel::clearImage(juce::Graphics& g)
+{
+    g.setColour(juce::Colours::transparentBlack);
+    g.getInternalContext().fillRect(g.getClipBounds(), true);
+}
+
+void MescalLookAndFeel::InnerShadow::configure(juce::Image const& sourceImage, juce::Colour topColor, juce::AffineTransform topShadowTransform, juce::Colour bottomColor, juce::AffineTransform bottomShadowTransform, float shadowSize)
+{
+    flood->setPropertyValue(mescal::Effect::Flood::color, juce::Colours::blue);
+
+    arithmeticComposite->setPropertyValue(mescal::Effect::ArithmeticComposite::coefficients, mescal::Vector4{ 0.0f, 1.0f, -1.0f, 0.0f });
+    arithmeticComposite->setInput(0, flood);
+    arithmeticComposite->setInput(1, sourceImage);
+
+    upperShadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, shadowSize);
+    upperShadow->setPropertyValue(mescal::Effect::Shadow::color, topColor);
+    upperShadow->setInput(0, arithmeticComposite);
+
+    lowerShadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, shadowSize);
+    lowerShadow->setPropertyValue(mescal::Effect::Shadow::color, bottomColor);
+    lowerShadow->setInput(0, arithmeticComposite);
+
+    upperTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, topShadowTransform);
+    upperTransform->setInput(0, upperShadow);
+
+    lowerTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, bottomShadowTransform);
+    lowerTransform->setInput(0, lowerShadow);
+
+    blend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::multiply);
+    blend->setInput(0, upperTransform);
+    blend->setInput(1, lowerTransform);
+
+    alphaMask->setInput(0, blend);
+    alphaMask->setInput(1, sourceImage);
+}
+
+void MescalLookAndFeel::DropShadow::configure(juce::Image const& sourceImage, juce::Colour shadowColor, float shadowSize, juce::AffineTransform transform)
+{
+    shadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, shadowSize);
+    shadow->setPropertyValue(mescal::Effect::Shadow::color, shadowColor);
+    shadow->setInput(0, sourceImage);
+
+    transformEffect->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, transform);
+    transformEffect->setInput(0, shadow);
 }

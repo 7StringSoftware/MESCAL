@@ -23,7 +23,7 @@ void EffectPropertyPanel::buildPropertyPanel()
 		{
 			juce::var jsonVar;
 			juce::String jsonString;
-#if JUCE_DEBUG
+#if 1// JUCE_DEBUG
 			juce::File directory = juce::File::getCurrentWorkingDirectory().getParentDirectory();
 
 			bool found = false;
@@ -180,7 +180,7 @@ void EffectPropertyPanel::buildPropertyPanel()
 						propertyValue,
 						juce::Array<float> { defaultValue[0], defaultValue[1], defaultValue[2] },
 						getLabels(3, propertyIndex),
-						range, 
+						range,
 						skew };
 				}
 				else if (std::holds_alternative<mescal::Vector4>(propertyValue))
