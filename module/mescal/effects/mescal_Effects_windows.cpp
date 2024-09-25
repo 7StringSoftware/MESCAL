@@ -380,7 +380,9 @@ namespace mescal
                     if (image.isValid())
                     {
                         if (juce::Direct2DPixelData::Ptr inputPixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
-                            pimpl->d2dEffect->SetInput(index, inputPixelData->getAdapterD2D1Bitmap());
+                        {
+                            pimpl->d2dEffect->SetInput(index, inputPixelData->getFirstPageForContext(pimpl->resources->deviceContext));
+                        }
                     }
                 }
                 else if (std::holds_alternative<Effect::Ptr>(input))
@@ -406,16 +408,16 @@ namespace mescal
 
                 if (adapter && !deviceContext)
                 {
-                    winrt::com_ptr<ID2D1DeviceContext1> deviceContext1;
+                    juce::ComSmartPtr<ID2D1DeviceContext1> deviceContext1;
                     if (const auto hr = adapter->direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS,
-                        deviceContext1.put());
+                        deviceContext1.resetAndGetPointerAddress());
                         FAILED(hr))
                     {
                         jassertfalse;
                         return hr;
                     }
 
-                    deviceContext = deviceContext1.as<ID2D1DeviceContext2>();
+                    deviceContext1->QueryInterface<ID2D1DeviceContext2>(deviceContext.resetAndGetPointerAddress());
                 }
 
                 return S_OK;
@@ -429,7 +431,7 @@ namespace mescal
 
             juce::SharedResourcePointer<juce::DirectX> directX;
             juce::DxgiAdapter::Ptr adapter;
-            winrt::com_ptr<ID2D1DeviceContext2> deviceContext;
+            juce::ComSmartPtr<ID2D1DeviceContext2> deviceContext;
         };
         juce::SharedResourcePointer<Resources> resources;
         winrt::com_ptr<ID2D1Effect> d2dEffect;
@@ -583,7 +585,7 @@ namespace mescal
 
         Pimpl::setInputsRecursive(pimpl.get());
 
-        pimpl->resources->deviceContext->SetTarget(outputPixelData->getAdapterD2D1Bitmap());
+        pimpl->resources->deviceContext->SetTarget(outputPixelData->getFirstPageForContext(pimpl->resources->deviceContext));
         pimpl->resources->deviceContext->BeginDraw();
         if (clearDestination)
             pimpl->resources->deviceContext->Clear();

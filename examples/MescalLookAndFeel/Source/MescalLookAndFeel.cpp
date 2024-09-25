@@ -14,13 +14,10 @@ MescalLookAndFeel::MescalLookAndFeel()
 
 void MescalLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button, const juce::Colour& backgroundColour, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
 {
-    return juce::LookAndFeel_V4::drawButtonBackground(g, button, backgroundColour, shouldDrawButtonAsHighlighted, shouldDrawButtonAsDown);
-
-#if 0
     juce::Image buttonImage{ juce::Image::ARGB, button.getWidth(), button.getHeight(), true };
     juce::Image outputImage{ juce::Image::ARGB, button.getWidth(), button.getHeight(), true };
 
-    auto r = buttonImage.getBounds().toFloat().reduced(2.0f);
+    auto r = buttonImage.getBounds().toFloat().reduced(0.0f);
 
     auto cornerProportion = 0.2f;
 
@@ -65,24 +62,20 @@ void MescalLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& bu
     }
 
     {
-        auto innerUpperLeftShadow = createInnerShadow(buttonImage,
+        innerShadow.configure(buttonImage,
             innerUpperLeftShadowColor,
-            innerShadowSize,
-            juce::AffineTransform::scale(1.0f, 1.0f).translated(innerShadowSize, innerShadowSize));
-        auto innerLowerRightShadow = createInnerShadow(buttonImage,
+            juce::AffineTransform::scale(1.0f, 1.0f).translated(innerShadowSize, innerShadowSize),
             innerLowerRightShadowColor,
-            innerShadowSize,
-            juce::AffineTransform::scale(1.0f, 1.0f).translated(-innerShadowSize, -innerShadowSize));
+            juce::AffineTransform::scale(1.0f, 1.0f).translated(-innerShadowSize, -innerShadowSize),
+            innerShadowSize);
 
-        auto innerShadowBlend = mescal::Effect::create(mescal::Effect::Type::blend) << innerLowerRightShadow << innerUpperLeftShadow;
-        innerShadowBlend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::multiply);
-
-        auto innerShadowSourceImageBlend = mescal::Effect::create(mescal::Effect::Type::blend) << buttonImage << innerShadowBlend;
+        auto innerShadowSourceImageBlend = mescal::Effect::create(mescal::Effect::Type::blend) << buttonImage << innerShadow.getEffect();
         innerShadowSourceImageBlend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::linearLight);
 
         outputEffect = innerShadowSourceImageBlend;
     }
 
+#if 0
     if (button.getToggleState() || shouldDrawButtonAsDown)
     {
         auto innerGlow = createInnerShadow(buttonImage, backgroundColour, (float)button.getHeight() * 0.25f, {});
@@ -90,11 +83,10 @@ void MescalLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& bu
 
         outputEffect = innerGlowBlend;
     }
+#endif
 
     outputEffect->applyEffect(outputImage, {}, false);
     g.drawImageAt(outputImage, 0, 0);
-#endif
-
 }
 
 void MescalLookAndFeel::drawLabel(juce::Graphics& g, juce::Label& label)
@@ -186,7 +178,7 @@ mescal::Effect::Ptr MescalLookAndFeel::create3DInnerShadow(juce::Image const& so
     return alphaMask;
 }
 
-juce::Image& MescalLookAndFeel::getImage(int index, juce::Rectangle<int> size)
+juce::Image MescalLookAndFeel::getImage(int index, juce::Rectangle<int> size)
 {
     if (images.size() < index + 1)
     {
@@ -202,7 +194,7 @@ juce::Image& MescalLookAndFeel::getImage(int index, juce::Rectangle<int> size)
     return image;
 }
 
-void MescalLookAndFeel::clearImage(juce::Graphics& g)
+void MescalLookAndFeel::clear(juce::Graphics& g)
 {
     g.setColour(juce::Colours::transparentBlack);
     g.getInternalContext().fillRect(g.getClipBounds(), true);

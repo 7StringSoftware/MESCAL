@@ -34,6 +34,8 @@
 #include <juce_graphics/native/juce_EventTracing.h>
 #include <juce_graphics/native/juce_DirectX_windows.h>
 #include <juce_graphics/native/juce_Direct2DImage_windows.h>
+#include <juce_graphics/native/juce_Direct2DGraphicsContext_windows.h>
+#include <juce_graphics/native/juce_Direct2DImageContext_windows.h>
 
 #include "mescal.h"
 
@@ -42,3 +44,4 @@
 #include "gradients/mescal_ConicGradient_windows.cpp"
 #include "effects/mescal_Effects_windows.cpp"
 #include "effects/mescal_ImageEffectFilter_windows.cpp"
+#include "images/mescal_Image_windows.cpp"

@@ -20,17 +20,17 @@ public:
             switch (slider.getTextBoxPosition())
             {
             case juce::Slider::NoTextBox:
-                radius = (float)slider.getHeight() * 12.0f / 22.0f;
+                radius = (float)slider.getHeight() * 0.4f;
                 break;
 
             case juce::Slider::TextBoxLeft:
             case juce::Slider::TextBoxRight:
-                radius = (float)slider.getHeight() * 12.0f / 22.0f;
+                radius = (float)slider.getHeight() * 0.4f;
                 break;
 
             case juce::Slider::TextBoxAbove:
             case juce::Slider::TextBoxBelow:
-                radius = (float)slider.getHeight() * 0.28f;
+                radius = (float)slider.getHeight() * 0.2f;
                 break;
             }
         }
@@ -41,12 +41,12 @@ public:
             case juce::Slider::NoTextBox:
             case juce::Slider::TextBoxLeft:
             case juce::Slider::TextBoxRight:
-                radius = (float)slider.getWidth() * 0.25f;
+                radius = (float)slider.getWidth() * 0.22f;
                 break;
 
             case juce::Slider::TextBoxAbove:
             case juce::Slider::TextBoxBelow:
-                radius = (float)slider.getWidth() * 0.25f;
+                radius = (float)slider.getWidth() * 0.22f;
                 break;
             }
         }
@@ -67,16 +67,13 @@ private:
         float shadowSize);
 
     std::vector<juce::Image> images;
-    juce::Image& getImage(int index, juce::Rectangle<int> size);
-    juce::Image& getImage(int index, juce::Rectangle<float> size)
+    juce::Image getImage(int index, juce::Rectangle<int> size);
+    juce::Image getImage(int index, juce::Rectangle<float> size)
     {
         return getImage(index, size.toNearestIntEdges());
     }
 
-    void clearImage(juce::Graphics& g);
-
-    juce::Image trackImage{ juce::Image::ARGB, 1024, 1024, true };
-    juce::Image outputImage{ juce::Image::ARGB, 1024, 1024, true };
+    void clear(juce::Graphics& g);
 
     struct InnerShadow
     {
