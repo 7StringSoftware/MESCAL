@@ -11,43 +11,61 @@ public:
     void drawButtonBackground(juce::Graphics&, juce::Button&, const juce::Colour& backgroundColour, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
     void drawLinearSlider(juce::Graphics&, int x, int y, int width, int height, float sliderPos, float minSliderPos, float maxSliderPos, juce::Slider::SliderStyle, juce::Slider&) override;
 
+    juce::Slider::SliderLayout getSliderLayout(juce::Slider& slider) override;
+
     int getSliderThumbRadius(juce::Slider& slider) override
     {
-        float radius = 20.0f;
+        auto radius = 20.0f;
+        auto width = (float)slider.getWidth();
+        auto height = (float)slider.getHeight();
 
-        if (slider.isHorizontal())
+        if (slider.getSliderStyle() == juce::Slider::IncDecButtons)
         {
-            switch (slider.getTextBoxPosition())
+            if (slider.isHorizontal())
             {
-            case juce::Slider::NoTextBox:
-                radius = (float)slider.getHeight() * 0.4f;
-                break;
-
-            case juce::Slider::TextBoxLeft:
-            case juce::Slider::TextBoxRight:
-                radius = (float)slider.getHeight() * 0.4f;
-                break;
-
-            case juce::Slider::TextBoxAbove:
-            case juce::Slider::TextBoxBelow:
-                radius = (float)slider.getHeight() * 0.2f;
-                break;
+                radius = height;
+            }
+            else
+            {
+                radius = width;
             }
         }
         else
         {
-            switch (slider.getTextBoxPosition())
+            if (slider.isHorizontal())
             {
-            case juce::Slider::NoTextBox:
-            case juce::Slider::TextBoxLeft:
-            case juce::Slider::TextBoxRight:
-                radius = (float)slider.getWidth() * 0.22f;
-                break;
+                switch (slider.getTextBoxPosition())
+                {
+                case juce::Slider::NoTextBox:
+                    radius = height * 0.45f;
+                    break;
 
-            case juce::Slider::TextBoxAbove:
-            case juce::Slider::TextBoxBelow:
-                radius = (float)slider.getWidth() * 0.22f;
-                break;
+                case juce::Slider::TextBoxLeft:
+                case juce::Slider::TextBoxRight:
+                    radius = height * 0.45f;
+                    break;
+
+                case juce::Slider::TextBoxAbove:
+                case juce::Slider::TextBoxBelow:
+                    radius = height * 0.24f;
+                    break;
+                }
+            }
+            else
+            {
+                switch (slider.getTextBoxPosition())
+                {
+                case juce::Slider::NoTextBox:
+                case juce::Slider::TextBoxLeft:
+                case juce::Slider::TextBoxRight:
+                    radius = width * 0.35f;
+                    break;
+
+                case juce::Slider::TextBoxAbove:
+                case juce::Slider::TextBoxBelow:
+                    radius = width * 0.22f;
+                    break;
+                }
             }
         }
 
@@ -86,7 +104,7 @@ private:
         mescal::Effect::Ptr  blend = mescal::Effect::create(mescal::Effect::Type::blend);
         mescal::Effect::Ptr alphaMask = mescal::Effect::create(mescal::Effect::Type::alphaMask);
 
-        void configure(juce::Image const& sourceImage,
+        void configure(mescal::Effect::Input input,
             juce::Colour topColor,
             juce::AffineTransform topShadowTransform,
             juce::Colour bottomColor,
@@ -104,13 +122,26 @@ private:
         mescal::Effect::Ptr shadow = mescal::Effect::create(mescal::Effect::Type::shadow);
         mescal::Effect::Ptr transformEffect = mescal::Effect::create(mescal::Effect::Type::affineTransform2D);
 
-        void configure(juce::Image const& sourceImage, juce::Colour shadowColor, float shadowSize, juce::AffineTransform transform);
+        void configure(mescal::Effect::Input input, juce::Colour shadowColor, float shadowSize, juce::AffineTransform transform);
 
         auto getEffect() const
         {
             return transformEffect;
         }
     } dropShadow;
+
+    struct Glow
+    {
+        mescal::Effect::Ptr shadow = mescal::Effect::create(mescal::Effect::Type::shadow);
+        mescal::Effect::Ptr blend = mescal::Effect::create(mescal::Effect::Type::blend);
+
+        void configure(mescal::Effect::Input input, juce::Colour glowColor, float glowSize);
+
+        auto getEffect() const
+        {
+            return blend;
+        };
+    } glow;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MescalLookAndFeel)
 };

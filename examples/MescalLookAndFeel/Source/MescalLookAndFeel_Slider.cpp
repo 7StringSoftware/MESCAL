@@ -2,7 +2,14 @@
 
 using namespace juce;
 
-void MescalLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPos, float minSliderPos, float maxSliderPos, juce::Slider::SliderStyle style, juce::Slider& slider)
+Slider::SliderLayout MescalLookAndFeel::getSliderLayout(Slider& slider)
+{
+    auto layout = juce::LookAndFeel_V4::getSliderLayout(slider);
+    layout.sliderBounds.reduce(4, 4);
+    return layout;
+}
+
+void MescalLookAndFeel::drawLinearSlider(Graphics& g, int x, int y, int width, int height, float sliderPos, float minSliderPos, float maxSliderPos, Slider::SliderStyle style, Slider& slider)
 {
     auto thumbColor = slider.findColour(Slider::thumbColourId);
     auto backgroundColor = slider.findColour(Slider::backgroundColourId);
@@ -17,97 +24,90 @@ void MescalLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int wi
     Point<float> endPoint(slider.isHorizontal() ? (float)(width + x) : startPoint.x,
         slider.isHorizontal() ? startPoint.y : (float)y);
 
-    float thumbRadius = (float)getSliderThumbRadius(slider);
-    float trackThickness = thumbRadius * 0.9f;
-
     if (slider.isBar())
     {
-#if 0
-        juce::Image sliderImage{ juce::Image::ARGB, (int)sliderRect.getWidth(), (int)sliderRect.getHeight(), true };
-        juce::Image trackImage{ juce::Image::ARGB, (int)trackRect.getWidth(), (int)trackRect.getHeight(), true };
+        auto sliderRect = slider.getLocalBounds().toFloat();
+        auto trackImage = getImage(0, slider.getLocalBounds());
+        auto outputImage = getImage(1, slider.getLocalBounds());
 
+        Rectangle<float> valueRect;
+        if (slider.isHorizontal())
         {
-            juce::Graphics imageG{ sliderImage };
-            imageG.setColour(slider.findColour(Slider::backgroundColourId));
-            imageG.fillRect(trackRect);
+            valueRect = sliderRect.withWidth(sliderPos - (float)x).reduced(0.0f, 4.0f);
+        }
+        else
+        {
+            valueRect = sliderRect.withY(sliderPos).withHeight((float)y + (float)height - sliderPos).reduced(4.0f, 0.0f);
         }
 
         {
-            juce::Graphics imageG{ trackImage };
-            imageG.setColour(slider.findColour(Slider::thumbColourId));
-            imageG.fillRect(sliderRect.reduced(2.0f, 2.0f).translated(0.0f, 0.0f));
+            Graphics valueG{ trackImage };
+            clear(valueG);
+            valueG.setColour(thumbColor);
+            valueG.fillRect(valueRect);
         }
 
-        auto innerShadowSize = 1.0f;
-        innerShadow.configure(sliderImage,
-            juce::Colours::black,
-            juce::AffineTransform::translation(innerShadowSize, innerShadowSize),
-            juce::Colours::white,
-            juce::AffineTransform::translation(-innerShadowSize, -innerShadowSize),
-            innerShadowSize);
+        glow.configure(trackImage,
+            trackColor,
+            5.0f);
 
-        auto imageWithInnerShadow = mescal::Effect::create(mescal::Effect::Type::composite) << sliderImage << innerShadow.getEffect();
-        imageWithInnerShadow->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
+        glow.getEffect()->applyEffect(outputImage, {}, false);
 
-        juce::Image outputImage{ juce::Image::ARGB, (int)trackRect.getWidth(), (int)trackRect.getHeight(), true };
-        imageWithInnerShadow->applyEffect(outputImage, {}, false);
         g.drawImageAt(outputImage, 0, 0);
-        g.drawImageAt(trackImage, 0, 0);
-
-        drawLinearSliderOutline(g, x, y, width, height, style, slider);
-#endif
-
         return;
     }
 
     //
     // Paint the slider track
     //
-    auto trackRect = juce::Rectangle<float>{ startPoint, endPoint };
-    juce::Rectangle<float> thumbRect{ thumbRadius * 2.5f, thumbRadius * 2.5f };
+    float thumbRadius = (float)getSliderThumbRadius(slider);
+    float trackThickness = thumbRadius * 0.75f;
+    Rectangle<float> thumbRect{ thumbRadius * 2.5f, thumbRadius * 2.5f };
 
+    auto trackRect = Rectangle<float>{ startPoint, endPoint };
     if (slider.isHorizontal())
     {
         trackRect = trackRect.withSizeKeepingCentre(trackRect.getWidth() + trackThickness, trackThickness);
-        thumbRect.setPosition(sliderPos - thumbRadius, trackRect.getCentreY() - thumbRect.getHeight() * 0.5f);
+        thumbRect.setCentre({ sliderPos, trackRect.getCentreY() });
     }
     else
     {
         trackRect = trackRect.withSizeKeepingCentre(trackThickness, trackRect.getHeight() + trackThickness);
-        thumbRect.setPosition(trackRect.getCentreX() - thumbRect.getWidth() * 0.5f, sliderPos - thumbRadius);
+        thumbRect.setCentre({ trackRect.getCentreX(), sliderPos });
     }
 
-    auto& trackImage = getImage(0, trackRect);
-    auto outputImage = getImage(2, trackRect);
+    auto trackImage = getImage(0, trackRect);
+    auto outputImage = getImage(2, trackImage.getBounds());
+
+    trackRect = trackImage.getBounds().toFloat().withPosition(trackRect.getPosition());
 
     {
-        juce::Graphics trackG{ trackImage };
+        Graphics trackG{ trackImage };
         clear(trackG);
 
-        auto r = trackRect.withZeroOrigin();
+        auto trackRectWithinImage = trackRect.withZeroOrigin();
 
         if (isTwoVal || isThreeVal)
         {
-            juce::Path p;
+            Path p;
 
             if (slider.isHorizontal())
             {
                 auto dashedR = trackRect.reduced(1.0f).translated(0.0f, -1.0f);
                 p.addRoundedRectangle(dashedR, dashedR.getHeight() * 0.5f);
 
-                r = r.withWidth(maxSliderPos - minSliderPos).withPosition(minSliderPos - startPoint.x, r.getY() - 2.0f);
+                trackRectWithinImage = dashedR.withWidth(trackThickness + maxSliderPos - minSliderPos).withX(minSliderPos - trackThickness * 0.5f) - trackRect.getPosition();
             }
             else
             {
                 auto dashedR = trackRect.reduced(1.0f).translated(-1.0f, 0.0f);
                 p.addRoundedRectangle(dashedR, dashedR.getWidth() * 0.5f);
 
-                r = r.withHeight(minSliderPos - maxSliderPos).withY(maxSliderPos);
-
+                trackRectWithinImage = dashedR.withHeight(trackThickness + minSliderPos - maxSliderPos).withY(maxSliderPos - trackThickness * 0.5f) - trackRect.getPosition();
             }
 
-            juce::PathStrokeType stroke{ 1.0f };
-            juce::Path dashedPath;
+            PathStrokeType stroke{ 1.0f };
+            Path dashedPath;
             float dashLength = 2.0f;
             stroke.createDashedStroke(dashedPath, p, &dashLength, 1);
             g.setColour(backgroundColor.darker());
@@ -116,18 +116,23 @@ void MescalLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int wi
 
         auto color = isTwoVal ? thumbColor : backgroundColor;
         trackG.setColour(color);
-        trackG.fillRoundedRectangle(r, trackThickness * 0.5f);
+        trackG.fillRoundedRectangle(trackRectWithinImage, trackThickness * 0.5f);
 
-        //         if (!isTwoVal)
-        //         {
-        //             trackG.setColour(trackColor);
-        //             trackG.fillRoundedRectangle(valueRect.withPosition(r.getTopLeft()), trackThickness * 0.5f);
-        //         }
+        if (!isTwoVal)
+        {
+            juce::Rectangle<float> valueRect = slider.isHorizontal() ?
+                trackRectWithinImage.withRight(sliderPos - (float)x) :
+                trackRectWithinImage.withY(sliderPos - (float)y).withBottom(trackRectWithinImage.getBottom());
+
+            trackG.setColour(trackColor);
+
+            trackG.fillRoundedRectangle(valueRect, trackThickness * 0.5f);
+        }
     }
 
     {
-        auto topLeftShadowColor = juce::Colours::black.withAlpha(1.0f);
-        auto bottomRightShadowColor = juce::Colours::white;
+        auto topLeftShadowColor = Colours::black;
+        auto bottomRightShadowColor = Colours::white;
 
         if (isTwoVal)
         {
@@ -137,151 +142,20 @@ void MescalLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int wi
         float innerShadowSize = 2.0f;
         innerShadow.configure(trackImage,
             topLeftShadowColor,
-            juce::AffineTransform::scale(1.0f, 1.0f).translated(innerShadowSize * 0.8f, innerShadowSize * 0.8f),
+            AffineTransform::scale(1.0f, 1.0f).translated(innerShadowSize * 1.0f, innerShadowSize * 1.0f),
             bottomRightShadowColor,
-            juce::AffineTransform::scale(1.1f, 1.0f,
+            AffineTransform::scale(1.0f, 1.0f,
                 (float)trackImage.getWidth() * 0.5f,
-                (float)trackImage.getHeight() * 0.5f).translated(-innerShadowSize * 0.5f, -innerShadowSize * 1.0f),
+                (float)trackImage.getHeight() * 0.5f).translated(innerShadowSize * -1.0f, innerShadowSize * -1.0f),
             innerShadowSize);
 
         auto imageWithInnerShadow = mescal::Effect::create(mescal::Effect::Type::composite) << trackImage << innerShadow.getEffect();
         imageWithInnerShadow->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
 
         imageWithInnerShadow->applyEffect(outputImage, {}, true);
-
     }
 
-    g.drawImageAt(outputImage, trackRect.getX(), trackRect.getY());
-
-#if 0
-    juce::Point<float> imageOrigin;
-
-    {
-        float trackLength = 0.0f;
-        juce::Rectangle<float> trackRect, valueRect;
-
-        if (slider.isHorizontal())
-        {
-            trackLength = endPoint.x - startPoint.x;
-            trackRect = trackRect.withWidth(trackLength).withHeight(trackThickness);
-
-            valueRect = trackRect.withWidth(sliderPos - minSliderPos);
-
-            imageOrigin = startPoint - Point<float>(thumbRadius, thumbRadius);
-        }
-        else
-        {
-            trackLength = std::abs(startPoint.y - endPoint.y);
-            trackRect = trackRect.withWidth(trackThickness).withHeight(trackLength);
-
-            imageOrigin = endPoint - Point<float>(thumbRadius, thumbRadius);
-        }
-
-        {
-            juce::Graphics trackG{ trackImage };
-            clear(trackG);
-
-            auto r = trackRect;
-
-            if (isTwoVal || isThreeVal)
-            {
-                if (slider.isHorizontal())
-                {
-                    juce::Path p;
-                    p.addRoundedRectangle(r.reduced(1.0f).translated(0.0f, -1.0f), (r.getHeight() - 1.0f) * 0.5f);
-
-                    juce::PathStrokeType stroke{ 1.0f };
-                    juce::Path dashedPath;
-                    float dashLength = 2.0f;
-                    stroke.createDashedStroke(dashedPath, p, &dashLength, 1);
-                    g.setColour(backgroundColor.darker());
-                    g.fillPath(dashedPath);
-
-                    //
-                    // Shrink r to span minSliderPos to maxSliderPos
-                    //
-                    r = juce::Rectangle<float>::leftTopRightBottom(minSliderPos - imageOrigin.x,
-                        r.getY(),
-                        maxSliderPos - imageOrigin.x,
-                        r.getBottom());
-                }
-                else
-                {
-                    juce::Path p;
-                    p.addRoundedRectangle(r.reduced(1.0f).translated(0.0f, 0.0f) + imageOrigin, (r.getWidth() - 1.0f) * 0.5f);
-
-                    juce::PathStrokeType stroke{ 1.0f };
-                    juce::Path dashedPath;
-                    float dashLength = 2.0f;
-                    stroke.createDashedStroke(dashedPath, p, &dashLength, 1);
-                    g.setColour(backgroundColor.darker());
-                    g.fillPath(dashedPath);
-
-                    //
-                    // Shrink r to span minSliderPos to maxSliderPos
-                    //
-                    r = juce::Rectangle<float>::leftTopRightBottom(r.getX(),
-                        maxSliderPos - imageOrigin.y,
-                        r.getRight(),
-                        minSliderPos - imageOrigin.y);
-                }
-            }
-
-            auto color = isTwoVal ? thumbColor : backgroundColor;
-            trackG.setColour(color);
-            trackG.fillRoundedRectangle(r, trackThickness * 0.5f);
-
-            if (!isTwoVal)
-            {
-                trackG.setColour(trackColor);
-                trackG.fillRoundedRectangle(valueRect.withPosition(r.getTopLeft()), trackThickness * 0.5f);
-            }
-
-            trackG.setColour(juce::Colours::hotpink);
-            trackG.drawRect(r);
-        }
-
-#if 0
-        auto outerLowerDropShadow = mescal::Effect::create(mescal::Effect::Type::shadow) << trackImage;
-        outerLowerDropShadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, 2.0f);
-        outerLowerDropShadow->setPropertyValue(mescal::Effect::Shadow::color, isTwoVal ? juce::Colours::black.withAlpha(0.25f) : juce::Colours::white);
-
-        auto outerLowerDropShadowTransform = mescal::Effect::create(mescal::Effect::Type::affineTransform2D) << outerLowerDropShadow;
-        outerLowerDropShadowTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, juce::AffineTransform::translation(2.0f, 2.0f));
-#endif
-
-        dropShadow.configure(trackImage, juce::Colours::black, 2.0f, juce::AffineTransform::translation(2.0f, 2.0f));
-
-        auto topLeftShadowColor = juce::Colours::black.withAlpha(1.0f);
-        auto bottomRightShadowColor = juce::Colours::white;
-
-        if (isTwoVal)
-        {
-            std::swap(topLeftShadowColor, bottomRightShadowColor);
-        }
-
-        float innerShadowSize = 2.0f;
-        innerShadow.configure(trackImage,
-            topLeftShadowColor,
-            juce::AffineTransform::scale(1.0f, 1.0f).translated(innerShadowSize * 0.8f, innerShadowSize * 0.8f),
-            bottomRightShadowColor,
-            juce::AffineTransform::scale(1.1f, 1.0f,
-                (float)trackImage.getWidth() * 0.5f,
-                (float)trackImage.getHeight() * 0.5f).translated(-innerShadowSize * 0.5f, -innerShadowSize * 1.0f),
-            innerShadowSize);
-
-#if 1
-        auto imageWithInnerShadow = mescal::Effect::create(mescal::Effect::Type::composite) << trackImage << innerShadow.getEffect();
-        imageWithInnerShadow->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
-
-        auto outerShadowComposite = mescal::Effect::create(mescal::Effect::Type::composite) << imageWithInnerShadow << dropShadow.getEffect();
-        outerShadowComposite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::destinationOver);
-
-        outerShadowComposite->applyEffect(outputImage, {}, false);
-        g.drawImage(trackImage, trackImage.getBounds().toFloat().withPosition(imageOrigin), juce::RectanglePlacement::doNotResize);
-#endif
-    }
-#endif
+    g.drawImage(outputImage, outputImage.getBounds().toFloat() + trackRect.getTopLeft(), juce::RectanglePlacement::doNotResize);
 
     //
     // Paint the thumb
@@ -294,12 +168,12 @@ void MescalLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int wi
         auto thumbOutput = getImage(3, thumbRect);
 
         {
-            juce::Graphics thumbG{ thumbImage };
+            Graphics thumbG{ thumbImage };
             clear(thumbG);
 
             auto ellipseR = thumbImage.getBounds().toFloat().withSizeKeepingCentre(thumbRadius * 2.0f, thumbRadius * 2.0f);
 
-            thumbG.setGradientFill(juce::ColourGradient
+            thumbG.setGradientFill(ColourGradient
                 {
                     thumbColor,
                     ellipseR.getCentre(),
@@ -313,15 +187,15 @@ void MescalLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int wi
 
         {
             dropShadow.configure(thumbImage,
-                juce::Colours::black.withAlpha(0.5f),
+                Colours::black.withAlpha(0.5f),
                 thumbRadius * 0.05f,
-                juce::AffineTransform::translation(thumbRadius * 0.1f, thumbRadius * 0.1f));
+                AffineTransform::translation(thumbRadius * 0.1f, thumbRadius * 0.1f));
 
             innerShadow.configure(thumbImage,
-                juce::Colours::white.withAlpha(0.5f),
-                juce::AffineTransform::translation(thumbRadius * 0.5f, thumbRadius * 0.55f),
-                juce::Colours::black.withAlpha(0.125f),
-                juce::AffineTransform::translation(thumbRadius * -0.125f, thumbRadius * -0.125f),
+                Colours::white.withAlpha(0.5f),
+                AffineTransform::translation(thumbRadius * 0.5f, thumbRadius * 0.55f),
+                Colours::black.withAlpha(0.125f),
+                AffineTransform::translation(thumbRadius * -0.125f, thumbRadius * -0.125f),
                 thumbRadius * 0.25f);
 
             auto imageWithInnerShadow = mescal::Effect::create(mescal::Effect::Type::composite) << thumbImage << innerShadow.getEffect();
@@ -330,66 +204,12 @@ void MescalLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int wi
             dropShadow.getEffect()->applyEffect(thumbOutput, {}, true);
             imageWithInnerShadow->applyEffect(thumbOutput, {}, false);
         }
-        g.drawImage(thumbOutput, thumbRect - juce::Point<float>{ 2.0f, 0.0f }, juce::RectanglePlacement::doNotResize);
 
-
-#if 0
-        if (slider.isHorizontal())
-        {
-            thumbRect.reduce(1.0f, 1.0f);
-            thumbRect.setCentre(startPoint.withX(sliderPos) - imageOrigin);
-        }
-        else
-        {
-            thumbRect.setCentre(startPoint.withY(sliderPos) - imageOrigin);
-        }
-
-        {
-            juce::Graphics trackG{ trackImage };
-            trackG.setColour(juce::Colours::transparentBlack);
-            trackG.getInternalContext().fillRect(trackImage.getBounds(), true);
-
-            trackG.setGradientFill(juce::ColourGradient
-                {
-                    thumbColor,
-                    thumbRect.getCentre(),
-                    thumbColor.darker(),
-                    { 0.0f, 0.0f },
-                    true
-                });
-
-            trackG.fillEllipse(thumbRect);
-        }
-
-        {
-            dropShadow.configure(trackImage,
-                juce::Colours::black.withAlpha(0.5f),
-                thumbRadius * 0.05f,
-                juce::AffineTransform::translation(thumbRadius * 0.1f, thumbRadius * 0.1f));
-
-            innerShadow.configure(trackImage,
-                juce::Colours::white.withAlpha(0.5f),
-                juce::AffineTransform::translation(thumbRadius * 0.5f, thumbRadius * 0.55f),
-                juce::Colours::black.withAlpha(0.125f),
-                juce::AffineTransform::translation(thumbRadius * -0.125f, thumbRadius * -0.125f),
-                thumbRadius * 0.25f);
-
-            auto imageWithInnerShadow = mescal::Effect::create(mescal::Effect::Type::composite) << trackImage << innerShadow.getEffect();
-            imageWithInnerShadow->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
-
-            dropShadow.getEffect()->applyEffect(outputImage, {}, true);
-            imageWithInnerShadow->applyEffect(outputImage, {}, false);
-        }
-
-        g.setColour(juce::Colours::black.withAlpha(0.25f));
-        g.fillEllipse(thumbRect.expanded(1.0f) + imageOrigin);
-        g.setColour(juce::Colours::black);
-        g.drawImage(outputImage, outputImage.getBounds().toFloat().withPosition(imageOrigin), juce::RectanglePlacement::doNotResize);
-#endif
+        g.drawImage(thumbOutput, thumbOutput.getBounds().toFloat() + thumbRect.getTopLeft(), RectanglePlacement::doNotResize);
     }
 }
 
-void MescalLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPosProportional, float rotaryStartAngle, float rotaryEndAngle, juce::Slider& slider)
+void MescalLookAndFeel::drawRotarySlider(Graphics& g, int x, int y, int width, int height, float sliderPosProportional, float rotaryStartAngle, float rotaryEndAngle, Slider& slider)
 {
     return;
 
@@ -403,13 +223,13 @@ void MescalLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
     auto lineW = jmin(8.0f, radius * 0.5f);
     auto arcRadius = radius - lineW * 0.5f;
 
-    juce::Image trackImage{ juce::Image::ARGB, width, height, true };
-    juce::Image outputImage{ juce::Image::ARGB, width, height, true };
+    Image trackImage{ Image::ARGB, width, height, true };
+    Image outputImage{ Image::ARGB, width, height, true };
     auto backgroundColor = slider.findColour(Slider::backgroundColourId);
     Path backgroundArc;
 
     {
-        juce::Graphics imageG{ trackImage };
+        Graphics imageG{ trackImage };
         backgroundArc.addCentredArc(bounds.getCentreX(),
             bounds.getCentreY(),
             arcRadius,
@@ -427,7 +247,7 @@ void MescalLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
             lineW * 0.5f,
             rotaryEndAngle,
             0.0f,
-            juce::MathConstants<float>::pi,
+            MathConstants<float>::pi,
             false);
 
         backgroundArc.addCentredArc(bounds.getCentreX(),
@@ -444,57 +264,17 @@ void MescalLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
             midpoint.y,
             lineW * 0.5f,
             lineW * 0.5f,
-            rotaryStartAngle + juce::MathConstants<float>::pi,
+            rotaryStartAngle + MathConstants<float>::pi,
             0.0f,
-            juce::MathConstants<float>::pi,
+            MathConstants<float>::pi,
             false);
 
         imageG.setColour(backgroundColor);
         imageG.fillPath(backgroundArc);
     }
 
-#if 0
     {
-        auto outerLowerDropShadow = mescal::Effect::create(mescal::Effect::Type::shadow) << trackImage;
-        outerLowerDropShadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, 2.0f);
-        outerLowerDropShadow->setPropertyValue(mescal::Effect::Shadow::color, juce::Colours::white);
-
-        auto outerLowerDropShadowTransform = mescal::Effect::create(mescal::Effect::Type::affineTransform2D) << outerLowerDropShadow;
-        outerLowerDropShadowTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, juce::AffineTransform::translation(4.0f, 4.0f));
-
-        float innerShadowSize = arcRadius * 0.1f;
-#if 0
-        auto innerDarkShadow = createInnerShadow(trackImage,
-            juce::Colours::black.withAlpha(1.0f),
-            innerShadowSize,
-            juce::AffineTransform::scale(1.0f, 1.0f).translated(innerShadowSize * 0.5f, innerShadowSize * 0.5f));
-        auto innerLightShadow = createInnerShadow(trackImage,
-            juce::Colours::white.withAlpha(1.0f),
-            innerShadowSize,
-            juce::AffineTransform::scale(1.0f, 1.0f,
-                (float)trackImage.getWidth() * 0.5f,
-                (float)trackImage.getHeight() * 0.5f).translated(-innerShadowSize * 0.5f, -innerShadowSize * 0.25f));
-
-        auto innerShadowBlend = mescal::Effect::create(mescal::Effect::Type::blend) << innerDarkShadow << innerLightShadow;
-        innerShadowBlend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::multiply);
-#else
-        auto innerShadowBlend = create3DInnerShadow(trackImage,
-            juce::Colours::black,
-            juce::AffineTransform::scale(1.0f, 1.0f).translated(innerShadowSize * 0.5f, innerShadowSize * 0.5f),
-            juce::Colours::white,
-            juce::AffineTransform::scale(1.1f, 1.0f,
-                (float)trackImage.getWidth() * 0.5f,
-                (float)trackImage.getHeight() * 0.5f).translated(-innerShadowSize * 0.5f, -innerShadowSize * 0.25f),
-            innerShadowSize);
-#endif
-
-        outputImage = juce::Image{ juce::Image::ARGB, trackImage.getWidth(), trackImage.getHeight(), true };
-        innerShadowBlend->applyEffect(outputImage, {}, false);
-    }
-#endif
-
-    {
-        juce::Graphics::ScopedSaveState save{ g };
+        Graphics::ScopedSaveState save{ g };
         g.setColour(backgroundColor);
         g.fillPath(backgroundArc);
 
@@ -536,15 +316,15 @@ void MescalLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
     Point<float> thumbPoint(bounds.getCentreX() + (arcRadius - lineW * 0.5f) * std::cos(toAngle - MathConstants<float>::halfPi),
         bounds.getCentreY() + (arcRadius - lineW * 0.5f) * std::sin(toAngle - MathConstants<float>::halfPi));
 
-    juce::Rectangle<float> thumbRect{ thumbRadius * 2.0f, thumbRadius * 2.0f };
+    Rectangle<float> thumbRect{ thumbRadius * 2.0f, thumbRadius * 2.0f };
     thumbRect.setCentre(thumbPoint);
 
     {
-        juce::Graphics trackG{ trackImage };
-        trackG.setColour(juce::Colours::transparentBlack);
+        Graphics trackG{ trackImage };
+        trackG.setColour(Colours::transparentBlack);
         trackG.getInternalContext().fillRect(trackImage.getBounds(), true);
 
-        trackG.setGradientFill(juce::ColourGradient
+        trackG.setGradientFill(ColourGradient
             {
                 thumbColor,
                 thumbRect.getCentre(),
@@ -559,16 +339,16 @@ void MescalLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
     {
         auto outerLowerDropShadow = mescal::Effect::create(mescal::Effect::Type::shadow) << trackImage;
         outerLowerDropShadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, thumbRadius * 0.05f);
-        outerLowerDropShadow->setPropertyValue(mescal::Effect::Shadow::color, juce::Colours::black.withAlpha(0.5f));
+        outerLowerDropShadow->setPropertyValue(mescal::Effect::Shadow::color, Colours::black.withAlpha(0.5f));
 
         auto outerLowerDropShadowTransform = mescal::Effect::create(mescal::Effect::Type::affineTransform2D) << outerLowerDropShadow;
-        outerLowerDropShadowTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, juce::AffineTransform::translation(thumbRadius * 0.1f, thumbRadius * 0.1f));
+        outerLowerDropShadowTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, AffineTransform::translation(thumbRadius * 0.1f, thumbRadius * 0.1f));
 
         innerShadow.configure(trackImage,
-            juce::Colours::white.withAlpha(0.5f),
-            juce::AffineTransform::translation(thumbRadius * 0.5f, thumbRadius * 0.5f),
-            juce::Colours::black.withAlpha(0.5f),
-            juce::AffineTransform::translation(thumbRadius * -0.5f, thumbRadius * -0.5f),
+            Colours::white.withAlpha(0.5f),
+            AffineTransform::translation(thumbRadius * 0.5f, thumbRadius * 0.5f),
+            Colours::black.withAlpha(0.5f),
+            AffineTransform::translation(thumbRadius * -0.5f, thumbRadius * -0.5f),
             thumbRadius * 0.25f);
 
         auto imageWithUpperShadow = mescal::Effect::create(mescal::Effect::Type::composite) << trackImage << innerShadow.getEffect();
@@ -584,8 +364,8 @@ void MescalLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
         imageWithUpperShadow->applyEffect(outputImage, {}, false);
     }
 
-    g.setColour(juce::Colours::black.withAlpha(0.25f));
+    g.setColour(Colours::black.withAlpha(0.25f));
     g.fillEllipse(thumbRect.expanded(1.0f));
-    g.setColour(juce::Colours::black);
+    g.setColour(Colours::black);
     g.drawImageAt(outputImage, 0, 0);
 }

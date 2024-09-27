@@ -200,13 +200,13 @@ void MescalLookAndFeel::clear(juce::Graphics& g)
     g.getInternalContext().fillRect(g.getClipBounds(), true);
 }
 
-void MescalLookAndFeel::InnerShadow::configure(juce::Image const& sourceImage, juce::Colour topColor, juce::AffineTransform topShadowTransform, juce::Colour bottomColor, juce::AffineTransform bottomShadowTransform, float shadowSize)
+void MescalLookAndFeel::InnerShadow::configure(mescal::Effect::Input input, juce::Colour topColor, juce::AffineTransform topShadowTransform, juce::Colour bottomColor, juce::AffineTransform bottomShadowTransform, float shadowSize)
 {
     flood->setPropertyValue(mescal::Effect::Flood::color, juce::Colours::blue);
 
     arithmeticComposite->setPropertyValue(mescal::Effect::ArithmeticComposite::coefficients, mescal::Vector4{ 0.0f, 1.0f, -1.0f, 0.0f });
     arithmeticComposite->setInput(0, flood);
-    arithmeticComposite->setInput(1, sourceImage);
+    arithmeticComposite->setInput(1, input);
 
     upperShadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, shadowSize);
     upperShadow->setPropertyValue(mescal::Effect::Shadow::color, topColor);
@@ -227,15 +227,26 @@ void MescalLookAndFeel::InnerShadow::configure(juce::Image const& sourceImage, j
     blend->setInput(1, lowerTransform);
 
     alphaMask->setInput(0, blend);
-    alphaMask->setInput(1, sourceImage);
+    alphaMask->setInput(1, input);
 }
 
-void MescalLookAndFeel::DropShadow::configure(juce::Image const& sourceImage, juce::Colour shadowColor, float shadowSize, juce::AffineTransform transform)
+void MescalLookAndFeel::DropShadow::configure(mescal::Effect::Input input, juce::Colour shadowColor, float shadowSize, juce::AffineTransform transform)
 {
     shadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, shadowSize);
     shadow->setPropertyValue(mescal::Effect::Shadow::color, shadowColor);
-    shadow->setInput(0, sourceImage);
+    shadow->setInput(0, input);
 
     transformEffect->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, transform);
     transformEffect->setInput(0, shadow);
+}
+
+void MescalLookAndFeel::Glow::configure(mescal::Effect::Input input, juce::Colour glowColor, float glowSize)
+{
+    shadow->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, glowSize);
+    shadow->setPropertyValue(mescal::Effect::Shadow::color, glowColor);
+    shadow->setInput(0, input);
+
+    blend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::linearLight);
+    blend->setInput(0, input);
+    blend->setInput(1, shadow);
 }
