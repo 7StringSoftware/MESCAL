@@ -550,22 +550,19 @@ public:
     std::vector<Input> const& getInputs() const noexcept;
 
     /**
-    * Set the input at the specified index to a JUCE Image
+    * Add an image or an effect as an input to this effect.
     *
-    * @param index The index of the input
-    * @param image The JUCE Image to use as the input
+    * @param input The input to add (an Image or an Effect)
     */
-    void setInput(int index, juce::Image const& image);
-    void addInput(juce::Image const& image);
+    void addInput(Input input);
 
     /**
-    * Set the input at the specified index to another Effect. This builds an effect processing graph.
+    * Sets an image or an effect as an indexed input to this effect.
     *
-    * @param index The index of the input
-    * @param image The Effect to use as the input
+    * @param index The index of the input to set
+    * @param input The input to add (an Image or an Effect)
     */
-    void setInput(int index, Ptr otherEffect);
-    void addInput(Ptr otherEffect);
+    void setInput(int index, Input input);
 
     /**
     * Run this Effect and paint the output from this Effect onto outputImage.

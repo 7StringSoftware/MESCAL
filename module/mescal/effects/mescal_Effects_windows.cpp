@@ -502,38 +502,21 @@ namespace mescal
         return {};
     }
 
-    void Effect::setInput(int index, juce::Image const& image)
-    {
-        pimpl->inputs[index] = image;
-    }
-
-    void Effect::addInput(juce::Image const& image)
+    void Effect::addInput(Input addedInput)
     {
         for (auto& input : pimpl->inputs)
         {
             if (std::holds_alternative<std::monostate>(input))
             {
-                input = image;
+                input = addedInput;
                 return;
             }
         }
     }
 
-    void Effect::setInput(int index, mescal::Effect::Ptr otherEffect)
+    void Effect::setInput(int index, mescal::Effect::Input input)
     {
-        pimpl->inputs[index] = otherEffect;
-    }
-
-    void Effect::addInput(mescal::Effect::Ptr otherEffect)
-    {
-        for (auto& input : pimpl->inputs)
-        {
-            if (std::holds_alternative<std::monostate>(input))
-            {
-                input = otherEffect;
-                return;
-            }
-        }
+        pimpl->inputs[index] = input;
     }
 
     const std::vector<mescal::Effect::Input>& Effect::getInputs() const noexcept
