@@ -6,6 +6,11 @@ class EffectGraph
 {
 public:
 	EffectGraph();
+    /// <summary>
+    ///
+    /// </summary>
+    void paintSlider();
+    void createSliderEffectGraph();
 
     void paintMetallicKnobImage(float angle);
     void createMetallicKnobEffectGraph();

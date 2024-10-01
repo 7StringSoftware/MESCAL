@@ -110,6 +110,24 @@ Effects only run in the GPU, so any Image objects used for inputs or outputs mus
 class Effect : public juce::ReferenceCountedObject
 {
 public:
+    struct Ptr : juce::ReferenceCountedObjectPtr<Effect>
+    {
+        Ptr() : juce::ReferenceCountedObjectPtr<Effect>() {}
+        Ptr(Effect* effect) : juce::ReferenceCountedObjectPtr<Effect>(effect) {}
+
+        Ptr operator<< (juce::Image const& image)
+        {
+            get()->addInput(image);
+            return get();
+        }
+
+        Ptr operator<< (Ptr effect)
+        {
+            get()->addInput(effect);
+            return get();
+        }
+    };
+
     /**
      * Enumeration of built-in effect types
      */
@@ -141,7 +159,7 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/2d-affine-transform
     */
-    struct AffineTransform2D
+    struct AffineTransform2D : public Ptr
     {
         static constexpr int interpolationMode = 0;
         static constexpr int borderMode = 1;
@@ -157,6 +175,28 @@ public:
 
         static constexpr int soft = 0;
         static constexpr int hard = 1;
+
+        static AffineTransform2D create(juce::AffineTransform transform)
+        {
+            auto effect = new Effect{ Effect::Type::affineTransform2D };
+            effect->setPropertyValue(AffineTransform2D::transformMatrix, transform);
+            return { effect };
+        }
+        AffineTransform2D(Effect* effect) : Ptr(effect) {}
+    };
+
+    /**
+    * Built-in Direct2D alpha mask effect
+    *
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/alpha-mask
+    */
+    struct AlphaMask : public Ptr
+    {
+        static AlphaMask create()
+        {
+            return { new Effect{ Effect::Type::alphaMask } };
+        }
+        AlphaMask(Effect* effect) : Ptr(effect) { }
     };
 
     /**
@@ -164,10 +204,18 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/arithmetic-composite
     */
-    struct ArithmeticComposite
+    struct ArithmeticComposite : public Ptr
     {
         static constexpr int coefficients = 0;
         static constexpr int clampOutput = 1;
+
+        static ArithmeticComposite create(float c0, float c1, float c2, float c3)
+        {
+            auto effect = new Effect{ Effect::Type::arithmeticComposite };
+            effect->setPropertyValue(ArithmeticComposite::coefficients, Vector4{ c0, c1, c2, c3 });
+            return { effect };
+        }
+        ArithmeticComposite(Effect* effect) : Ptr(effect) { }
     };
 
     /**
@@ -175,7 +223,7 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/blend
     */
-    struct Blend
+    struct Blend : public Ptr
     {
         static constexpr int mode = 0;
 
@@ -205,6 +253,14 @@ public:
         static constexpr int luminosity = 23;
         static constexpr int subtract = 24;
         static constexpr int division = 25;
+
+        static Blend create(int initialMode)
+        {
+            auto effect = new Effect{ Effect::Type::blend };
+            effect->setPropertyValue(Blend::mode, initialMode);
+            return { effect };
+        }
+        Blend(Effect* effect) : Ptr(effect) { }
     };
 
     /**
@@ -225,7 +281,7 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/composite
     */
-    struct Composite
+    struct Composite : public Ptr
     {
         static constexpr int mode = 0;
 
@@ -242,6 +298,14 @@ public:
         static constexpr int sourceCopy = 10;
         static constexpr int boundedSourceCopy = 11;
         static constexpr int maskInvert = 12;
+
+        static Composite create(int initialMode)
+        {
+            auto effect = new Effect{ Effect::Type::composite };
+            effect->setPropertyValue(Composite::mode, initialMode);
+            return { effect };
+        }
+        Composite(Effect* effect) : Ptr(effect) { }
     };
 
     /**
@@ -249,10 +313,13 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/crop
     */
-    struct Crop
+    struct Crop : public Ptr
     {
         static constexpr int rect = 0;
         static constexpr int borderMode = 1;
+
+        static Crop create(juce::Rectangle<float> cropArea);
+        Crop(Effect* effect) : Ptr(effect) {}
     };
 
     /**
@@ -271,9 +338,17 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/flood
     */
-    struct Flood
+    struct Flood : public Ptr
     {
         static constexpr int color = 0;
+
+        static Flood create(juce::Colour floodColor)
+        {
+            auto effect = new Effect{ Effect::Type::flood };
+            effect->setPropertyValue(Flood::color, floodColor);
+            return { effect };
+        }
+        Flood(Effect* effect) : Ptr(effect) {}
     };
 
     /**
@@ -281,7 +356,7 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/gaussian-blur
     */
-    struct GaussianBlur
+    struct GaussianBlur : public Ptr
     {
         static constexpr int standardDeviation = 0;
         static constexpr int optimization = 1;
@@ -293,6 +368,9 @@ public:
 
         static constexpr int soft = 0;
         static constexpr int hard = 1;
+
+        static GaussianBlur create(float standardDeviation);
+        GaussianBlur(Effect* effect) : Ptr(effect) { }
     };
 
     /**
@@ -326,7 +404,7 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/shadow
     */
-    struct Shadow
+    struct Shadow : public Ptr
     {
         static constexpr int blurStandardDeviation = 0;
         static constexpr int color = 1;
@@ -335,6 +413,15 @@ public:
         static constexpr int speed = 0;
         static constexpr int balanced = 1;
         static constexpr int quality = 2;
+
+        static Shadow create(float standardDeviation, juce::Colour shadowColor)
+        {
+            auto effect = new Effect{ Effect::Type::shadow };
+            effect->setPropertyValue(Shadow::blurStandardDeviation, standardDeviation);
+            effect->setPropertyValue(Shadow::color, shadowColor);
+            return { effect };
+        }
+        Shadow(Effect* effect) : Ptr(effect) {}
     };
 
     /**
@@ -342,7 +429,7 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/spot-diffuse-lighting
     */
-    struct SpotDiffuseLighting
+    struct SpotDiffuseLighting : public Ptr
     {
         static constexpr int lightPosition = 0;
         static constexpr int pointsAt = 1;
@@ -360,6 +447,16 @@ public:
         static constexpr int multiSampleLinear = 3;
         static constexpr int anisotropic = 4;
         static constexpr int highQualityCubic = 5;
+
+        SpotDiffuseLighting withLightPosition(float x, float y, float z);
+        SpotDiffuseLighting withPointsAt(float x, float y, float z);
+        SpotDiffuseLighting withFocus(float focus);
+        SpotDiffuseLighting withLimitingConeAngle(float angle);
+        SpotDiffuseLighting withDiffuseConstant(float constant);
+        SpotDiffuseLighting withSurfaceScale(float scale);
+        SpotDiffuseLighting withColor(juce::Colour colour);
+        SpotDiffuseLighting withKernelUnitLength(float x, float y);
+        SpotDiffuseLighting withScaleMode(int mode);
     };
 
     /**
@@ -367,7 +464,7 @@ public:
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/spot-specular-lighting
     */
-    struct SpotSpecularLighting
+    struct SpotSpecularLighting : public Ptr
     {
         static constexpr int lightPosition = 0;
         static constexpr int pointsAt = 1;
@@ -386,6 +483,19 @@ public:
         static constexpr int multiSampleLinear = 3;
         static constexpr int anisotropic = 4;
         static constexpr int highQualityCubic = 5;
+
+        static SpotSpecularLighting create();
+        SpotSpecularLighting(Effect* effect) : Ptr(effect) { }
+        SpotSpecularLighting withLightPosition(float x, float y, float z);
+        SpotSpecularLighting withPointsAt(float x, float y, float z);
+        SpotSpecularLighting withFocus(float focus);
+        SpotSpecularLighting withLimitingConeAngle(float angle);
+        SpotSpecularLighting withSpecularExponent(float exponent);
+        SpotSpecularLighting withSpecularConstant(float constant);
+        SpotSpecularLighting withSurfaceScale(float scale);
+        SpotSpecularLighting withColor(juce::Colour colour);
+        SpotSpecularLighting withKernelUnitLength(float x, float y);
+        SpotSpecularLighting withScaleMode(int mode);
     };
 
     /**
@@ -394,7 +504,7 @@ public:
     * Effects have zero or more inputs. Each input can be a JUCE Image or another Effect.
     * Chaining effects together allows for complex image processing graphs.
     */
-    using Input = std::variant<std::monostate, juce::Image, juce::ReferenceCountedObjectPtr<Effect>>;
+    using Input = std::variant<std::monostate, juce::Image, Ptr>;
 
     /**
     * Variant that can hold different types for getting and setting effect property values
@@ -413,7 +523,8 @@ public:
         Vector4,
         Enumeration,
         juce::AffineTransform,
-        juce::Colour>;
+        juce::Colour,
+        juce::Rectangle<float>>;
 
     /**
     * Structure that contains metadata about an effect property
@@ -434,9 +545,10 @@ public:
     */
     Effect(Type effectType_);
     Effect(const Effect& other);
+    Effect(const Effect&& other) noexcept;
     ~Effect();
 
-    static juce::ReferenceCountedObjectPtr<Effect> create(Type effectType);
+    static Ptr create(Type effectType);
 
     /**
     * Get the name of the effect
@@ -457,6 +569,7 @@ public:
     * @param image The JUCE Image to use as the input
     */
     void setInput(int index, juce::Image const& image);
+    void addInput(juce::Image const& image);
 
     /**
     * Set the input at the specified index to another Effect. This builds an effect processing graph.
@@ -464,7 +577,8 @@ public:
     * @param index The index of the input
     * @param image The Effect to use as the input
     */
-    void setInput(int index, juce::ReferenceCountedObjectPtr<Effect> otherEffect);
+    void setInput(int index, Ptr otherEffect);
+    void addInput(Ptr otherEffect);
 
     /**
     * Run this Effect and paint the output from this Effect onto outputImage.
@@ -506,10 +620,10 @@ public:
 
     Type const effectType;
 
-    using Ptr = juce::ReferenceCountedObjectPtr<Effect>;
+    std::function<void(Effect*, int, PropertyValue)> onPropertyChange;
 
 protected:
     /** @internal */
     struct Pimpl;
-    std::unique_ptr<Pimpl> pimpl;
+    std::shared_ptr<Pimpl> pimpl;
 };

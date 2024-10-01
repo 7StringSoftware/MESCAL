@@ -13,22 +13,49 @@ EffectGraphComponent::~EffectGraphComponent()
 {
 }
 
+static void setCallbackRecursive(mescal::Effect::Ptr effect, std::function<void()> callback)
+{
+    effect->onPropertyChange = [callback](mescal::Effect*, int, mescal::Effect::PropertyValue)
+    {
+        if (callback)
+        {
+            callback();
+        }
+    };
+
+    for (auto const& input : effect->getInputs())
+    {
+        if (std::holds_alternative<mescal::Effect::Ptr>(input))
+        {
+            setCallbackRecursive(std::get<mescal::Effect::Ptr>(input), callback);
+        }
+    }
+}
+
 void EffectGraphComponent::setOutputEffect(mescal::Effect::Ptr outputEffect, int imageWidth, int imageHeight)
 {
 	viewportContent.buildEffectGraphComponents(outputEffect, imageWidth, imageHeight);
+
+    setCallbackRecursive(outputEffect, [this]()
+        {
+            if (onPropertyChange)
+            {
+                onPropertyChange();
+            }
+        });
 }
 
 void EffectGraphComponent::paint(juce::Graphics& g)
 {
-	g.fillAll(juce::Colours::white);
+	g.fillAll(juce::Colour{ 0xffd1d1d1 });
 }
 
 void EffectGraphComponent::resized()
 {
-	viewportContent.setBounds(viewportContent.getPreferredSize());
+    auto contentSize = getPreferredSize().getUnion(getLocalBounds());
+	viewportContent.setBounds(contentSize);
 	viewport.setBounds(getLocalBounds());
 }
-
 
 juce::Rectangle<int> EffectGraphComponent::getPreferredSize()
 {
@@ -111,7 +138,7 @@ void EffectGraphComponent::ViewportContent::buildEffectGraphComponentsRecursive(
 void EffectGraphComponent::ViewportContent::positionEffectGraphComponentsRecursive(NodeComponent* nodeComponent, int& y, int depth, std::vector<std::vector<juce::Component*>>& columns,
     int& sequence)
 {
-	int size = 150;
+	int size = 300;
 	int gap = 80;
 	int top = y;
 	int x = (size + gap) * (depth - 1);

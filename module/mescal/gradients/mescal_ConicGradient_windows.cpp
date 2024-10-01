@@ -17,6 +17,7 @@ namespace mescal
         {
             if (!deviceContext)
             {
+#if 0
                 if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
                 {
                     if (auto adapter = pixelData->getAdapter())
@@ -33,7 +34,8 @@ namespace mescal
                         deviceContext = deviceContext1.as<ID2D1DeviceContext2>();
                     }
                 }
-            }
+#endif
+        }
         }
 
         void draw(juce::Span<Stop> stops, juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor)
@@ -164,6 +166,7 @@ namespace mescal
                 {
                     if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
                     {
+#if 0
                         if (auto bitmap = pixelData->getAdapterD2D1Bitmap())
                         {
                             deviceContext->SetTarget(bitmap);
@@ -176,6 +179,7 @@ namespace mescal
                             deviceContext->EndDraw();
                             deviceContext->SetTarget(nullptr);
                         }
+#endif
                     }
                 }
             }

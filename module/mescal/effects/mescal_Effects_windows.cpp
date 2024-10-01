@@ -13,32 +13,17 @@ namespace mescal
         {
         }
 
-        void createResources()
+        void createD2DEffect()
         {
-            juce::SharedResourcePointer<juce::DirectX> directX;
-
-            if (!adapter)
+            if (auto hr = resources->create(); FAILED(hr))
             {
-                adapter = directX->adapters.getDefaultAdapter();
+                jassertfalse;
+                return;
             }
 
-            if (adapter && !deviceContext)
+            if (!d2dEffect)
             {
-                winrt::com_ptr<ID2D1DeviceContext1> deviceContext1;
-                if (const auto hr = adapter->direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS,
-                    deviceContext1.put());
-                    FAILED(hr))
-                {
-                    jassertfalse;
-                    return;
-                }
-
-                deviceContext = deviceContext1.as<ID2D1DeviceContext2>();
-            }
-
-            if (deviceContext && !d2dEffect)
-            {
-                if (const auto hr = deviceContext->CreateEffect(*effectGuids[(size_t)effectType], d2dEffect.put());
+                if (const auto hr = resources->deviceContext->CreateEffect(*effectGuids[(size_t)effectType], d2dEffect.put());
                     FAILED(hr))
                 {
                     jassertfalse;
@@ -60,19 +45,6 @@ namespace mescal
                 maxNumInputs = juce::jmin(2u, maxNumInputs);
 
                 inputs.resize(maxNumInputs);
-
-#if 0
-                if (effectType == Type::spotSpecularLighting)
-                {
-                    static bool go = true;
-                    if (go)
-                    {
-                        go = false;
-                        dumpPropertiesRecursive(d2dEffect.get(), SpotSpecular::lightPosition);
-
-                    }
-                }
-#endif
             }
         }
 
@@ -179,7 +151,7 @@ namespace mescal
         int getNumProperties()
         {
             if (!d2dEffect)
-                createResources();
+                createD2DEffect();
 
             if (!d2dEffect)
                 return 0;
@@ -192,7 +164,7 @@ namespace mescal
             WCHAR nameBuffer[256];
 
             if (!d2dEffect)
-                createResources();
+                createD2DEffect();
 
             if (!d2dEffect)
                 return {};
@@ -282,7 +254,7 @@ namespace mescal
             [[maybe_unused]] HRESULT hr = S_OK;
 
             if (!d2dEffect)
-                createResources();
+                createD2DEffect();
 
             if (!d2dEffect)
                 return;
@@ -325,6 +297,11 @@ namespace mescal
                 auto color = std::get<juce::Colour>(value);
                 d2dEffect->SetValue(index, D2D1_VECTOR_4F{ color.getFloatRed(), color.getFloatGreen(), color.getFloatBlue(), color.getFloatAlpha() });
             }
+            else if (std::holds_alternative<juce::Rectangle<float>>(value))
+            {
+                auto& rect = std::get<juce::Rectangle<float>>(value);
+                d2dEffect->SetValue(index, D2D1_VECTOR_4F{ rect.getX(), rect.getY(), rect.getRight(), rect.getBottom() });
+            }
             else
             {
                 jassertfalse;
@@ -336,7 +313,7 @@ namespace mescal
         PropertyValue getProperty(int index)
         {
             if (!d2dEffect)
-                createResources();
+                createD2DEffect();
 
             if (!d2dEffect)
                 return {};
@@ -403,7 +380,9 @@ namespace mescal
                     if (image.isValid())
                     {
                         if (juce::Direct2DPixelData::Ptr inputPixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
-                            pimpl->d2dEffect->SetInput(index, inputPixelData->getAdapterD2D1Bitmap());
+                        {
+                            pimpl->d2dEffect->SetInput(index, inputPixelData->getFirstPageForContext(pimpl->resources->deviceContext));
+                        }
                     }
                 }
                 else if (std::holds_alternative<Effect::Ptr>(input))
@@ -417,8 +396,44 @@ namespace mescal
         }
 
         Type effectType;
-        juce::DxgiAdapter::Ptr adapter;
-        winrt::com_ptr<ID2D1DeviceContext2> deviceContext;
+
+        struct Resources
+        {
+            HRESULT create()
+            {
+                if (!adapter)
+                {
+                    adapter = directX->adapters.getDefaultAdapter();
+                }
+
+                if (adapter && !deviceContext)
+                {
+                    juce::ComSmartPtr<ID2D1DeviceContext1> deviceContext1;
+                    if (const auto hr = adapter->direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS,
+                        deviceContext1.resetAndGetPointerAddress());
+                        FAILED(hr))
+                    {
+                        jassertfalse;
+                        return hr;
+                    }
+
+                    deviceContext1->QueryInterface<ID2D1DeviceContext2>(deviceContext.resetAndGetPointerAddress());
+                }
+
+                return S_OK;
+            }
+
+            void release()
+            {
+                deviceContext = nullptr;
+                adapter = nullptr;
+            }
+
+            juce::SharedResourcePointer<juce::DirectX> directX;
+            juce::DxgiAdapter::Ptr adapter;
+            juce::ComSmartPtr<ID2D1DeviceContext2> deviceContext;
+        };
+        juce::SharedResourcePointer<Resources> resources;
         winrt::com_ptr<ID2D1Effect> d2dEffect;
         std::vector<Effect::Input> inputs;
 
@@ -447,9 +462,21 @@ namespace mescal
 
     Effect::Effect(Type effectType_) :
         effectType(effectType_),
-        pimpl(std::make_unique<Pimpl>(effectType_))
+        pimpl(std::make_shared<Pimpl>(effectType_))
     {
-        pimpl->createResources();
+        pimpl->createD2DEffect();
+    }
+
+    Effect::Effect(const Effect& other) :
+        effectType(other.effectType),
+        pimpl(other.pimpl)
+    {
+    }
+
+    Effect::Effect(const Effect&& other) noexcept :
+        effectType(other.effectType),
+        pimpl(std::move(other.pimpl))
+    {
     }
 
     Effect::~Effect()
@@ -463,7 +490,7 @@ namespace mescal
 
     juce::String Effect::getName() const noexcept
     {
-        pimpl->createResources();
+        pimpl->createD2DEffect();
 
         if (pimpl->d2dEffect)
         {
@@ -480,9 +507,33 @@ namespace mescal
         pimpl->inputs[index] = image;
     }
 
+    void Effect::addInput(juce::Image const& image)
+    {
+        for (auto& input : pimpl->inputs)
+        {
+            if (std::holds_alternative<std::monostate>(input))
+            {
+                input = image;
+                return;
+            }
+        }
+    }
+
     void Effect::setInput(int index, mescal::Effect::Ptr otherEffect)
     {
         pimpl->inputs[index] = otherEffect;
+    }
+
+    void Effect::addInput(mescal::Effect::Ptr otherEffect)
+    {
+        for (auto& input : pimpl->inputs)
+        {
+            if (std::holds_alternative<std::monostate>(input))
+            {
+                input = otherEffect;
+                return;
+            }
+        }
     }
 
     const std::vector<mescal::Effect::Input>& Effect::getInputs() const noexcept
@@ -503,6 +554,9 @@ namespace mescal
     void Effect::setPropertyValue(int index, const PropertyValue value)
     {
         pimpl->setProperty(index, value);
+
+        if (onPropertyChange)
+            onPropertyChange(this, index, value);
     }
 
     Effect::PropertyValue Effect::getPropertyValue(int index)
@@ -517,8 +571,8 @@ namespace mescal
 
     void Effect::applyEffect(juce::Image& outputImage, const juce::AffineTransform& transform, bool clearDestination)
     {
-        pimpl->createResources();
-        if (!pimpl->deviceContext || !pimpl->adapter || !pimpl->adapter->dxgiAdapter || !pimpl->d2dEffect)
+        pimpl->createD2DEffect();
+        if (!pimpl->d2dEffect)
         {
             return;
         }
@@ -531,16 +585,96 @@ namespace mescal
 
         Pimpl::setInputsRecursive(pimpl.get());
 
-        pimpl->deviceContext->SetTarget(outputPixelData->getAdapterD2D1Bitmap());
-        pimpl->deviceContext->BeginDraw();
+        pimpl->resources->deviceContext->SetTarget(outputPixelData->getFirstPageForContext(pimpl->resources->deviceContext));
+        pimpl->resources->deviceContext->BeginDraw();
         if (clearDestination)
-            pimpl->deviceContext->Clear();
+            pimpl->resources->deviceContext->Clear();
 
         if (!transform.isIdentity())
-            pimpl->deviceContext->SetTransform(juce::D2DUtilities::transformToMatrix(transform));
+            pimpl->resources->deviceContext->SetTransform(juce::D2DUtilities::transformToMatrix(transform));
 
-        pimpl->deviceContext->DrawImage(pimpl->d2dEffect.get());
-        pimpl->deviceContext->EndDraw();
+        pimpl->resources->deviceContext->DrawImage(pimpl->d2dEffect.get());
+        [[maybe_unused]] auto hr = pimpl->resources->deviceContext->EndDraw();
+        jassert(SUCCEEDED(hr));
     }
-}
 
+    Effect::Crop Effect::Crop::create(juce::Rectangle<float> cropArea)
+    {
+        auto effect = new Effect{ Effect::Type::crop };
+        effect->setPropertyValue(Crop::rect, cropArea);
+        return { effect };
+    }
+
+    Effect::GaussianBlur Effect::GaussianBlur::create(float standardDeviationValue)
+    {
+        auto effect = new Effect{ Effect::Type::gaussianBlur };
+        effect->setPropertyValue(standardDeviation, standardDeviationValue);
+        return effect;
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::create()
+    {
+        return new Effect{ Effect::Type::spotSpecularLighting };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withLightPosition(float x, float y, float z)
+    {
+        get()->setPropertyValue(lightPosition, Vector3{ x, y, z });
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withPointsAt(float x, float y, float z)
+    {
+        get()->setPropertyValue(pointsAt, Vector3{ x, y, z });
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withFocus(float focusValue)
+    {
+        get()->setPropertyValue(focus, focusValue);
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withLimitingConeAngle(float angle)
+    {
+        get()->setPropertyValue(limitingConeAngle, angle);
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withSpecularExponent(float exponent)
+    {
+        get()->setPropertyValue(specularExponent, exponent);
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withSpecularConstant(float constant)
+    {
+        get()->setPropertyValue(specularConstant, constant);
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withSurfaceScale(float scale)
+    {
+        get()->setPropertyValue(surfaceScale, scale);
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withColor(juce::Colour colour)
+    {
+        get()->setPropertyValue(color, colour);
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withKernelUnitLength(float x, float y)
+    {
+        get()->setPropertyValue(kernelUnitLength, Vector2{ x, y });
+        return SpotSpecularLighting{ *this };
+    }
+
+    Effect::SpotSpecularLighting Effect::SpotSpecularLighting::withScaleMode(int mode)
+    {
+        get()->setPropertyValue(scaleMode, mode);
+        return SpotSpecularLighting{ *this };
+    }
+
+}
