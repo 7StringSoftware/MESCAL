@@ -500,3 +500,19 @@ void InteractiveMeshGradient::PatchComponent::mouseUp(const juce::MouseEvent&)
         onSelect(this);
     }
 }
+
+void InteractiveMeshGradient::InteriorControlComponent::mouseDown(const juce::MouseEvent& e)
+{
+
+}
+
+void InteractiveMeshGradient::InteriorControlComponent::mouseDrag(const juce::MouseEvent& e)
+{
+
+}
+
+void InteractiveMeshGradient::InteriorControlComponent::paint(juce::Graphics& g)
+{
+    g.setColour(juce::Colours::hotpink);
+    g.fillAll();
+}

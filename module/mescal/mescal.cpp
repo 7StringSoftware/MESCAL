@@ -40,6 +40,7 @@
 #include "mescal.h"
 
 #include "json/mescal_JSON.cpp"
+#include "resources/mescal_Resources_windows.cpp"
 #include "gradients/mescal_MeshGradient_windows.cpp"
 #include "gradients/mescal_ConicGradient_windows.cpp"
 #include "effects/mescal_Effects_windows.cpp"

@@ -61,16 +61,11 @@ namespace mescal
 
         void createResources()
         {
-            if (!deviceContext2)
-            {
-                auto deviceContext1 = juce::Direct2DDeviceContext::create(directX->adapters.getDefaultAdapter());
-                deviceContext1->QueryInterface<ID2D1DeviceContext2>(deviceContext2.put());
-            }
+            resources->create();
         }
 
         MeshGradient& owner;
-        juce::SharedResourcePointer<juce::DirectX> directX;
-        winrt::com_ptr<ID2D1DeviceContext2> deviceContext2;
+        juce::SharedResourcePointer<DirectXResources> resources;
         winrt::com_ptr<ID2D1GradientMesh> gradientMesh;
     };
 
@@ -336,27 +331,26 @@ namespace mescal
 
         pimpl->createResources();
 
-        if (pimpl->deviceContext2 && image.isValid())
+        auto& deviceContext = pimpl->resources->deviceContext;
+        if (deviceContext && image.isValid())
         {
             pimpl->gradientMesh = {};
-            pimpl->deviceContext2->CreateGradientMesh(d2dPatches.data(), (uint32_t)d2dPatches.size(), pimpl->gradientMesh.put());
+            deviceContext->CreateGradientMesh(d2dPatches.data(), (uint32_t)d2dPatches.size(), pimpl->gradientMesh.put());
 
             if (pimpl->gradientMesh)
             {
                 if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
                 {
-                    juce::ComSmartPtr<ID2D1DeviceContext1> context1;
-                    *context1.resetAndGetPointerAddress() = pimpl->deviceContext2.as<ID2D1DeviceContext1>().get();
-                    if (auto bitmap = pixelData->getFirstPageForContext(context1))
+                    if (auto bitmap = pixelData->getFirstPageForContext(deviceContext))
                     {
-                        pimpl->deviceContext->SetTarget(bitmap);
-                        pimpl->deviceContext->BeginDraw();
-                        pimpl->deviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
-                        pimpl->deviceContext->Clear(juce::D2DUtilities::toCOLOR_F(backgroundColor));
-                        pimpl->deviceContext->DrawGradientMesh(pimpl->gradientMesh.get());
-                        [[maybe_unused]] auto hr = pimpl->deviceContext->EndDraw();
+                        deviceContext->SetTarget(bitmap);
+                        deviceContext->BeginDraw();
+                        deviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+                        deviceContext->Clear(juce::D2DUtilities::toCOLOR_F(backgroundColor));
+                        deviceContext->DrawGradientMesh(pimpl->gradientMesh.get());
+                        [[maybe_unused]] auto hr = deviceContext->EndDraw();
                         jassert(SUCCEEDED(hr));
-                        pimpl->deviceContext->SetTarget(nullptr);
+                        deviceContext->SetTarget(nullptr);
                     }
                 }
             }

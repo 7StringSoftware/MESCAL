@@ -209,6 +209,15 @@
     <Filter Include="JUCE Modules\juce_graphics\placement">
       <UniqueIdentifier>{160D9882-0F68-278D-C5F9-8960FD7421D2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="JUCE Modules\juce_graphics\unicode\sheenbidi\Headers">
+      <UniqueIdentifier>{0CB19E25-4E0F-3B63-F005-249DA1602485}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="JUCE Modules\juce_graphics\unicode\sheenbidi\Source">
+      <UniqueIdentifier>{26969BB2-447E-3386-5885-61B4896FAA0E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="JUCE Modules\juce_graphics\unicode\sheenbidi">
+      <UniqueIdentifier>{5B44DF93-8EE9-BAF5-0B3B-30AE9E58A3F1}</UniqueIdentifier>
+    </Filter>
     <Filter Include="JUCE Modules\juce_graphics\unicode">
       <UniqueIdentifier>{A4846E15-C7B2-BB61-80BA-E284529F3AAA}</UniqueIdentifier>
     </Filter>
@@ -314,11 +323,14 @@
     <Filter Include="JUCE Modules\mescal\gradients">
       <UniqueIdentifier>{7741F2EB-E002-F999-93FA-68C1E2C227E8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="JUCE Modules\mescal\images">
+      <UniqueIdentifier>{0F45AF80-38B1-53F1-CE0D-91F6A0D7EF01}</UniqueIdentifier>
+    </Filter>
     <Filter Include="JUCE Modules\mescal\json">
       <UniqueIdentifier>{4635C68B-ACED-F291-1E6B-16E616E12783}</UniqueIdentifier>
     </Filter>
-    <Filter Include="JUCE Modules\mescal\sprites">
-      <UniqueIdentifier>{F13FFB4B-F854-D621-A621-6B64783A835A}</UniqueIdentifier>
+    <Filter Include="JUCE Modules\mescal\resources">
+      <UniqueIdentifier>{62F8233A-70A8-09FB-19B0-04AC8B90CA46}</UniqueIdentifier>
     </Filter>
     <Filter Include="JUCE Modules\mescal">
       <UniqueIdentifier>{A70386C7-1093-63E7-B81E-B26871EEC759}</UniqueIdentifier>
@@ -605,6 +617,15 @@
       <Filter>JUCE Modules\juce_core\text</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_core\text\juce_CharacterFunctions.cpp">
+      <Filter>JUCE Modules\juce_core\text</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_core\text\juce_CharPointer_UTF8_test.cpp">
+      <Filter>JUCE Modules\juce_core\text</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_core\text\juce_CharPointer_UTF16_test.cpp">
+      <Filter>JUCE Modules\juce_core\text</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_core\text\juce_CharPointer_UTF32_test.cpp">
       <Filter>JUCE Modules\juce_core\text</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_core\text\juce_Identifier.cpp">
@@ -1393,13 +1414,70 @@
     <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\placement\juce_RectanglePlacement.cpp">
       <Filter>JUCE Modules\juce_graphics\placement</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\BidiChain.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\BidiTypeLookup.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\BracketQueue.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\GeneralCategoryLookup.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\IsolatingRun.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\LevelRun.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\PairingLookup.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\RunQueue.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SBAlgorithm.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SBBase.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SBCodepointSequence.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SBLine.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SBLog.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SBMirrorLocator.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SBParagraph.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SBScriptLocator.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\ScriptLookup.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\ScriptStack.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SheenBidi.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\StatusStack.c">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\juce_Unicode.cpp">
       <Filter>JUCE Modules\juce_graphics\unicode</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\juce_UnicodeBidi.cpp">
-      <Filter>JUCE Modules\juce_graphics\unicode</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\juce_UnicodeBrackets.cpp">
       <Filter>JUCE Modules\juce_graphics\unicode</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\juce_UnicodeGenerated.cpp">
@@ -1421,6 +1499,9 @@
       <Filter>JUCE Modules\juce_graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\juce_graphics_Harfbuzz.cpp">
+      <Filter>JUCE Modules\juce_graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\juce_graphics_Sheenbidi.c">
       <Filter>JUCE Modules\juce_graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_gui_basics\accessibility\juce_AccessibilityHandler.cpp">
@@ -2050,10 +2131,10 @@
     <ClCompile Include="..\..\..\..\..\..\..\JUCE\modules\juce_gui_extra\juce_gui_extra.mm">
       <Filter>JUCE Modules\juce_gui_extra</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\..\module\mescal\effects\mescal_CustomEffect_windows.cpp">
+    <ClCompile Include="..\..\..\..\..\module\mescal\effects\mescal_Effects_windows.cpp">
       <Filter>JUCE Modules\mescal\effects</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\..\module\mescal\effects\mescal_Effects_windows.cpp">
+    <ClCompile Include="..\..\..\..\..\module\mescal\effects\mescal_ImageEffectFilter_windows.cpp">
       <Filter>JUCE Modules\mescal\effects</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\..\module\mescal\gradients\mescal_ConicGradient_windows.cpp">
@@ -2062,14 +2143,14 @@
     <ClCompile Include="..\..\..\..\..\module\mescal\gradients\mescal_MeshGradient_windows.cpp">
       <Filter>JUCE Modules\mescal\gradients</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\..\..\module\mescal\images\mescal_Image_windows.cpp">
+      <Filter>JUCE Modules\mescal\images</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\..\..\..\module\mescal\json\mescal_JSON.cpp">
       <Filter>JUCE Modules\mescal\json</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\..\module\mescal\sprites\mescal_ScatterEffect_windows.cpp">
-      <Filter>JUCE Modules\mescal\sprites</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\..\module\mescal\sprites\mescal_SpriteBatch_windows.cpp">
-      <Filter>JUCE Modules\mescal\sprites</Filter>
+    <ClCompile Include="..\..\..\..\..\module\mescal\resources\mescal_Resources_windows.cpp">
+      <Filter>JUCE Modules\mescal\resources</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\..\..\module\mescal\mescal.cpp">
       <Filter>JUCE Modules\mescal</Filter>
@@ -2090,6 +2171,9 @@
       <Filter>JUCE Library Code</Filter>
     </ClCompile>
     <ClCompile Include="..\..\JuceLibraryCode\include_juce_graphics_Harfbuzz.cpp">
+      <Filter>JUCE Library Code</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\JuceLibraryCode\include_juce_graphics_Sheenbidi.c">
       <Filter>JUCE Library Code</Filter>
     </ClCompile>
     <ClCompile Include="..\..\JuceLibraryCode\include_juce_gui_basics.cpp">
@@ -2293,6 +2377,9 @@
       <Filter>JUCE Modules\juce_core\memory</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_core\memory\juce_ContainerDeletePolicy.h">
+      <Filter>JUCE Modules\juce_core\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_core\memory\juce_CopyableHeapBlock.h">
       <Filter>JUCE Modules\juce_core\memory</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_core\memory\juce_HeapBlock.h">
@@ -3771,6 +3858,117 @@
     <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\placement\juce_RectanglePlacement.h">
       <Filter>JUCE Modules\juce_graphics\placement</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Headers\SBAlgorithm.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Headers\SBBase.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Headers\SBBidiType.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Headers\SBCodepoint.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Headers\SBCodepointSequence.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Headers\SBConfig.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Headers\SBGeneralCategory.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Headers\SBLine.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Headers\SBMirrorLocator.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Headers\SBParagraph.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Headers\SBRun.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Headers\SBScript.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Headers\SBScriptLocator.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Headers\SheenBidi.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\BidiChain.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\BidiTypeLookup.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\BracketQueue.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\BracketType.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\GeneralCategoryLookup.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\IsolatingRun.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\LevelRun.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\PairingLookup.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\RunExtrema.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\RunKind.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\RunQueue.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SBAlgorithm.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SBAssert.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SBBase.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SBCodepointSequence.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SBLine.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SBLog.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SBMirrorLocator.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SBParagraph.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\SBScriptLocator.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\ScriptLookup.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\ScriptStack.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\Source\StatusStack.h">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi\Source</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\juce_graphics.h">
       <Filter>JUCE Modules\juce_graphics</Filter>
     </ClInclude>
@@ -4476,10 +4674,10 @@
     <ClInclude Include="..\..\..\..\..\..\..\JUCE\modules\juce_gui_extra\juce_gui_extra.h">
       <Filter>JUCE Modules\juce_gui_extra</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\..\module\mescal\effects\mescal_CustomEffect_windows.h">
+    <ClInclude Include="..\..\..\..\..\module\mescal\effects\mescal_Effects_windows.h">
       <Filter>JUCE Modules\mescal\effects</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\..\module\mescal\effects\mescal_Effects_windows.h">
+    <ClInclude Include="..\..\..\..\..\module\mescal\effects\mescal_ImageEffectFilter_windows.h">
       <Filter>JUCE Modules\mescal\effects</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\..\module\mescal\gradients\mescal_ConicGradient_windows.h">
@@ -4488,14 +4686,11 @@
     <ClInclude Include="..\..\..\..\..\module\mescal\gradients\mescal_MeshGradient_windows.h">
       <Filter>JUCE Modules\mescal\gradients</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\..\..\module\mescal\images\mescal_Image_windows.h">
+      <Filter>JUCE Modules\mescal\images</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\..\..\..\module\mescal\json\mescal_JSON.h">
       <Filter>JUCE Modules\mescal\json</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\..\module\mescal\sprites\mescal_ScatterEffect_windows.h">
-      <Filter>JUCE Modules\mescal\sprites</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\..\..\module\mescal\sprites\mescal_SpriteBatch_windows.h">
-      <Filter>JUCE Modules\mescal\sprites</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\..\..\module\mescal\mescal.h">
       <Filter>JUCE Modules\mescal</Filter>
@@ -4519,6 +4714,9 @@
     </None>
     <None Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\image_formats\pnglib\libpng_readme.txt">
       <Filter>JUCE Modules\juce_graphics\image_formats\pnglib</Filter>
+    </None>
+    <None Include="..\..\..\..\..\..\..\JUCE\modules\juce_graphics\unicode\sheenbidi\JUCE_CHANGES.txt">
+      <Filter>JUCE Modules\juce_graphics\unicode\sheenbidi</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
