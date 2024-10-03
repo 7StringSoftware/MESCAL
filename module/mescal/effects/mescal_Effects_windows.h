@@ -293,7 +293,7 @@ public:
         static constexpr int destinationOut = 5;
         static constexpr int sourceAtop = 6;
         static constexpr int destinationAtop = 7;
-        static constexpr int xor = 8;
+        static constexpr int exclusiveOr = 8;
         static constexpr int plus = 9;
         static constexpr int sourceCopy = 10;
         static constexpr int boundedSourceCopy = 11;
