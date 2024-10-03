@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="XEbnPK" name="MescalLookAndFeel" projectType="guiapp" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" defines="">
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" defines="JUCE_DIRECT2D_METRICS=1">
   <MAINGROUP id="VYSsCw" name="MescalLookAndFeel">
     <GROUP id="{8B15FD36-06CF-DAD8-A43B-75B5A35F0253}" name="Source">
       <FILE id="qvyRjo" name="EffectGraphComponent.cpp" compile="1" resource="0"
