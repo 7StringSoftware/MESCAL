@@ -246,7 +246,14 @@ void MescalLookAndFeel::Glow::configure(mescal::Effect::Input input, juce::Colou
     shadow->setPropertyValue(mescal::Effect::Shadow::color, glowColor);
     shadow->setInput(0, input);
 
-    blend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::linearLight);
+    blur->setPropertyValue(mescal::Effect::GaussianBlur::standardDeviation, glowSize);
+    blur->setInput(0, input);
+
+    blend->setPropertyValue(mescal::Effect::Blend::mode, mescal::Effect::Blend::multiply);
     blend->setInput(0, input);
-    blend->setInput(1, shadow);
+    blend->setInput(1, blur);
+
+    composite->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
+    composite->setInput(0, input);
+    composite->setInput(1, blur);
 }

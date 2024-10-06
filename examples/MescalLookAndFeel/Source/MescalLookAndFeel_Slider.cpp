@@ -77,9 +77,10 @@ void MescalLookAndFeel::drawLinearSlider(Graphics& g, int x, int y, int width, i
     }
 
     auto trackImage = getImage(0, trackRect);
-    auto outputImage = getImage(2, trackImage.getBounds());
+    auto outputImage = getImage(2, slider.getLocalBounds());
 
     trackRect = trackImage.getBounds().toFloat().withPosition(trackRect.getPosition());
+    juce::Rectangle<float> valueRect;
 
     {
         Graphics trackG{ trackImage };
@@ -120,7 +121,7 @@ void MescalLookAndFeel::drawLinearSlider(Graphics& g, int x, int y, int width, i
 
         if (!isTwoVal)
         {
-            juce::Rectangle<float> valueRect = slider.isHorizontal() ?
+             valueRect = slider.isHorizontal() ?
                 trackRectWithinImage.withRight(sliderPos - (float)x) :
                 trackRectWithinImage.withY(sliderPos - (float)y).withBottom(trackRectWithinImage.getBottom());
 
@@ -129,6 +130,24 @@ void MescalLookAndFeel::drawLinearSlider(Graphics& g, int x, int y, int width, i
             trackG.fillRoundedRectangle(valueRect, trackThickness * 0.5f);
         }
     }
+
+    if (!valueRect.isEmpty())
+    {
+        auto glowImage = getImage(3, slider.getLocalBounds());
+
+        {
+            juce::Graphics glowG{ glowImage };
+            clear(glowG);
+
+            glowG.setColour(trackColor);
+            glowG.fillRoundedRectangle(valueRect + trackRect.getPosition(), trackThickness * 0.5f);
+        }
+
+        glow.configure(glowImage, trackColor, trackThickness * 0.4f);
+        glow.getEffect()->applyEffect(outputImage, {}, true);
+        g.drawImageAt(outputImage, 0, 0);
+    }
+
 
     {
         auto topLeftShadowColor = Colours::black;

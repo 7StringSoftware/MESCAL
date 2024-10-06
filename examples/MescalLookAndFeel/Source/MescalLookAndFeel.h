@@ -101,7 +101,7 @@ private:
         mescal::Effect::Ptr upperTransform = mescal::Effect::create(mescal::Effect::Type::affineTransform2D);
         mescal::Effect::Ptr lowerShadow = mescal::Effect::create(mescal::Effect::Type::shadow);
         mescal::Effect::Ptr lowerTransform = mescal::Effect::create(mescal::Effect::Type::affineTransform2D);
-        mescal::Effect::Ptr  blend = mescal::Effect::create(mescal::Effect::Type::blend);
+        mescal::Effect::Ptr blend = mescal::Effect::create(mescal::Effect::Type::blend);
         mescal::Effect::Ptr alphaMask = mescal::Effect::create(mescal::Effect::Type::alphaMask);
 
         void configure(mescal::Effect::Input input,
@@ -133,7 +133,9 @@ private:
     struct Glow
     {
         mescal::Effect::Ptr shadow = mescal::Effect::create(mescal::Effect::Type::shadow);
+        mescal::Effect::Ptr blur = mescal::Effect::create(mescal::Effect::Type::gaussianBlur);
         mescal::Effect::Ptr blend = mescal::Effect::create(mescal::Effect::Type::blend);
+        mescal::Effect::Ptr composite = mescal::Effect::create(mescal::Effect::Type::composite);
 
         void configure(mescal::Effect::Input input, juce::Colour glowColor, float glowSize);
 
