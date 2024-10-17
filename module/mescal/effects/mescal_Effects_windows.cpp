@@ -394,6 +394,7 @@ namespace mescal
 
         static void setInputsRecursive(Pimpl* pimpl)
         {
+#if 0
             for (int index = 0; index < pimpl->inputs.size(); ++index)
             {
                 auto& input = pimpl->inputs[index];
@@ -414,6 +415,7 @@ namespace mescal
                     setInputsRecursive(otherEffect->pimpl.get());
                 }
             }
+#endif
         }
 
         Type effectType;
@@ -517,6 +519,7 @@ namespace mescal
 
     void Effect::applyEffect(juce::Image& outputImage, const juce::AffineTransform& transform, bool clearDestination)
     {
+#if 0
         pimpl->createResources();
         if (!pimpl->deviceContext || !pimpl->adapter || !pimpl->adapter->dxgiAdapter || !pimpl->d2dEffect)
         {
@@ -541,6 +544,7 @@ namespace mescal
 
         pimpl->deviceContext->DrawImage(pimpl->d2dEffect.get());
         pimpl->deviceContext->EndDraw();
+#endif
     }
 }
 

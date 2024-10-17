@@ -59,31 +59,13 @@ namespace mescal
         {
         }
 
-        void createResources(juce::Image image)
+        void createResources()
         {
-            if (!deviceContext)
-            {
-                if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
-                {
-                    if (auto adapter = pixelData->getAdapter())
-                    {
-                        winrt::com_ptr<ID2D1DeviceContext1> deviceContext1;
-                        if (const auto hr = adapter->direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS,
-                            deviceContext1.put());
-                            FAILED(hr))
-                        {
-                            jassertfalse;
-                            return;
-                        }
-
-                        deviceContext = deviceContext1.as<ID2D1DeviceContext2>();
-                    }
-                }
-            }
+            resources->create();
         }
 
         MeshGradient& owner;
-        winrt::com_ptr<ID2D1DeviceContext2> deviceContext;
+        juce::SharedResourcePointer<DirectXResources> resources;
         winrt::com_ptr<ID2D1GradientMesh> gradientMesh;
     };
 
@@ -154,9 +136,35 @@ namespace mescal
         setCornerPosition(mescal::MeshGradient::CornerPlacement::topRight, rect.getTopRight());
         setCornerPosition(mescal::MeshGradient::CornerPlacement::bottomLeft, rect.getBottomLeft());
         setCornerPosition(mescal::MeshGradient::CornerPlacement::bottomRight, rect.getBottomRight());
+
+        for (auto edgePlacement : edgePlacements)
+        {
+            auto edge = getEdge(edgePlacement);
+
+            juce::Line<float> line{ edge.tail, edge.head };
+            edge.internalControlPoints =
+            {
+                line.getPointAlongLineProportionally(0.33f),
+                line.getPointAlongLineProportionally(0.66f)
+            };
+
+            setEdge(edgePlacement, edge);
+        }
+
+        {
+            juce::Line diagonal{ rect.getTopLeft(), rect.getBottomRight() };
+            setInteriorControlPointPosition(mescal::MeshGradient::CornerPlacement::topLeft, diagonal.getPointAlongLineProportionally(0.33f));
+            setInteriorControlPointPosition(mescal::MeshGradient::CornerPlacement::bottomRight, diagonal.getPointAlongLineProportionally(0.66f));
+        }
+
+        {
+            juce::Line diagonal{ rect.getTopRight(), rect.getBottomLeft() };
+            setInteriorControlPointPosition(mescal::MeshGradient::CornerPlacement::topRight, diagonal.getPointAlongLineProportionally(0.33f));
+            setInteriorControlPointPosition(mescal::MeshGradient::CornerPlacement::bottomLeft, diagonal.getPointAlongLineProportionally(0.66f));
+        }
     }
 
-    juce::Point<float> MeshGradient::Patch::getPosition(int matrixRow, int matrixColumn) const noexcept
+    std::optional<juce::Point<float>> MeshGradient::Patch::getPosition(int matrixRow, int matrixColumn) const noexcept
     {
         return points[matrixRow * numMatrixColumns + matrixColumn];
     }
@@ -164,7 +172,8 @@ namespace mescal
     juce::Point<float> MeshGradient::Patch::getCornerPosition(CornerPlacement placement) const noexcept
     {
         auto index = cornerIndices[(size_t)placement];
-        return points[index];
+        jassert(points[index].has_value());
+        return points[index].value_or(juce::Point<float>{});
     }
 
     void MeshGradient::Patch::setPosition(int matrixRow, int matrixColumn, juce::Point<float> position)
@@ -178,6 +187,18 @@ namespace mescal
         points[index] = position;
     }
 
+    void MeshGradient::Patch::setCornerPositions(juce::Span<juce::Point<float>> positions)
+    {
+        {
+            auto it = positions.begin();
+            for (auto index : cornerIndices)
+            {
+                points[index] = *it;
+                it++;
+            }
+        }
+    }
+
     Color128 MeshGradient::Patch::getColor(CornerPlacement placement) const noexcept
     {
         return colors[(size_t)placement];
@@ -188,14 +209,60 @@ namespace mescal
         colors[(size_t)placement] = color;
     }
 
-    void MeshGradient::Patch::setEdge(EdgePlacement placement, Edge edge)
+    void MeshGradient::Patch::setEdge(EdgePlacement edgePlacement, Edge edge)
     {
-        
+        auto [tailCornerPlacement, headCornerPlacement] = edgeToCornerPlacements(edgePlacement);
+        setCornerPosition(tailCornerPlacement, edge.tail);
+        setCornerPosition(headCornerPlacement, edge.head);
+
+        auto [bezierIndex0, bezierIndex1] = edgeBezierControlPointIndices[(size_t)edgePlacement];
+        points[bezierIndex0] = edge.bezierControlPoints.first;
+        points[bezierIndex1] = edge.bezierControlPoints.second;
     }
 
-    MeshGradient::Edge MeshGradient::Patch::getEdge(EdgePlacement placement) const noexcept
+    MeshGradient::Edge MeshGradient::Patch::getEdge(EdgePlacement edgePlacement) const noexcept
     {
+        Edge edge;
 
+        auto [tailCornerPlacement, headCornerPlacement] = edgeToCornerPlacements(edgePlacement);
+        edge.tail = getCornerPosition(tailCornerPlacement);
+        edge.head = getCornerPosition(headCornerPlacement);
+
+        auto [bezierIndex0, bezierIndex1] = edgeBezierControlPointIndices[(size_t)edgePlacement];
+        edge.bezierControlPoints = std::make_pair(points[bezierIndex0], points[bezierIndex1]);
+
+        return edge;
+    }
+
+    std::optional<juce::Point<float>> MeshGradient::Patch::getBezierControlPointPosition(EdgePlacement edgePlacement, BezierControlPointPlacement bezierControlPointPlacement)
+    {
+        auto indexPair = MeshGradient::edgeBezierControlPointIndices[(size_t)edgePlacement];
+        return points[ bezierControlPointPlacement == MeshGradient::BezierControlPointPlacement::first ? indexPair.first : indexPair.second];
+    }
+
+    void MeshGradient::Patch::setBezierControlPointPosition(EdgePlacement edgePlacement, BezierControlPointPlacement bezierControlPointPlacement, juce::Point<float> position)
+    {
+        auto indexPair = MeshGradient::edgeBezierControlPointIndices[(size_t)edgePlacement];
+        points[bezierControlPointPlacement == MeshGradient::BezierControlPointPlacement::first ? indexPair.first : indexPair.second] = position;
+    }
+
+    std::optional<juce::Point<float>> MeshGradient::Patch::getInteriorControlPointPosition(CornerPlacement placement)
+    {
+        auto index = interiorControlIndices[(size_t)placement];
+        return points[index];
+    }
+
+    void MeshGradient::Patch::setInteriorControlPointPosition(CornerPlacement placement, juce::Point<float> position)
+    {
+        auto index = interiorControlIndices[(size_t)placement];
+        points[index] = position;
+    }
+
+    std::pair<MeshGradient::CornerPlacement, MeshGradient::CornerPlacement> MeshGradient::Patch::edgeToCornerPlacements(EdgePlacement edgePlacement)
+    {
+        auto tailCornerPlacement = (CornerPlacement)edgePlacement;
+        auto nextCornerPlacement = (CornerPlacement)(((size_t)(edgePlacement)+1) & (edgePlacements.size() - 1));
+        return { tailCornerPlacement, nextCornerPlacement };
     }
 
     void MeshGradient::draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor)
@@ -224,25 +291,54 @@ namespace mescal
                 &d2dPatch.point30, &d2dPatch.point31, &d2dPatch.point32, &d2dPatch.point33
             };
 
-            auto pointIterator = d2dPoints.begin();
+            std::array<D2D1_POINT_2F*, 16> d2dFallbackPoints
+            {
+                &d2dPatch.point00, &d2dPatch.point00, &d2dPatch.point03, &d2dPatch.point03,
+                &d2dPatch.point00, &d2dPatch.point00, &d2dPatch.point03, &d2dPatch.point03,
+                &d2dPatch.point30, &d2dPatch.point30, &d2dPatch.point33, &d2dPatch.point33,
+                &d2dPatch.point30, &d2dPatch.point30, &d2dPatch.point33, &d2dPatch.point33
+            };
+
+            auto destinationIterator = d2dPoints.begin();
             for (auto point : patch->points)
             {
-                **pointIterator++ = pointToPOINT_2F(point);
+                if (point.has_value())
+                {
+                    **destinationIterator = pointToPOINT_2F(*point);
+                }
+
+                ++destinationIterator;
             }
 
-            d2dPatch.point01 = d2dPatch.point00;
-            d2dPatch.point02 = d2dPatch.point03;
-            d2dPatch.point10 = d2dPatch.point00;
-            d2dPatch.point20 = d2dPatch.point30;
-            d2dPatch.point13 = d2dPatch.point03;
-            d2dPatch.point23 = d2dPatch.point33;
-            d2dPatch.point31 = d2dPatch.point30;
-            d2dPatch.point32 = d2dPatch.point33;
+#if 0
+            destinationIterator = d2dPoints.begin();
+            auto fallbackIterator = d2dFallbackPoints.begin();
+            for (auto point : patch->points)
+            {
+                if (!point.has_value())
+                {
+                    **destinationIterator = **fallbackIterator;
+                }
 
+                ++destinationIterator;
+                ++fallbackIterator;
+            }
+#endif
+            d2dPatch.point01 = d2dPatch.point00;
+            d2dPatch.point10 = d2dPatch.point00;
             d2dPatch.point11 = d2dPatch.point00;
+
+            d2dPatch.point02 = d2dPatch.point03;
+            d2dPatch.point13 = d2dPatch.point03;
             d2dPatch.point12 = d2dPatch.point03;
+
+            d2dPatch.point20 = d2dPatch.point30;
             d2dPatch.point21 = d2dPatch.point30;
+            d2dPatch.point31 = d2dPatch.point30;
+
             d2dPatch.point22 = d2dPatch.point33;
+            d2dPatch.point23 = d2dPatch.point33;
+            d2dPatch.point32 = d2dPatch.point33;
 
             std::array < D2D1_COLOR_F*, 4> d2dColors
             {
@@ -257,27 +353,28 @@ namespace mescal
             }
         }
 
-        pimpl->createResources(image);
+        pimpl->createResources();
 
-        if (pimpl->deviceContext && image.isValid())
+        auto& deviceContext = pimpl->resources->deviceContext;
+        if (deviceContext && image.isValid())
         {
             pimpl->gradientMesh = {};
-            pimpl->deviceContext->CreateGradientMesh(d2dPatches.data(), (uint32_t)d2dPatches.size(), pimpl->gradientMesh.put());
+            deviceContext->CreateGradientMesh(d2dPatches.data(), (uint32_t)d2dPatches.size(), pimpl->gradientMesh.put());
 
             if (pimpl->gradientMesh)
             {
                 if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
                 {
-                    if (auto bitmap = pixelData->getAdapterD2D1Bitmap())
+                    if (auto bitmap = pixelData->getFirstPageForContext(deviceContext))
                     {
-                        pimpl->deviceContext->SetTarget(bitmap);
-                        pimpl->deviceContext->BeginDraw();
-                        pimpl->deviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
-                        pimpl->deviceContext->Clear(juce::D2DUtilities::toCOLOR_F(backgroundColor));
-                        pimpl->deviceContext->DrawGradientMesh(pimpl->gradientMesh.get());
-                        [[maybe_unused]] auto hr = pimpl->deviceContext->EndDraw();
+                        deviceContext->SetTarget(bitmap);
+                        deviceContext->BeginDraw();
+                        deviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
+                        deviceContext->Clear(juce::D2DUtilities::toCOLOR_F(backgroundColor));
+                        deviceContext->DrawGradientMesh(pimpl->gradientMesh.get());
+                        [[maybe_unused]] auto hr = deviceContext->EndDraw();
                         jassert(SUCCEEDED(hr));
-                        pimpl->deviceContext->SetTarget(nullptr);
+                        deviceContext->SetTarget(nullptr);
                     }
                 }
             }

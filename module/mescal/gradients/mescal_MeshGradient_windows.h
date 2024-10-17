@@ -62,18 +62,23 @@ struct Color128
 class MeshGradient
 {
 public:
-    MeshGradient(int numRows_, int numColumns_, std::optional<juce::Rectangle<float>> bounds_);
+    MeshGradient(int numRows_, int numColumns_, std::optional<juce::Rectangle<float>> bounds_ = {});
     MeshGradient() = default;
     ~MeshGradient();
 
     enum class EdgePlacement
     {
-        left, bottom, right, top
+        left, bottom, right, top, unknown = -1
     };
 
     enum class CornerPlacement
     {
         topLeft, bottomLeft, bottomRight, topRight, unknown = -1
+    };
+
+    enum class BezierControlPointPlacement
+    {
+        first, second
     };
 
     static constexpr std::array<EdgePlacement, 4> edgePlacements
@@ -97,17 +102,31 @@ public:
         0, 4 * 3 + 0, 4 * 3 + 3, 4 * 0 + 3
     };
 
+    static constexpr std::array<std::pair<size_t, size_t>, 4> edgeBezierControlPointIndices
+    {
+        std::pair<int, int>{ 4 * 1 + 0, 4 * 2 + 0 }, 
+        { 4 * 3 + 1, 4 * 3 + 2 },
+        { 4 * 2 + 3, 4 * 1 + 3 },
+        { 4 * 0 + 2, 4 * 0 + 1 }
+    };
+
+    static constexpr std::array<size_t, 4> interiorControlIndices
+    {
+        4 * 1 + 1, 4 * 2 + 1, 4 * 2 + 2, 4 * 1 + 2
+    };
+
     struct MatrixPosition
     {
         int row, column;
     };
 
-    using BezierControlPair = std::pair<juce::Point<float>, juce::Point<float>>;
+    using ControlPointPair = std::pair<std::optional<juce::Point<float>>, std::optional<juce::Point<float>>>;
 
     struct Edge
     {
         juce::Point<float> tail;
-        BezierControlPair bezierControlPoints;
+        ControlPointPair bezierControlPoints;
+        ControlPointPair internalControlPoints;
         juce::Point<float> head;
     };
 
@@ -120,10 +139,12 @@ public:
 
         void setBounds(juce::Rectangle<float> rect);
 
-        juce::Point<float> getPosition(int matrixRow, int matrixColumn) const noexcept;
+        std::optional<juce::Point<float>> getPosition(int matrixRow, int matrixColumn) const noexcept;
         juce::Point<float> getCornerPosition(CornerPlacement placement) const noexcept;
         void setPosition(int matrixRow, int matrixColumn, juce::Point<float> position);
         void setCornerPosition(CornerPlacement placement, juce::Point<float> position);
+
+        void setCornerPositions(juce::Span<juce::Point<float>> positions);
 
         void setColor(CornerPlacement placement, juce::Colour color);
         Color128 getColor(CornerPlacement placement) const noexcept;
@@ -131,10 +152,18 @@ public:
         void setEdge(EdgePlacement placement, Edge edge);
         Edge getEdge(EdgePlacement placement) const noexcept;
 
-        std::array<juce::Point<float>, 16> points;
+        std::optional<juce::Point<float>> getBezierControlPointPosition(EdgePlacement edgePlacement, BezierControlPointPlacement bezierControlPointPlacement);
+        void setBezierControlPointPosition(EdgePlacement edgePlacement, BezierControlPointPlacement bezierControlPointPlacement, juce::Point<float> position);
+
+        std::optional<juce::Point<float>> getInteriorControlPointPosition(CornerPlacement placement);
+        void setInteriorControlPointPosition(CornerPlacement placement, juce::Point<float> position);
+
+        std::array<std::optional<juce::Point<float>>, 16> points;
         std::array<Color128, 4> colors;
 
         static constexpr size_t numMatrixColumns = 4;
+
+        static std::pair<CornerPlacement, CornerPlacement> edgeToCornerPlacements(EdgePlacement edgePlacement);
     };
 
     int getNumRows() const

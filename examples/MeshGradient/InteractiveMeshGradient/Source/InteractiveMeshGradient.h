@@ -19,6 +19,8 @@ private:
 
         juce::ComponentDragger dragger;
         std::weak_ptr<mescal::MeshGradient::Patch> patch;
+        mescal::MeshGradient::EdgePlacement edgePlacement = mescal::MeshGradient::EdgePlacement::unknown;
+        mescal::MeshGradient::BezierControlPointPlacement controlPointPlacement = mescal::MeshGradient::BezierControlPointPlacement::first;
         std::function<void(BezierControlComponent&)> onChange;
     };
 
@@ -29,8 +31,8 @@ private:
         void paint(juce::Graphics& g) override;
 
         juce::ComponentDragger dragger;
-//         std::weak_ptr<mescal::MeshGradient::Vertex> vertex;
-//         mescal::MeshGradient::Placement placement = mescal::MeshGradient::Placement::unknown;
+        std::weak_ptr<mescal::MeshGradient::Patch> patch;
+        mescal::MeshGradient::CornerPlacement placement = mescal::MeshGradient::CornerPlacement::unknown;
         std::function<void(InteriorControlComponent&)> onChange;
     };
 

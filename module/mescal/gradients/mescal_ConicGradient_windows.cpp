@@ -17,6 +17,7 @@ namespace mescal
         {
             if (!deviceContext)
             {
+#if 0
                 if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
                 {
                     if (auto adapter = pixelData->getAdapter())
@@ -33,10 +34,11 @@ namespace mescal
                         deviceContext = deviceContext1.as<ID2D1DeviceContext2>();
                     }
                 }
+#endif
             }
         }
 
-        void draw(juce::Span<Stop> stops, juce::Image image, juce::AffineTransform transform, std::optional<juce::Colour> backgroundColor)
+        void draw(juce::Span<Stop> stops, juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor)
         {
             auto toPOINT_2F = [](juce::Point<float> p)
                 {
@@ -164,21 +166,20 @@ namespace mescal
                 {
                     if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
                     {
+#if 0
                         if (auto bitmap = pixelData->getAdapterD2D1Bitmap())
                         {
                             deviceContext->SetTarget(bitmap);
                             deviceContext->BeginDraw();
                             deviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
-                            if (backgroundColor.has_value())
-                            {
-                                deviceContext->Clear(juce::D2DUtilities::toCOLOR_F(*backgroundColor));
-                            }
+                            deviceContext->Clear(juce::D2DUtilities::toCOLOR_F(backgroundColor));
 
                             deviceContext->DrawGradientMesh(gradientMesh.get());
 
                             deviceContext->EndDraw();
                             deviceContext->SetTarget(nullptr);
                         }
+#endif
                     }
                 }
             }
@@ -218,7 +219,7 @@ namespace mescal
         sortStops();
     }
 
-    void ConicGradient::draw(juce::Image image, juce::AffineTransform transform, std::optional<juce::Colour> backgroundColor)
+    void ConicGradient::draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor)
     {
         pimpl->draw(stops, image, transform, backgroundColor);
     }
