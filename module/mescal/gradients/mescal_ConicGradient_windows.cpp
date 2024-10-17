@@ -3,7 +3,7 @@ namespace mescal
 
 #ifdef __INTELLISENSE__
 
-#include "mescal_GradientMesh_windows.h"
+#include "mescal_MeshGradient_windows.h"
 
 #endif
 
@@ -17,6 +17,7 @@ namespace mescal
         {
             if (!deviceContext)
             {
+#if 0
 #if 0
                 if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
                 {
