@@ -406,42 +406,4 @@ namespace mescal
         return Color128{ level, level, level, 1.0f };
     }
 
-
-#if 0
-    void MeshGradient::makeConicGradient(juce::Rectangle<float> bounds)
-    {
-        /*
-                      A---B B---C           B   B
-        A---B---C     |   | |   |          /|   | \
-        |   |   |     |   | |   |         / |   |  \
-        |   |   |     D---E E---F        A--DE  EF--C
-        D---E---F
-        |   |   |     D---E E---F        G--DE  EF--I
-        |   |   |     |   | |   |        \  |   | /
-        G---H---I     |   | |   |         \ |   |/
-                      G---H H---I           H   H
-
-
-            01     01
-          / |      |  \
-        /   |      |   \
-       00--10 11  11 12-02
-
-       20--10 11  11 12-22
-         \  |     |  /
-          \ |     | /
-            21     21
-
-        00 -> 01 -> 11 -> 10
-        01 -> 02 -> 12 -> 11
-        22 -> 21 -> 11 -> 12
-        21 -> 20 -> 10 -> 11
-
-        */
-
-
-    }
-#endif
-
-
 } // namespace mescal

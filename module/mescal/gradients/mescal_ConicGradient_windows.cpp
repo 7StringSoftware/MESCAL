@@ -1,42 +1,15 @@
 namespace mescal
 {
 
-#ifdef __INTELLISENSE__
-
-#include "mescal_MeshGradient_windows.h"
-
-#endif
-
     struct ConicGradient::Pimpl
     {
         Pimpl(ConicGradient& owner_) : owner(owner_)
         {
         }
 
-        void createResources(juce::Image image)
+        void createResources()
         {
-            if (!deviceContext)
-            {
-#if 0
-#if 0
-                if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
-                {
-                    if (auto adapter = pixelData->getAdapter())
-                    {
-                        winrt::com_ptr<ID2D1DeviceContext1> deviceContext1;
-                        if (const auto hr = adapter->direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS,
-                            deviceContext1.put());
-                            FAILED(hr))
-                        {
-                            jassertfalse;
-                            return;
-                        }
-
-                        deviceContext = deviceContext1.as<ID2D1DeviceContext2>();
-                    }
-                }
-#endif
-        }
+            resources->create();
         }
 
         void draw(juce::Span<Stop> stops, juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor)
@@ -156,8 +129,9 @@ namespace mescal
             patches.front().leftEdgeMode = D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ANTIALIASED;
             patches.back().rightEdgeMode = D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ANTIALIASED;
 
-            createResources(image);
+            createResources();
 
+            auto& deviceContext = resources->deviceContext;
             if (deviceContext && image.isValid())
             {
                 gradientMesh = {};
@@ -167,8 +141,7 @@ namespace mescal
                 {
                     if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
                     {
-#if 0
-                        if (auto bitmap = pixelData->getAdapterD2D1Bitmap())
+                        if (auto bitmap = pixelData->getFirstPageForContext(deviceContext))
                         {
                             deviceContext->SetTarget(bitmap);
                             deviceContext->BeginDraw();
@@ -180,14 +153,13 @@ namespace mescal
                             deviceContext->EndDraw();
                             deviceContext->SetTarget(nullptr);
                         }
-#endif
                     }
                 }
             }
         }
 
         ConicGradient& owner;
-        winrt::com_ptr<ID2D1DeviceContext2> deviceContext;
+        juce::SharedResourcePointer<DirectXResources> resources;
         winrt::com_ptr<ID2D1GradientMesh> gradientMesh;
     };
 
