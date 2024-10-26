@@ -38,17 +38,17 @@ public:
         /**
          * Gradient colors are stored using 32-bit float values per color channel
          */
-        mescal::Color128 color128;
+        mescal::Color128 innerColor, outerColor;
     };
 
     void clearStops();
-    void addStop(float angle, Color128 color128);
+    void addStop(float angle, Color128 innerColor, Color128 outerColor);
     void addStops(juce::Span<Stop> newStops);
     auto const& getStops() const noexcept
     {
         return stops;
     }
-    void setStopColor(size_t index, Color128 color128);
+    void setStopColor(size_t index, Color128 innerColor, Color128 outerColor);
     void setStopAngle(size_t index, float angle);
 
     void draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor = juce::Colours::transparentBlack);

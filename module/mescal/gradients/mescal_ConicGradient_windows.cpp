@@ -15,28 +15,7 @@ namespace mescal
 
         void createResources(juce::Image image)
         {
-            if (!deviceContext)
-            {
-#if 0
-#if 0
-                if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
-                {
-                    if (auto adapter = pixelData->getAdapter())
-                    {
-                        winrt::com_ptr<ID2D1DeviceContext1> deviceContext1;
-                        if (const auto hr = adapter->direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS,
-                            deviceContext1.put());
-                            FAILED(hr))
-                        {
-                            jassertfalse;
-                            return;
-                        }
-
-                        deviceContext = deviceContext1.as<ID2D1DeviceContext2>();
-                    }
-                }
-#endif
-        }
+            resources->create();
         }
 
         void draw(juce::Span<Stop> stops, juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor)
@@ -114,10 +93,10 @@ namespace mescal
                 patch.point30 = toPOINT_2F(innerArcStart.transformedBy(transform));
                 patch.point33 = toPOINT_2F(innerArcEnd.transformedBy(transform));
 
-                patch.color00 = { stop.color128.red, stop.color128.green, stop.color128.blue, stop.color128.alpha };
-                patch.color03 = { nextStop.color128.red, nextStop.color128.green, nextStop.color128.blue, nextStop.color128.alpha };
-                patch.color33 = patch.color03;
-                patch.color30 = patch.color00;
+                patch.color00 = { stop.outerColor.red, stop.outerColor.green, stop.outerColor.blue, stop.outerColor.alpha };
+                patch.color30 = { stop.innerColor.red, stop.innerColor.green, stop.innerColor.blue, stop.innerColor.alpha };
+                patch.color03 = { nextStop.outerColor.red, nextStop.outerColor.green, nextStop.outerColor.blue, nextStop.outerColor.alpha };
+                patch.color33 = { nextStop.innerColor.red, nextStop.innerColor.green, nextStop.innerColor.blue, nextStop.innerColor.alpha };
 
                 auto arcAngle = nextStop.angle - stop.angle;
                 auto controlPointDistance = 4.0f * std::tan(arcAngle * 0.25f) / 3.0f;
@@ -158,6 +137,7 @@ namespace mescal
 
             createResources(image);
 
+            auto& deviceContext = resources->deviceContext;
             if (deviceContext && image.isValid())
             {
                 gradientMesh = {};
@@ -167,8 +147,7 @@ namespace mescal
                 {
                     if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
                     {
-#if 0
-                        if (auto bitmap = pixelData->getAdapterD2D1Bitmap())
+                        if (auto bitmap = pixelData->getFirstPageForContext(deviceContext))
                         {
                             deviceContext->SetTarget(bitmap);
                             deviceContext->BeginDraw();
@@ -180,14 +159,13 @@ namespace mescal
                             deviceContext->EndDraw();
                             deviceContext->SetTarget(nullptr);
                         }
-#endif
                     }
                 }
             }
         }
 
         ConicGradient& owner;
-        winrt::com_ptr<ID2D1DeviceContext2> deviceContext;
+        juce::SharedResourcePointer<DirectXResources> resources;
         winrt::com_ptr<ID2D1GradientMesh> gradientMesh;
     };
 
@@ -205,9 +183,9 @@ namespace mescal
         stops.clear();
     }
 
-    void ConicGradient::addStop(float angle, Color128 color128)
+    void ConicGradient::addStop(float angle, Color128 innerColor, Color128 outerColor)
     {
-        stops.emplace_back(Stop{ angle, color128 });
+        stops.emplace_back(Stop{ angle, innerColor, outerColor });
         sortStops();
     }
 
@@ -215,7 +193,7 @@ namespace mescal
     {
         for (auto const& newStop : newStops)
         {
-            stops.emplace_back(Stop{ newStop.angle, Color128{ newStop.color128 } });
+            stops.emplace_back(Stop{ newStop.angle, newStop.innerColor, newStop.outerColor });
         }
         sortStops();
     }
@@ -236,6 +214,12 @@ namespace mescal
     void ConicGradient::setStopAngle(size_t index, float angle)
     {
         stops[index].angle = angle;
+    }
+
+    void ConicGradient::setStopColor(size_t index, Color128 innerColor, Color128 outerColor)
+    {
+        stops[index].innerColor = innerColor;
+        stops[index].outerColor = outerColor;
     }
 
 } // namespace mescal
