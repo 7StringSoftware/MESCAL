@@ -1,19 +1,13 @@
 namespace mescal
 {
 
-#ifdef __INTELLISENSE__
-
-#include "mescal_MeshGradient_windows.h"
-
-#endif
-
     struct ConicGradient::Pimpl
     {
         Pimpl(ConicGradient& owner_) : owner(owner_)
         {
         }
 
-        void createResources(juce::Image image)
+        void createResources()
         {
             resources->create();
         }
@@ -135,7 +129,7 @@ namespace mescal
             patches.front().leftEdgeMode = D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ANTIALIASED;
             patches.back().rightEdgeMode = D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ANTIALIASED;
 
-            createResources(image);
+            createResources();
 
             auto& deviceContext = resources->deviceContext;
             if (deviceContext && image.isValid())

@@ -37,6 +37,10 @@ namespace mescal
     {
     }
 
+    MescalImageEffectFilter::~MescalImageEffectFilter()
+    {
+    }
+
     void MescalImageEffectFilter::applyEffect(juce::Image& sourceImage, juce::Graphics& destContext, float scaleFactor, float alpha)
     {
         if (outputImage.isNull() || outputImage.getWidth() != sourceImage.getWidth() || outputImage.getHeight() != sourceImage.getHeight())
