@@ -371,7 +371,6 @@ namespace mescal
 
         static void setInputsRecursive(Pimpl* pimpl)
         {
-#if 0
             for (int index = 0; index < pimpl->inputs.size(); ++index)
             {
                 auto& input = pimpl->inputs[index];
@@ -394,7 +393,6 @@ namespace mescal
                     setInputsRecursive(otherEffect->pimpl.get());
                 }
             }
-#endif
         }
 
         Type effectType;
