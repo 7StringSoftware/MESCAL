@@ -280,7 +280,7 @@ namespace mescal
 
         std::vector<D2D1_GRADIENT_MESH_PATCH> d2dPatches{ patches.size(), D2D1_GRADIENT_MESH_PATCH{} };
         auto d2dPatchIterator = d2dPatches.begin();
-        for (auto const patch : patches)
+        for (auto const& patch : patches)
         {
             auto& d2dPatch = *d2dPatchIterator++;
             std::array<D2D1_POINT_2F*, 16> d2dPoints
@@ -310,7 +310,6 @@ namespace mescal
                 ++destinationIterator;
             }
 
-#if 0
             destinationIterator = d2dPoints.begin();
             auto fallbackIterator = d2dFallbackPoints.begin();
             for (auto point : patch->points)
@@ -323,22 +322,6 @@ namespace mescal
                 ++destinationIterator;
                 ++fallbackIterator;
             }
-#endif
-            d2dPatch.point01 = d2dPatch.point00;
-            d2dPatch.point10 = d2dPatch.point00;
-            d2dPatch.point11 = d2dPatch.point00;
-
-            d2dPatch.point02 = d2dPatch.point03;
-            d2dPatch.point13 = d2dPatch.point03;
-            d2dPatch.point12 = d2dPatch.point03;
-
-            d2dPatch.point20 = d2dPatch.point30;
-            d2dPatch.point21 = d2dPatch.point30;
-            d2dPatch.point31 = d2dPatch.point30;
-
-            d2dPatch.point22 = d2dPatch.point33;
-            d2dPatch.point23 = d2dPatch.point33;
-            d2dPatch.point32 = d2dPatch.point33;
 
             std::array < D2D1_COLOR_F*, 4> d2dColors
             {
@@ -405,43 +388,5 @@ namespace mescal
     {
         return Color128{ level, level, level, 1.0f };
     }
-
-
-#if 0
-    void MeshGradient::makeConicGradient(juce::Rectangle<float> bounds)
-    {
-        /*
-                      A---B B---C           B   B
-        A---B---C     |   | |   |          /|   | \
-        |   |   |     |   | |   |         / |   |  \
-        |   |   |     D---E E---F        A--DE  EF--C
-        D---E---F
-        |   |   |     D---E E---F        G--DE  EF--I
-        |   |   |     |   | |   |        \  |   | /
-        G---H---I     |   | |   |         \ |   |/
-                      G---H H---I           H   H
-
-
-            01     01
-          / |      |  \
-        /   |      |   \
-       00--10 11  11 12-02
-
-       20--10 11  11 12-22
-         \  |     |  /
-          \ |     | /
-            21     21
-
-        00 -> 01 -> 11 -> 10
-        01 -> 02 -> 12 -> 11
-        22 -> 21 -> 11 -> 12
-        21 -> 20 -> 10 -> 11
-
-        */
-
-
-    }
-#endif
-
 
 } // namespace mescal
