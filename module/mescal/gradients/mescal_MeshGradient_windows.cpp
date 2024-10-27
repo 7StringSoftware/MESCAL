@@ -209,6 +209,11 @@ namespace mescal
         colors[(size_t)placement] = color;
     }
 
+    void MeshGradient::Patch::setColor(CornerPlacement placement, Color128 color)
+    {
+        colors[(size_t)placement] = color;
+    }
+
     void MeshGradient::Patch::setEdge(EdgePlacement edgePlacement, Edge edge)
     {
         auto [tailCornerPlacement, headCornerPlacement] = edgeToCornerPlacements(edgePlacement);

@@ -147,6 +147,7 @@ public:
         void setCornerPositions(juce::Span<juce::Point<float>> positions);
 
         void setColor(CornerPlacement placement, juce::Colour color);
+        void setColor(CornerPlacement placement, Color128 color);
         Color128 getColor(CornerPlacement placement) const noexcept;
 
         void setEdge(EdgePlacement placement, Edge edge);
