@@ -88,7 +88,7 @@ public:
 
             setResizable(true, true);
 
-            centreWithSize(2048, 1024);
+            //centreWithSize(2048, 1024);
 
             setVisible(true);
     }

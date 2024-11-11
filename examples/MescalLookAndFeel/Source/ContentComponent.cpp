@@ -15,7 +15,7 @@ ContentComponent::ContentComponent()
     addAndMakeVisible(widgets);
     addAndMakeVisible(effectGraph);
 
-    setSize(2048, 1024);
+    setSize(1024, 800);
 
     juce::MessageManager::callAsync([this]
         {

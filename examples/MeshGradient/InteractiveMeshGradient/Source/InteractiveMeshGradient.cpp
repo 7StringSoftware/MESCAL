@@ -259,7 +259,7 @@ void InteractiveMeshGradient::selectPatch(PatchComponent* selectedPatchComponent
             vertexComponentIterator++;
 
             (*interiorControlComponentIterator).patch = patch;
-            (*interiorControlComponentIterator).setCentrePosition(patch->getInteriorControlPointPosition(placement).roundToInt());
+            (*interiorControlComponentIterator).setCentrePosition(patch->getInteriorControlPointPosition(placement)->roundToInt());
             (*interiorControlComponentIterator).setVisible(true);
             (*interiorControlComponentIterator).toFront(true);
             interiorControlComponentIterator++;
@@ -275,7 +275,7 @@ void InteractiveMeshGradient::selectPatch(PatchComponent* selectedPatchComponent
             (*bezierControlComponentIterator).patch = patch;
             (*bezierControlComponentIterator).edgePlacement = edgePlacement;
             (*bezierControlComponentIterator).controlPointPlacement = mescal::MeshGradient::BezierControlPointPlacement::first;
-            (*bezierControlComponentIterator).setCentrePosition(edge.bezierControlPoints.first.toInt());
+            (*bezierControlComponentIterator).setCentrePosition(edge.bezierControlPoints.first->toInt());
             (*bezierControlComponentIterator).setVisible(true);
             (*bezierControlComponentIterator).toFront(true);
 
@@ -284,7 +284,7 @@ void InteractiveMeshGradient::selectPatch(PatchComponent* selectedPatchComponent
             (*bezierControlComponentIterator).patch = patch;
             (*bezierControlComponentIterator).edgePlacement = edgePlacement;
             (*bezierControlComponentIterator).controlPointPlacement = mescal::MeshGradient::BezierControlPointPlacement::second;
-            (*bezierControlComponentIterator).setCentrePosition(edge.bezierControlPoints.second.toInt());
+            (*bezierControlComponentIterator).setCentrePosition(edge.bezierControlPoints.second->toInt());
             (*bezierControlComponentIterator).setVisible(true);
             (*bezierControlComponentIterator).toFront(true);
 

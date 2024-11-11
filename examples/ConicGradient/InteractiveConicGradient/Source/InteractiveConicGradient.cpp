@@ -139,7 +139,7 @@ void InteractiveConicGradient::setGradientStops(PresetType presetType, Direction
         float angleStep = sign * juce::MathConstants<float>::twoPi / (float)(colors.size() - 1);
         for (auto& color128 : colors)
         {
-            conicGradient.addStop(angle, color128);
+            conicGradient.addStop(angle, color128, color128);
             angle += angleStep;
         }
 
@@ -152,7 +152,8 @@ void InteractiveConicGradient::setGradientStops(PresetType presetType, Direction
         int numSteps = 16;
         for (float hue = 0.0f; hue <= 1.0f; hue += 1.0f / (float)numSteps)
         {
-            conicGradient.addStop(sign * hue * juce::MathConstants<float>::twoPi, mescal::Color128::fromHSV(hue, 1.0f, 1.0f, 1.0f));
+            auto color = mescal::Color128::fromHSV(hue, 1.0f, 1.0f, 1.0f);
+            conicGradient.addStop(sign * hue * juce::MathConstants<float>::twoPi, color, color);
         }
         break;
     }
@@ -161,7 +162,8 @@ void InteractiveConicGradient::setGradientStops(PresetType presetType, Direction
     {
         for (float level = 0.0f; level <= 1.0f; level += 0.125f)
         {
-            conicGradient.addStop(sign * level * juce::MathConstants<float>::twoPi, mescal::Color128::grayLevel(level + 0.25f));
+            auto hue = mescal::Color128::grayLevel(level + 0.25f);
+            conicGradient.addStop(sign * level * juce::MathConstants<float>::twoPi, hue, hue);
         }
         break;
     }
@@ -249,7 +251,7 @@ void InteractiveConicGradient::ArcSlider::paint(juce::Graphics& g)
 {
     float reduction = isMouseOver() || isMouseButtonDown(false) ? 0.0f : 4.0f;
     auto const& stop = owner.conicGradient.getStops()[index];
-    auto c = stop.color128.toColour();
+    auto c = stop.innerColor.toColour();
     g.setColour(c.contrasting());
     g.fillEllipse(getLocalBounds().toFloat().reduced(reduction));
     g.setColour(c);

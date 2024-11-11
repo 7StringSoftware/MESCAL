@@ -3,3 +3,6 @@ x64/
 doxygen/html
 .DS_Store
 *.vcxproj.user
+Builds/
+JuceLibraryCode/
+
