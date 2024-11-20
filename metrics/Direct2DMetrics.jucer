@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<JUCERPROJECT id="oFIjb4" name="Direct2DMetrics" projectType="guiapp" useAppConfig="0"
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" defines="JUCE_DIRECT2D_METRICS=1"
+              version="1.0.1">
+  <MAINGROUP id="sjUOSU" name="Direct2DMetrics">
+    <GROUP id="{61CA4CCB-00DB-2D34-1C76-6B3AF398483A}" name="Source">
+      <FILE id="ztgvxk" name="PipeClient.h" compile="0" resource="0" file="Source/PipeClient.h"/>
+      <FILE id="HZRXpd" name="StatTable.h" compile="0" resource="0" file="Source/StatTable.h"/>
+      <FILE id="IjEbVo" name="MetricsContentComponent.h" compile="0" resource="0"
+            file="Source/MetricsContentComponent.h"/>
+      <FILE id="ZM0AfZ" name="stopwatch.png" compile="0" resource="1" file="Source/stopwatch.png"/>
+      <FILE id="Mu2Fho" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
+    </GROUP>
+  </MAINGROUP>
+  <MODULES>
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0" useGlobalPath="1"/>
+  </MODULES>
+  <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1"/>
+  <EXPORTFORMATS>
+    <VS2022 targetFolder="Builds/VisualStudio2022" smallIcon="ZM0AfZ" bigIcon="ZM0AfZ">
+      <CONFIGURATIONS>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="Direct2DMetrics"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="Direct2DMetrics"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_core" path="../../../../JUCE-dev/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../../../../JUCE-dev/modules"/>
+        <MODULEPATH id="juce_events" path="../../../../JUCE-dev/modules"/>
+        <MODULEPATH id="juce_graphics" path="../../../../JUCE-dev/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../../../../JUCE-dev/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="../../../../JUCE-dev/modules"/>
+      </MODULEPATHS>
+    </VS2022>
+  </EXPORTFORMATS>
+</JUCERPROJECT>
