@@ -34,7 +34,10 @@ private:
 
     void createMeshGradient()
     {
-        meshGradient = std::make_unique<mescal::MeshGradient>(2, 2, getLocalBounds().toFloat());
+        //
+        // Make a mesh gradient with a single patch (1 row, 1 column)
+        //
+        meshGradient = std::make_unique<mescal::MeshGradient>(1, 1, getLocalBounds().toFloat());
 
         std::array<juce::Colour, 4> colors
         {
@@ -44,12 +47,12 @@ private:
             juce::Colours::cyan
         };
         auto colorIterator = colors.begin();
-        for (int row = 0; row < meshGradient->getNumRows(); ++row)
+
+        auto patch = meshGradient->getPatches().front();
+        for (auto corner : meshGradient->cornerPlacements)
         {
-            for (int column = 0; column < meshGradient->getNumColumns(); ++column)
-            {
-                meshGradient->getVertex(row, column)->color = mescal::Color128{ *colorIterator++ };
-            }
+            patch->setColor(corner, *colorIterator);
+            ++colorIterator;
         }
     }
 
