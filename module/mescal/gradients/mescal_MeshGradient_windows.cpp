@@ -71,9 +71,9 @@ namespace mescal
 
 
     MeshGradient::MeshGradient(int numRows_, int numColumns_, std::optional<juce::Rectangle<float>> bounds) :
-        pimpl(std::make_unique<Pimpl>(*this)),
         numRows(numRows_),
-        numColumns(numColumns_)
+        numColumns(numColumns_),
+        pimpl(std::make_unique<Pimpl>(*this))
     {
         jassert(numRows_ > 0);
         jassert(numColumns_ > 0);
@@ -124,9 +124,9 @@ namespace mescal
     }
 
     MeshGradient::Patch::Patch(MeshGradient& owner_, int row_, int column_) :
-        owner(owner_),
         row(row_),
-        column(column_)
+        column(column_),
+        owner(owner_)
     {
     }
 

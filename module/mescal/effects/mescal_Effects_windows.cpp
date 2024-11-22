@@ -95,9 +95,12 @@ namespace mescal
                     {
                     case D2D1_PROPERTY_TYPE_STRING:
                     {
-                        juce::HeapBlock<WCHAR> stringBuffer{ 1024 };
-                        properties->GetValue(index, (BYTE*)stringBuffer.getData(), 512);
-                        DBG(indent << juce::String{ stringBuffer });
+                        size_t stringBufferNumWchar = 1024;
+                        juce::HeapBlock<wchar_t> stringBuffer{ stringBufferNumWchar };
+                        properties->GetValue(index, (BYTE*)stringBuffer.getData(), (uint32_t)(stringBufferNumWchar * sizeof(wchar_t)));
+
+                        juce::String juceString{ stringBuffer.getData(), stringBufferNumWchar };
+                        DBG(indent << juceString);
                         break;
                     }
 
@@ -221,6 +224,9 @@ namespace mescal
                 }
                 break;
             }
+
+            default:
+                break;
             }
 
             return info;
@@ -371,7 +377,7 @@ namespace mescal
 
         static void setInputsRecursive(Pimpl* pimpl)
         {
-            for (int index = 0; index < pimpl->inputs.size(); ++index)
+            for (size_t index = 0; index < pimpl->inputs.size(); ++index)
             {
                 auto& input = pimpl->inputs[index];
                 if (std::holds_alternative<juce::Image>(input))
@@ -381,14 +387,14 @@ namespace mescal
                     {
                         if (juce::Direct2DPixelData::Ptr inputPixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
                         {
-                            pimpl->d2dEffect->SetInput(index, inputPixelData->getFirstPageForContext(pimpl->resources->deviceContext));
+                            pimpl->d2dEffect->SetInput((uint32_t)index, inputPixelData->getFirstPageForContext(pimpl->resources->deviceContext));
                         }
                     }
                 }
                 else if (std::holds_alternative<Effect::Ptr>(input))
                 {
                     auto otherEffect = std::get<Effect::Ptr>(input);
-                    pimpl->d2dEffect->SetInputEffect(index, otherEffect->pimpl->d2dEffect.get());
+                    pimpl->d2dEffect->SetInputEffect((uint32_t)index, otherEffect->pimpl->d2dEffect.get());
 
                     setInputsRecursive(otherEffect->pimpl.get());
                 }

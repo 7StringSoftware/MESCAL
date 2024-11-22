@@ -11,7 +11,7 @@ public:
     void paint(juce::Graphics& g) override
     {
         //
-        // Paint the conic gradient
+        // Paint the gradient
         //
         meshGradient->draw(outputImage, {});
 
