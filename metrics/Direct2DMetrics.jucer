@@ -26,7 +26,7 @@
     <VS2022 targetFolder="Builds/VisualStudio2022" smallIcon="ZM0AfZ" bigIcon="ZM0AfZ">
       <CONFIGURATIONS>
         <CONFIGURATION isDebug="1" name="Debug" targetName="Direct2DMetrics"/>
-        <CONFIGURATION isDebug="0" name="Release" targetName="Direct2DMetrics"/>
+        <CONFIGURATION isDebug="0" name="Release" targetName="Direct2DMetrics" useRuntimeLibDLL="0"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_core" path="../../../../JUCE-dev/modules"/>

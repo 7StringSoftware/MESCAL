@@ -5,10 +5,9 @@ struct PipeClient : public juce::InterprocessConnection, public juce::ReferenceC
 {
     using Ptr = juce::ReferenceCountedObjectPtr<PipeClient>;
 
-    PipeClient(uint32_t processID_) :
+    PipeClient(juce::StringRef pipeNameIn) :
         juce::InterprocessConnection(true, juce::Direct2DMetricsHub::magicNumber),
-        processID(processID_),
-        pipeName("JUCEDirect2DMetricsHub:" + juce::String::toHexString((juce::pointer_sized_int)processID_))
+        pipeName(pipeNameIn)
     {
         connectToPipe(pipeName, -1);
     }
@@ -27,22 +26,28 @@ struct PipeClient : public juce::InterprocessConnection, public juce::ReferenceC
         if (onConnectionLost) onConnectionLost();
     }
 
-    void sendRequest(int requestType)
+    void sendRequest(int requestType, void *windowHandle)
     {
-        juce::MemoryBlock block{ sizeof(int) };
-        auto message = (int*)block.getData();
-        *message = requestType;
+        juce::MemoryBlock block{ sizeof(juce::Direct2DMetricsHub::Request) };
+        auto message = (juce::Direct2DMetricsHub::Request*)block.getData();
+        message->requestType = requestType;
+        message->windowHandle = windowHandle;
         sendMessage(block);
     }
 
-    void getMetricsValues()
+    void getMetricsValues(void* windowHandle)
     {
-        sendRequest(juce::Direct2DMetricsHub::getValuesRequest);
+        sendRequest(juce::Direct2DMetricsHub::getValuesRequest, windowHandle);
     }
 
-    void resetAllMetrics()
+    void resetAllMetrics(void* windowHandle)
     {
-        sendRequest(juce::Direct2DMetricsHub::resetValuesRequest);
+        sendRequest(juce::Direct2DMetricsHub::resetValuesRequest, windowHandle);
+    }
+
+    void getWindowHandles()
+    {
+        sendRequest(juce::Direct2DMetricsHub::getWindowHandlesRequest, nullptr);
     }
 
     void messageReceived(const juce::MemoryBlock& message) override
@@ -62,31 +67,19 @@ struct PipeClient : public juce::InterprocessConnection, public juce::ReferenceC
             break;
         }
 
+        case juce::Direct2DMetricsHub::getWindowHandlesRequest:
+        {
+            auto response = (juce::Direct2DMetricsHub::GetWindowHandlesResponse*)message.getData();
+            if (onGetWindowHandlesResponse) onGetWindowHandlesResponse(response);
+            break;
+        }
         }
     }
 
-    uint32_t const processID;
     juce::String const pipeName;
     std::function<void(juce::Direct2DMetricsHub::GetValuesResponse* response)> onAllMetricsResponse;
+    std::function<void(juce::Direct2DMetricsHub::GetWindowHandlesResponse* response)> onGetWindowHandlesResponse;
     std::function<void()> onConnectionLost;
-
-    static constexpr struct FlagNames
-    {
-        static constexpr std::array<std::string_view, 5> names
-        {
-           "effectsEnabled",
-           "fillRectListEnabled",
-           "drawImageEnabled",
-           "softwareImageBackupEnabled",
-           "gradientEnabled"
-        };
-
-        juce::String getName(size_t i) const
-        {
-            return juce::String::createStringFromData(names[i].data(), (int)names[i].size());
-        }
-
-    } flagNames;
 
     juce::Time lastUpdateTime = juce::Time::getCurrentTime();
 };

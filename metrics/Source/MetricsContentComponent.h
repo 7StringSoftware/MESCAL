@@ -13,12 +13,26 @@ public:
 
         statTable.resetStatsButton.onClick = [this]
             {
-                for (auto client : processClients)
+                if (pipeClient)
                 {
-                    client->resetAllMetrics();
+                    pipeClient->resetAllMetrics(getSelectedWindowHandle());
                 }
             };
-        addChildComponent(statTable);
+        addAndMakeVisible(statTable);
+
+        addAndMakeVisible(pipeComboBox);
+        pipeComboBox.onChange = [this]
+            {
+                if (pipeClient && pipeComboBox.getText() != pipeClient->pipeName)
+                {
+                    pipeClient.reset();
+                }
+
+                if (!pipeClient && pipeComboBox.getText().isNotEmpty())
+                    addClient(pipeComboBox.getText());
+            };
+
+        addAndMakeVisible(windowHandleComboBox);
     }
 
     ~MetricsContentComponent() override
@@ -32,11 +46,21 @@ public:
         g.setColour(juce::Colours::white);
         if (statTable.isEnabled() && statTable.isVisible())
         {
-            TCHAR windowName[64] = {};
-            GetWindowText((HWND)windowHandle, windowName, 64);
+            juce::String text;
+            auto selectedWindowHandle = getSelectedWindowHandle();
+            if (selectedWindowHandle)
+            {
+                TCHAR windowName[64] = {};
+                GetWindowText((HWND)getSelectedWindowHandle(), windowName, 64);
 
-            juce::String text{ windowName };
-            text << " - HWND 0x" << juce::String::toHexString((juce::pointer_sized_int)windowHandle);
+                text << juce::String{ windowName };
+                text << " - HWND 0x" << juce::String::toHexString((juce::pointer_sized_int)selectedWindowHandle);
+            }
+            else
+            {
+                text << "Images";
+            }
+
             g.drawText(text,
                 15, 0, getWidth() - 30, 25,
                 juce::Justification::centredRight);
@@ -59,98 +83,78 @@ public:
 
     void resized() override
     {
-        statTable.setBounds(getLocalBounds().withTrimmedTop(25));
+        statTable.setBounds(getLocalBounds().withTrimmedTop(50));
+        pipeComboBox.setBounds(0, 0, getWidth(), 25);
+        windowHandleComboBox.setBounds(0, pipeComboBox.getBottom(), getWidth(), 25);
     }
 
     void timerCallback() override
     {
         auto now = juce::Time::getCurrentTime();
 
-        for (int i = processClients.size() - 1; i >= 0; --i)
+        WIN32_FIND_DATA findData{};
+        auto processID = (int)GetCurrentProcessId();
+
+        juce::StringArray foundPipeNames;
+        if (auto pipeHandle = FindFirstFileA("\\\\.\\pipe\\JUCEDirect2DMetrics*", &findData); pipeHandle != INVALID_HANDLE_VALUE)
         {
-            auto elapsed = now - processClients[i]->lastUpdateTime;
-            if (elapsed.inMilliseconds() >= 1000)
+            auto pipeName = juce::String{ findData.cFileName, juce::numElementsInArray(findData.cFileName) };
+
+            auto pipeProcessID = pipeName.getTrailingIntValue();
+            if (pipeProcessID != processID)
+                foundPipeNames.add(pipeName);
+
+            while (FindNextFile(pipeHandle, &findData))
             {
-                processClients.remove(i);
+                pipeName = juce::String{ findData.cFileName, juce::numElementsInArray(findData.cFileName) };
+                pipeProcessID = pipeName.getTrailingIntValue();
+                if (pipeProcessID != processID)
+                    foundPipeNames.add(pipeName);
+            }
+
+            FindClose(pipeHandle);
+        }
+
+        if (pipeNames != foundPipeNames)
+        {
+            pipeNames = foundPipeNames;
+            pipeComboBox.clear(juce::dontSendNotification);
+            int id = 1;
+            for (auto const& pipeName : foundPipeNames)
+            {
+                pipeComboBox.addItem(pipeName, id++);
             }
         }
 
-        findJUCEProcesses();
-
-        auto foregroundWindow = GetForegroundWindow();
-        DWORD foregroundProcessID = 0;
-
-        if (foregroundWindow)
+        if (pipeComboBox.getNumItems() == 0)
         {
-            GetWindowThreadProcessId(foregroundWindow, &foregroundProcessID);
-
-            for (auto processClient : processClients)
-            {
-                if (processClient->processID == foregroundProcessID)
-                {
-                    lastClient = processClient;
-                    processClient->getMetricsValues();
-                    statTable.setEnabled(true);
-                    return;
-                }
-            }
+            windowHandleComboBox.clear(juce::dontSendNotification);
         }
 
-        if (lastClient && processClients.contains(lastClient))
+        if (pipeComboBox.getSelectedId() == 0 && foundPipeNames.size() > 0 || pipeClient == nullptr)
         {
-            lastClient->getMetricsValues();
-            statTable.setEnabled(true);
-            return;
+            pipeComboBox.setSelectedId(1, juce::sendNotification);
         }
 
-        statTable.setEnabled(false);
+        if (pipeClient)
+        {
+            pipeClient->getWindowHandles();
+            pipeClient->getMetricsValues(getSelectedWindowHandle());
+        }
+
+        statTable.setEnabled(true);
         repaint();
     }
 
-    static BOOL enumWindowsCallback(HWND hwnd, LPARAM lParam)
+    void addClient(juce::StringRef pipeName)
     {
-        auto that = (MetricsContentComponent*)lParam;
-
-        static char juceWindowName[] = "JUCEWindow";
-        char windowName[64] = {};
-
-        GetWindowTextA(hwnd, windowName, 64);
-        if (0 == memcmp(windowName, juceWindowName, sizeof(juceWindowName) - sizeof(TCHAR)))
-        {
-            DWORD processID = 0;
-            if (GetWindowThreadProcessId(hwnd, &processID))
+        pipeClient = std::make_unique<PipeClient>(pipeName);
+        pipeClient->onConnectionLost = [this]
             {
-                if (processID == GetCurrentProcessId()) return TRUE;
-
-                that->addClient(processID);
-            }
-        }
-
-        return TRUE;
-    }
-
-    void findJUCEProcesses()
-    {
-        EnumWindows(enumWindowsCallback, (LPARAM)this);
-    }
-
-    void addClient(uint32_t processID)
-    {
-        for (auto client : processClients)
-        {
-            if (client->processID == processID)
-            {
-                return;
-            }
-        }
-
-        auto client = new PipeClient{ processID };
-        client->onConnectionLost = [this, client]
-            {
-                processClients.removeObject(client);
+                pipeClient.reset();
             };
 
-        client->onAllMetricsResponse = [this](juce::Direct2DMetricsHub::GetValuesResponse* response)
+        pipeClient->onAllMetricsResponse = [this](juce::Direct2DMetricsHub::GetValuesResponse* response)
             {
                 for (int i = 0; i < juce::Direct2DMetrics::numStats; ++i)
                 {
@@ -158,22 +162,77 @@ public:
                 }
 
                 statTable.update();
-
-                if (windowHandle != response->windowHandle)
-                {
-                    repaint();
-                }
-                windowHandle = response->windowHandle;
+                repaint();
             };
 
-        processClients.add(client);
+        pipeClient->onGetWindowHandlesResponse = [this](juce::Direct2DMetricsHub::GetWindowHandlesResponse* response)
+            {
+                bool changed = false;
+                for (auto const& windowHandle : response->windowHandles)
+                {
+                    if (std::find(windowHandles.begin(), windowHandles.end(), windowHandle) == windowHandles.end())
+                    {
+                        changed = true;
+                        break;
+                    }
+                }
+
+                if (!changed)
+                    return;
+
+                windowHandles.clear();
+                for (auto const& windowHandle : response->windowHandles)
+                {
+                    windowHandles.emplace_back(windowHandle);
+                }
+
+                auto id = windowHandleComboBox.getSelectedId();
+                windowHandleComboBox.clear(juce::dontSendNotification);
+
+                for (size_t j = 0; j < response->maxNumWindowHandles; ++j)
+                {
+                    if (auto windowHandle = response->windowHandles[j])
+                    {
+                        auto topWindowHandle = GetTopWindow((HWND)windowHandle);
+                        if (topWindowHandle == nullptr)
+                            topWindowHandle = (HWND)windowHandle;
+
+                        TCHAR windowName[64] = {};
+                        GetWindowText(topWindowHandle, windowName, juce::numElementsInArray(windowName));
+
+                        juce::String text{ windowName };
+                        text << " - HWND 0x";
+                        text << juce::String::toHexString((juce::pointer_sized_int)topWindowHandle);
+                        windowHandleComboBox.addItem(text, (int)(juce::pointer_sized_int)windowHandle);
+                    }
+                }
+
+                windowHandleComboBox.addItem("Images", -1);
+
+                if (id == 0)
+                {
+                    id = (int)(juce::pointer_sized_int)response->windowHandles[0];
+                    if (id == 0)
+                        id = -1;
+                }
+
+                windowHandleComboBox.setSelectedId(id, juce::dontSendNotification);
+            };
+    }
+
+    void* getSelectedWindowHandle()
+    {
+        auto id = windowHandleComboBox.getSelectedId();
+        return id < 0 ? nullptr : (void*)(juce::pointer_sized_int)id;
     }
 
 private:
-    juce::ReferenceCountedArray<PipeClient> processClients;
-    PipeClient* lastClient = nullptr;
+    std::unique_ptr<PipeClient> pipeClient;
+    juce::StringArray pipeNames;
+    std::vector<void*> windowHandles;
     StatTable statTable;
-    void* windowHandle = nullptr;
+    juce::ComboBox pipeComboBox;
+    juce::ComboBox windowHandleComboBox;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MetricsContentComponent)
 };
