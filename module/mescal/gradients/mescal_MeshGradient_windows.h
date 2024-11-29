@@ -63,7 +63,6 @@ class MeshGradient
 {
 public:
     MeshGradient(int numRows_, int numColumns_, std::optional<juce::Rectangle<float>> bounds_ = {});
-    MeshGradient() = default;
     ~MeshGradient();
 
     enum class EdgePlacement

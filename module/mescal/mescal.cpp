@@ -20,6 +20,7 @@
     SOFTWARE.
 */
 
+#define _SILENCE_CLANG_COROUTINE_MESSAGE 1
 #include <windows.h>
 #include <winrt/Windows.Foundation.h>
 #include <d2d1_3helper.h>

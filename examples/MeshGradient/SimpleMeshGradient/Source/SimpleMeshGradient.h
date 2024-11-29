@@ -11,7 +11,7 @@ public:
     void paint(juce::Graphics& g) override
     {
         //
-        // Paint the conic gradient
+        // Paint the gradient
         //
         meshGradient->draw(outputImage, {});
 
@@ -34,6 +34,9 @@ private:
 
     void createMeshGradient()
     {
+        //
+        // Make a mesh gradient with a single patch (1 row, 1 column)
+        //
         meshGradient = std::make_unique<mescal::MeshGradient>(1, 1, getLocalBounds().toFloat());
 
         std::array<juce::Colour, 4> colors

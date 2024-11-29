@@ -12,7 +12,7 @@ namespace mescal
         static void setInputRecursive(Effect::Ptr effect, juce::Image& sourceImage)
         {
             auto inputs = effect->getInputs();
-            for (int index = 0; index < inputs.size(); ++index)
+            for (size_t index = 0; index < inputs.size(); ++index)
             {
                 auto& input = inputs[index];
                 if (std::holds_alternative<mescal::Effect::Ptr>(input))
@@ -24,7 +24,7 @@ namespace mescal
                 }
                 else if (std::holds_alternative <std::monostate>(input))
                 {
-                    effect->setInput(index, sourceImage);
+                    effect->setInput((uint32_t)index, sourceImage);
                 }
             }
         }
@@ -50,7 +50,8 @@ namespace mescal
 
         Pimpl::setInputRecursive(pimpl->effect, sourceImage);
         pimpl->effect->applyEffect(outputImage, juce::AffineTransform::scale(scaleFactor), true);
-        destContext.setColour(juce::Colours::black.withAlpha(alpha));
+        destContext.setColour(juce::Colours::black);
+        destContext.setOpacity(alpha);
         destContext.drawImageAt(outputImage, 0, 0);
     }
 }
