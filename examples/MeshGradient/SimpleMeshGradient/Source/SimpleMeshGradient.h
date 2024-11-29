@@ -34,7 +34,7 @@ private:
 
     void createMeshGradient()
     {
-        meshGradient = std::make_unique<mescal::MeshGradient>(2, 2, getLocalBounds().toFloat());
+        meshGradient = std::make_unique<mescal::MeshGradient>(1, 1, getLocalBounds().toFloat());
 
         std::array<juce::Colour, 4> colors
         {
@@ -44,12 +44,11 @@ private:
             juce::Colours::cyan
         };
         auto colorIterator = colors.begin();
-        for (int row = 0; row < meshGradient->getNumRows(); ++row)
+        auto patch = meshGradient->getPatch(0, 0);
+
+        for (int i = 0; i < 4; ++i)
         {
-            for (int column = 0; column < meshGradient->getNumColumns(); ++column)
-            {
-                meshGradient->getVertex(row, column)->color = mescal::Color128{ *colorIterator++ };
-            }
+            patch->colors[i] = mescal::Color128{ *colorIterator++ };
         }
     }
 
