@@ -50,7 +50,7 @@ namespace mescal
 
         Pimpl::setInputRecursive(pimpl->effect, sourceImage);
         pimpl->effect->applyEffect(outputImage, juce::AffineTransform::scale(scaleFactor), true);
-        destContext.setColour(juce::Colours::black);
+        destContext.setColour(juce::Colours::black.withAlpha(alpha));
         destContext.drawImageAt(outputImage, 0, 0);
     }
 }
