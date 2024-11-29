@@ -23,8 +23,8 @@ namespace mescal
     class MescalPixelData : public juce::Direct2DPixelData
     {
     public:
-        MescalPixelData(int width, int height, bool clearImage)
-            : juce::Direct2DPixelData(juce::Image::ARGB, width, height, clearImage)
+        MescalPixelData(int width, int height, bool clearImage, juce::Image::Permanence permanence)
+            : juce::Direct2DPixelData(juce::Image::ARGB, width, height, clearImage, permanence)
         {
         }
 
@@ -72,9 +72,9 @@ namespace mescal
     {
     }
 
-    juce::ImagePixelData::Ptr MescalImageType::create(juce::Image::PixelFormat, int width, int height, bool clearImage) const
+    juce::ImagePixelData::Ptr MescalImageType::create(juce::Image::PixelFormat, int width, int height, bool clearImage, juce::Image::Permanence permanence) const
     {
-        return new MescalPixelData{ width, height, clearImage };
+        return new MescalPixelData{ width, height, clearImage, permanence };
     }
 
     int MescalImageType::getTypeID() const
