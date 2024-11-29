@@ -107,6 +107,7 @@ InteractiveMeshGradient::InteractiveMeshGradient()
 	addAndMakeVisible(showControlsToggle);
 
     setSize(768, 768);
+    selectPatch(patchComponents.front().get());
 }
 
 void InteractiveMeshGradient::paint(juce::Graphics& g)
@@ -413,5 +414,32 @@ void InteractiveMeshGradient::PatchComponent::mouseUp(const juce::MouseEvent&)
     if (isMouseOver(true) && onSelect)
     {
         onSelect(this);
+    }
+}
+
+void InteractiveMeshGradient::PatchComponent::updateOutlinePath()
+{
+    path.clear();
+
+    path.startNewSubPath(patch->getCornerPosition(mescal::MeshGradient::CornerPlacement::topRight));
+
+    {
+        auto edge = patch->getEdge(mescal::MeshGradient::EdgePlacement::top);
+        path.cubicTo(*edge.bezierControlPoints.first, *edge.bezierControlPoints.second, patch->getCornerPosition(mescal::MeshGradient::CornerPlacement::topLeft));
+    }
+
+    {
+        auto edge = patch->getEdge(mescal::MeshGradient::EdgePlacement::left);
+        path.cubicTo(*edge.bezierControlPoints.first, *edge.bezierControlPoints.second, patch->getCornerPosition(mescal::MeshGradient::CornerPlacement::bottomLeft));
+    }
+
+    {
+        auto edge = patch->getEdge(mescal::MeshGradient::EdgePlacement::bottom);
+        path.cubicTo(*edge.bezierControlPoints.first, *edge.bezierControlPoints.second, patch->getCornerPosition(mescal::MeshGradient::CornerPlacement::bottomRight));
+    }
+
+    {
+        auto edge = patch->getEdge(mescal::MeshGradient::EdgePlacement::right);
+        path.cubicTo(*edge.bezierControlPoints.first, *edge.bezierControlPoints.second, patch->getCornerPosition(mescal::MeshGradient::CornerPlacement::topRight));
     }
 }

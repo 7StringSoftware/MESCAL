@@ -55,7 +55,7 @@ private:
         bool hitTest(int x, int y) override;
         void paint(juce::Graphics& g) override;
         void mouseUp(const juce::MouseEvent& e) override;
-        void updateOutlinePath() {}
+        void updateOutlinePath();
 
         juce::Path path;
         std::shared_ptr<mescal::MeshGradient::Patch> patch;
