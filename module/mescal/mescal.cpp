@@ -47,5 +47,5 @@
 #include "effects/mescal_Effects_windows.cpp"
 #include "effects/mescal_ImageEffectFilter_windows.cpp"
 #include "images/mescal_Image_windows.cpp"
-#include "utility/mescal_GPUConfig_windows.cpp"
+#include "utility/mescal_GPU_windows.cpp"
 #include "sprites/mescal_SpriteBatch_windows.cpp"

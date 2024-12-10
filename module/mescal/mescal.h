@@ -49,6 +49,6 @@ namespace mescal
     #include "effects/mescal_Effects_windows.h"
     #include "effects/mescal_ImageEffectFilter_windows.h"
     #include "images/mescal_Image_windows.h"
-    #include "utility/mescal_GPUConfig_windows.h"
+    #include "utility/mescal_GPU_windows.h"
     #include "sprites/mescal_SpriteBatch_windows.h"
 }
