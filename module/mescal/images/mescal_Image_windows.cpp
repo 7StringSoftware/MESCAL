@@ -23,23 +23,13 @@ namespace mescal
     class MescalPixelData : public juce::Direct2DPixelData
     {
     public:
-        MescalPixelData(int width, int height, bool clearImage, juce::Image::Permanence permanence)
-            : juce::Direct2DPixelData(juce::Image::ARGB, width, height, clearImage, permanence)
+        MescalPixelData(int width, int height, bool clearImage)
+            : juce::Direct2DPixelData(juce::Image::ARGB, width, height, clearImage)
         {
         }
 
         ~MescalPixelData() override
         {
-        }
-
-        std::unique_ptr<juce::ImageType> createType() const override
-        {
-            return std::make_unique<MescalImageType>();
-        }
-
-        std::unique_ptr<juce::LowLevelGraphicsContext> createLowLevelContext() override
-        {
-            return std::make_unique<MescalImageContext>(deviceContext, bitmap, paintAreas);
         }
 
         juce::SharedResourcePointer<juce::DirectX> directX;
@@ -72,9 +62,9 @@ namespace mescal
     {
     }
 
-    juce::ImagePixelData::Ptr MescalImageType::create(juce::Image::PixelFormat, int width, int height, bool clearImage, juce::Image::Permanence permanence) const
+    juce::ImagePixelData::Ptr MescalImageType::create(juce::Image::PixelFormat, int width, int height, bool clearImage) const
     {
-        return new MescalPixelData{ width, height, clearImage, permanence };
+        return new MescalPixelData{ width, height, clearImage };
     }
 
     int MescalImageType::getTypeID() const

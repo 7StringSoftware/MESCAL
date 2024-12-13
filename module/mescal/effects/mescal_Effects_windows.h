@@ -323,6 +323,19 @@ public:
     };
 
     /**
+    * Constants for built-in Direct2D 2D edge detection effect
+    *
+    * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/edge-detect
+    */
+    struct EdgeDetection
+    {
+        static constexpr int strength = 0;
+        static constexpr int blurRadius = 1;
+        static constexpr int mode = 2;
+        static constexpr int overlayEdges = 3;
+    };
+
+    /**
     * Constants for built-in Direct2D 2D emboss effect
     *
     * Reference: https://learn.microsoft.com/en-us/windows/win32/direct2d/emboss

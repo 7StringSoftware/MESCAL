@@ -139,9 +139,9 @@ namespace mescal
 
                 if (gradientMesh)
                 {
-                    if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
+                    if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData().get()))
                     {
-                        if (auto bitmap = pixelData->getFirstPageForContext(deviceContext))
+                        if (auto bitmap = pixelData->getFirstPageForDevice(resources->adapter->direct2DDevice))
                         {
                             deviceContext->SetTarget(bitmap);
                             deviceContext->BeginDraw();

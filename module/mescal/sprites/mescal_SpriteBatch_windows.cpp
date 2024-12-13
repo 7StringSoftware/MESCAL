@@ -96,13 +96,13 @@ namespace mescal
 
             if (destinationImage.isValid() && spriteBatch)
             {
-                auto atlasPixelData = dynamic_cast<juce::Direct2DPixelData*>(atlas.getPixelData());
-                auto destinationPixelData = dynamic_cast<juce::Direct2DPixelData*>(destinationImage.getPixelData());
+                auto atlasPixelData = dynamic_cast<juce::Direct2DPixelData*>(atlas.getPixelData().get());
+                auto destinationPixelData = dynamic_cast<juce::Direct2DPixelData*>(destinationImage.getPixelData().get());
 
                 if (atlasPixelData && destinationPixelData)
                 {
-                    auto atlasBitmap = atlasPixelData->getFirstPageForContext(deviceContext3);
-                    auto destinationBitmap = destinationPixelData->getFirstPageForContext(deviceContext3);
+                    auto atlasBitmap = atlasPixelData->getFirstPageForDevice(resources->adapter->direct2DDevice);
+                    auto destinationBitmap = destinationPixelData->getFirstPageForDevice(resources->adapter->direct2DDevice);
                     if (atlasBitmap && destinationBitmap)
                     {
                         deviceContext3->SetTarget(destinationBitmap);
