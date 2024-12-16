@@ -32,6 +32,11 @@ namespace mescal
         Effect::Ptr effect;
     };
 
+    MescalImageEffectFilter::MescalImageEffectFilter() :
+        pimpl(std::make_unique<Pimpl>(nullptr))
+    {
+    }
+
     MescalImageEffectFilter::MescalImageEffectFilter(Effect::Ptr effect_) :
         pimpl(std::make_unique<Pimpl>(effect_))
     {
@@ -41,12 +46,20 @@ namespace mescal
     {
     }
 
+    void MescalImageEffectFilter::setEffect(mescal::Effect::Ptr effect_)
+    {
+        pimpl->effect = effect_;
+    }
+
     void MescalImageEffectFilter::applyEffect(juce::Image& sourceImage, juce::Graphics& destContext, float scaleFactor, float alpha)
     {
         if (outputImage.isNull() || outputImage.getWidth() != sourceImage.getWidth() || outputImage.getHeight() != sourceImage.getHeight())
         {
             outputImage = juce::Image(juce::Image::ARGB, sourceImage.getWidth(), sourceImage.getHeight(), true, juce::NativeImageType{});
         }
+
+        destContext.getInternalContext().setFill(juce::Colours::transparentBlack);
+        destContext.getInternalContext().fillRect(destContext.getClipBounds(), true);
 
         Pimpl::setInputRecursive(pimpl->effect, sourceImage);
         pimpl->effect->applyEffect(outputImage, juce::AffineTransform::scale(scaleFactor), true);

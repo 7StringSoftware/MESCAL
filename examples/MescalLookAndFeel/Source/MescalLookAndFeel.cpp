@@ -11,6 +11,7 @@ MescalLookAndFeel::MescalLookAndFeel()
     setColour(juce::Slider::ColourIds::trackColourId, juce::Colour{ 0xffB6CFCF });
     setColour(juce::ComboBox::outlineColourId, juce::Colours::transparentBlack);
 }
+#if 0
 
 void MescalLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button, const juce::Colour& backgroundColour, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
 {
@@ -134,6 +135,7 @@ void MescalLookAndFeel::drawLabel(juce::Graphics& g, juce::Label& label)
 
     //g.drawRect(label.getLocalBounds().reduced(2));
 }
+#endif
 
 mescal::Effect::Ptr MescalLookAndFeel::addShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform)
 {

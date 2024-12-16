@@ -16,12 +16,10 @@ public:
     void createMetallicKnobEffectGraph();
     void paint3DButtonImages();
     void create3DButtonEffectGraph();
+    void buildComponentEffectGraph();
 
     std::vector<juce::Image> sourceImages;
 	mescal::Effect::Ptr outputEffect;
-
-    void createMetallicKnobGraph();
-    void createSliderGraph();
 
     mescal::Effect::Ptr addShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform);
     mescal::Effect::Ptr createInnerShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform);

@@ -9,12 +9,12 @@ public:
     EffectGraphComponent();
     ~EffectGraphComponent() override;
 
-    void setOutputEffect(mescal::Effect::Ptr outputEffect, int imageWidth, int imageHeight);
+    void setOutputEffect(mescal::Effect::Ptr outputEffect);
     void paint(juce::Graphics&) override;
     void resized() override;
     juce::Rectangle<int> getPreferredSize();
 
-    std::function<void()> onPropertyChange;
+    std::function<void()> onEffectPropertyChange;
 
 private:
     struct NodeComponent;
@@ -51,7 +51,7 @@ private:
 
         void resized() override;
 
-        juce::Image image;
+        juce::Image thumbnail;
         std::vector<std::unique_ptr<InputConnectorComponent>> inputConnectors;
         OutputConnectorComponent outputConnector;
     };
@@ -98,7 +98,7 @@ private:
             std::vector<std::vector<juce::Component*>>& columns,
             int& sequence);
 
-        void buildEffectGraphComponents(mescal::Effect::Ptr newOutputEffect, int imageWidth, int imageHeight);
+        void buildEffectGraphComponents(mescal::Effect::Ptr newOutputEffect);
         void resized() override;
         void paint(juce::Graphics&) override;
         juce::Rectangle<int> getPreferredSize();

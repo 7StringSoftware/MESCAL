@@ -44,14 +44,17 @@ public:
     void clearStops();
     void addStop(float angle, Color128 innerColor, Color128 outerColor);
     void addStops(juce::Span<Stop> newStops);
-    auto const& getStops() const noexcept
+    auto& getStops() noexcept
     {
         return stops;
     }
     void setStopColor(size_t index, Color128 innerColor, Color128 outerColor);
     void setStopAngle(size_t index, float angle);
 
-    void draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor = juce::Colours::transparentBlack);
+    /**
+    * Draw the conic gradient around the origin (0, 0)
+    */
+    void draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor = juce::Colours::transparentBlack, bool replaceContents = true);
 
 private:
     std::vector<Stop> stops;

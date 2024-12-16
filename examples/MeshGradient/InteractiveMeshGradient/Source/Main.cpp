@@ -40,7 +40,9 @@ public:
 
             setResizable (true, true);
 
-            centreWithSize(getWidth(), getHeight());
+            auto area = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()->userArea.reduced(40);
+
+            centreWithSize(area.getWidth(), area.getHeight());
 
             setVisible (true);
         }

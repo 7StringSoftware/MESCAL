@@ -8,6 +8,8 @@ public:
     MescalLookAndFeel();
 
     void drawRotarySlider(juce::Graphics&, int x, int y, int width, int height, float sliderPosProportional, float rotaryStartAngle, float rotaryEndAngle, juce::Slider&) override;
+
+#if 0
     void drawButtonBackground(juce::Graphics&, juce::Button&, const juce::Colour& backgroundColour, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
     void drawLinearSlider(juce::Graphics&, int x, int y, int width, int height, float sliderPos, float minSliderPos, float maxSliderPos, juce::Slider::SliderStyle, juce::Slider&) override;
 
@@ -55,25 +57,20 @@ public:
     }
 
     void drawLabel(juce::Graphics& g, juce::Label& label) override;
+#endif
 
-private:
-    static mescal::Effect::Ptr addShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform);
-
-    static mescal::Effect::Ptr create3DInnerShadow(juce::Image const& sourceImage,
-        juce::Colour topColor,
-        juce::AffineTransform topShadowTransform,
-        juce::Colour bottomColor,
-        juce::AffineTransform bottomShadowTransform,
-        float shadowSize);
-
-    std::vector<juce::Image> images;
-    juce::Image getImage(int index, juce::Rectangle<int> size);
-    juce::Image getImage(int index, juce::Rectangle<float> size)
+    juce::Slider::SliderLayout getSliderLayout(juce::Slider& slider) override
     {
-        return getImage(index, size.toNearestIntEdges());
-    }
+        auto layout = juce::LookAndFeel_V4::getSliderLayout(slider);
 
-    void clear(juce::Graphics& g);
+        if (slider.isRotary())
+        {
+            auto size = juce::jmin(slider.getWidth(), slider.getHeight()) - 80;
+            layout.sliderBounds = slider.getLocalBounds().withSizeKeepingCentre(size, size);
+        }
+
+        return layout;
+    }
 
     struct InnerShadow
     {
@@ -98,6 +95,29 @@ private:
             return alphaMask;
         }
     } innerShadow;
+
+
+private:
+    static mescal::Effect::Ptr addShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform);
+
+    static mescal::Effect::Ptr create3DInnerShadow(juce::Image const& sourceImage,
+        juce::Colour topColor,
+        juce::AffineTransform topShadowTransform,
+        juce::Colour bottomColor,
+        juce::AffineTransform bottomShadowTransform,
+        float shadowSize);
+
+    std::vector<juce::Image> images;
+    juce::Image getImage(int index, juce::Rectangle<int> size);
+    juce::Image getImage(int index, juce::Rectangle<float> size)
+    {
+        return getImage(index, size.toNearestIntEdges());
+    }
+
+    void clear(juce::Graphics& g);
+
+    void drawRotarySliderConicGradient(juce::Graphics&, int x, int y, int width, int height, float sliderPosProportional, float rotaryStartAngle, float rotaryEndAngle, juce::Slider&);
+
 
     struct DropShadow
     {

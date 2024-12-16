@@ -2,6 +2,7 @@
 
 using namespace juce;
 
+#if 0
 void MescalLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPos, float minSliderPos, float maxSliderPos, juce::Slider::SliderStyle style, juce::Slider& slider)
 {
     auto thumbColor = slider.findColour(Slider::thumbColourId);
@@ -258,9 +259,12 @@ void MescalLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int wi
 #endif
     }
 }
+#endif
 
 void MescalLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height, float sliderPosProportional, float rotaryStartAngle, float rotaryEndAngle, juce::Slider& slider)
 {
+    //LookAndFeel_V4::drawRotarySlider(g, x, y, width, height, sliderPosProportional, rotaryStartAngle, rotaryEndAngle, slider);
+    drawRotarySliderConicGradient(g, x, y, width, height, sliderPosProportional, rotaryStartAngle, rotaryEndAngle, slider);
     return;
 
     auto outline = slider.findColour(Slider::rotarySliderOutlineColourId);
@@ -272,6 +276,9 @@ void MescalLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
     auto toAngle = rotaryStartAngle + sliderPosProportional * (rotaryEndAngle - rotaryStartAngle);
     auto lineW = jmin(8.0f, radius * 0.5f);
     auto arcRadius = radius - lineW * 0.5f;
+
+    drawRotarySliderConicGradient(g, x, y, width, height, sliderPosProportional, rotaryStartAngle, rotaryEndAngle, slider);
+    return;
 
     juce::Image trackImage{ juce::Image::ARGB, width, height, true };
     juce::Image outputImage{ juce::Image::ARGB, width, height, true };
@@ -434,13 +441,6 @@ void MescalLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
         auto outerLowerDropShadowTransform = mescal::Effect::create(mescal::Effect::Type::affineTransform2D) << outerLowerDropShadow;
         outerLowerDropShadowTransform->setPropertyValue(mescal::Effect::AffineTransform2D::transformMatrix, juce::AffineTransform::translation(thumbRadius * 0.1f, thumbRadius * 0.1f));
 
-        innerShadow.configure(trackImage,
-            juce::Colours::white.withAlpha(0.5f),
-            juce::AffineTransform::translation(thumbRadius * 0.5f, thumbRadius * 0.5f),
-            juce::Colours::black.withAlpha(0.5f),
-            juce::AffineTransform::translation(thumbRadius * -0.5f, thumbRadius * -0.5f),
-            thumbRadius * 0.25f);
-
         auto imageWithUpperShadow = mescal::Effect::create(mescal::Effect::Type::composite) << trackImage << innerShadow.getEffect();
         imageWithUpperShadow->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceAtop);
 
@@ -458,4 +458,92 @@ void MescalLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
     g.fillEllipse(thumbRect.expanded(1.0f));
     g.setColour(juce::Colours::black);
     g.drawImageAt(outputImage, 0, 0);
+}
+
+void MescalLookAndFeel::drawRotarySliderConicGradient(juce::Graphics& g, int x, int y, int width, int height, float sliderPosProportional, float rotaryStartAngle, float rotaryEndAngle, juce::Slider& slider)
+{
+    auto outline = slider.findColour(Slider::rotarySliderOutlineColourId);
+    auto fill = slider.findColour(Slider::rotarySliderFillColourId);
+
+    auto bounds = Rectangle<int>(x, y, width, height).toFloat();
+
+    auto radius = jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f;
+    auto toAngle = rotaryStartAngle + sliderPosProportional * (rotaryEndAngle - rotaryStartAngle);
+    auto lineW = jmin(32.0f, radius * 0.5f);
+    auto arcRadius = radius - lineW * 0.5f;
+
+    //
+    // Draw the conic gradient
+    //
+    juce::Image sourceImage{ juce::Image::ARGB, slider.getWidth(), slider.getHeight(), true};
+    juce::Image trackShadowImage{ juce::Image::ARGB, slider.getWidth(), slider.getHeight(), true };
+    juce::Image conicGradientArcImage{ juce::Image::ARGB, slider.getWidth(), slider.getHeight(), true };
+    juce::Image glowImage{ juce::Image::ARGB, slider.getWidth(), slider.getHeight(), true };
+    juce::Image outputImage{ juce::Image::ARGB, slider.getWidth(), slider.getHeight(), true };
+    juce::Range<float> radiusRange{ arcRadius - lineW * 0.4f, arcRadius + lineW * 0.4f };
+
+    Path backgroundArc;
+    {
+        backgroundArc.addCentredArc(bounds.getCentreX(),
+            bounds.getCentreY(),
+            arcRadius,
+            arcRadius,
+            0.0f,
+            rotaryStartAngle,
+            rotaryEndAngle,
+            true);
+
+        {
+            juce::Graphics trackG{ sourceImage };
+	        trackG.setColour(outline.withAlpha(1.0f));
+	        trackG.strokePath(backgroundArc, PathStrokeType(lineW, PathStrokeType::curved, PathStrokeType::rounded));
+        }
+
+        innerShadow.configure(sourceImage,
+            juce::Colours::black,
+            juce::AffineTransform::translation(lineW * 0.25f, lineW * 0.25f),
+            juce::Colours::white,
+            juce::AffineTransform::translation(lineW * -0.25f, lineW * -0.25f),
+            lineW * 0.5f);
+        innerShadow.getEffect()->applyEffect(trackShadowImage, {}, true);
+    }
+
+    {
+        mescal::ConicGradient thumbConicGradient;
+
+        thumbConicGradient.setRadiusRange(radiusRange);
+
+        float stopInterval = 1.0f / 32.0f;
+        float angleStep = sliderPosProportional * (rotaryEndAngle - rotaryStartAngle) * stopInterval;
+        if (angleStep > 0.0f)
+        {
+            auto endColor128 = mescal::Color128::fromHSV(0.75f, 1.0f, 1.0f, 0.5f);
+            for (float angle = rotaryStartAngle; angle <= toAngle; angle += angleStep)
+            {
+                auto color128 = mescal::Color128::fromHSV(0.25f + 0.5f * (angle - rotaryStartAngle) / (toAngle - rotaryStartAngle) , 1.0f, 1.0f, 0.5f);
+                thumbConicGradient.addStop(angle, color128, color128);
+            }
+
+            thumbConicGradient.addStop(toAngle, endColor128, endColor128);
+
+            thumbConicGradient.draw(conicGradientArcImage, juce::AffineTransform::translation(bounds.toFloat().getCentre()), juce::Colours::transparentBlack, true);
+        }
+
+        {
+            auto blur = mescal::Effect::GaussianBlur::create(20.0f);
+            blur << conicGradientArcImage;
+
+            auto glowComposite = mescal::Effect::ArithmeticComposite::create(0.0f, 2.0f, 0.5f, 0.0f);
+            glowComposite << blur;
+            glowComposite << trackShadowImage;
+
+            glowComposite->applyEffect(glowImage, {}, false);
+        }
+    }
+
+    g.drawImageAt(glowImage, 0, 0);
+    g.setColour(juce::Colour::greyLevel(0.8f));
+    g.strokePath(backgroundArc, PathStrokeType(lineW, PathStrokeType::curved, PathStrokeType::rounded));
+    g.drawImageAt(trackShadowImage, 0, 0);
+    g.drawImageAt(conicGradientArcImage, 0, 0);
 }

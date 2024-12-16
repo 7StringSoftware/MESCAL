@@ -31,7 +31,7 @@ public:
        //lookAndFeelV4 = std::make_unique<juce::LookAndFeel_V4>();
        //LookAndFeel::setDefaultLookAndFeel(lookAndFeelV4.get());
 
-        mainWindow = std::make_unique<MainWindow>(getApplicationName());
+        mainWindow = std::make_unique<MainWindow>(getApplicationName(), nullptr);
     }
 
     void shutdown() override
@@ -52,7 +52,7 @@ public:
     class MainWindow : public juce::DocumentWindow
     {
     public:
-        MainWindow(juce::String name)
+        MainWindow(juce::String name, mescal::Effect::Ptr effectIn)
             : DocumentWindow(name, juce::Colour{ 0xffffffff }, DocumentWindow::allButtons)
         {
 #if 0
@@ -84,11 +84,12 @@ public:
 #endif
 
             setUsingNativeTitleBar(true);
-            setContentOwned(new ContentComponent, true);
+            setContentOwned(new ContentComponent{ effectIn }, false);
 
             setResizable(true, true);
 
-            //centreWithSize(2048, 1024);
+            auto area = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay()->userArea.reduced(40);
+            centreWithSize(area.getWidth(), area.getHeight());
 
             setVisible(true);
     }

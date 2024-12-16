@@ -2,18 +2,26 @@
 
 #include <JuceHeader.h>
 using namespace juce;
-#define PIP_JUCE_EXAMPLES_DIRECTORY_STRING "c:/JUCE/examples"
-#include "c:\JUCE\examples\Assets\DemoUtilities.h"
-#include "C:\JUCE\examples\GUI\WidgetsDemo.h"
+#define PIP_JUCE_EXAMPLES_DIRECTORY_STRING "c:/JUCE-fork/examples"
+#include "c:\JUCE-fork\examples\Assets\DemoUtilities.h"
+#include "C:\JUCE-fork\examples\GUI\WidgetsDemo.h"
 #include "..\..\Effects\EffectGraphDemo\Source\EffectGraphComponent.h"
 
-class ContentComponent : public juce::Component
+class ContentComponent : public juce::Component, public juce::Timer
 {
 public:
-    ContentComponent();
+    ContentComponent(mescal::Effect::Ptr effectIn);
 
     void resized() override;
 
+    mescal::Effect::Ptr effect;
     WidgetsDemo widgets;
-    EffectGraphComponent effectGraph;
+    juce::Slider rotarySlider{ juce::Slider::Rotary, juce::Slider::NoTextBox };
+    EffectGraphComponent effectGraphComponent;
+
+    void timerCallback()  override
+    {
+    }
+
+    juce::VBlankAttachment vblank{ this, [this] { rotarySlider.repaint(); } };
 };

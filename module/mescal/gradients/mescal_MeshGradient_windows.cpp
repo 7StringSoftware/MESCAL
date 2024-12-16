@@ -85,7 +85,44 @@ namespace mescal
         {
             for (int column = 0; column < numColumns_; ++column)
             {
-                patches.emplace_back(std::make_shared<Patch>(*this, row, column));
+                auto& patch = patches.emplace_back(std::make_shared<Patch>(*this, row, column));
+                patch->edgeModes[(size_t)EdgePlacement::top] = row == 0 ? Edge::antialiased : Edge::aliased;
+                patch->edgeModes[(size_t)EdgePlacement::bottom] = row == numRows_ - 1 ? Edge::antialiased : Edge::aliased;
+                patch->edgeModes[(size_t)EdgePlacement::left] = column == 0 ? Edge::antialiased : Edge::aliased;
+                patch->edgeModes[(size_t)EdgePlacement::right] = column == numColumns_ - 1 ? Edge::antialiased : Edge::aliased;
+            }
+        }
+
+        int numVertices = (numRows_ + 1) * (numColumns_ + 1);
+        for (int i = 0; i < numVertices; ++i)
+        {
+            sharedVertices.emplace_back(std::make_shared<SharedVertex>());
+        }
+
+        {
+            auto vertexIterator = sharedVertices.begin();
+            for (int vertexRow = 0; vertexRow < numRows_ + 1; vertexRow++)
+            {
+                for (int vertexColumn = 0; vertexColumn < numColumns_ + 1; vertexColumn++)
+                {
+                    auto& vertex = *vertexIterator++;
+
+                    auto addPatch = [&](int rowOffset, int columnOffset, CornerPlacement cornerPlacement)
+                        {
+                            int patchRow = vertexRow + rowOffset;
+                            int patchColumn = vertexColumn + columnOffset;
+                            if (auto patch = getPatch(patchRow, patchColumn))
+                            {
+                                vertex->patches.push_back(patch);
+                                patch->sharedVertices[(size_t)cornerPlacement] = vertex;
+                            }
+                        };
+
+                    addPatch(0, 0, CornerPlacement::topLeft);
+                    addPatch(0, -1, CornerPlacement::topRight);
+                    addPatch(-1, -1, CornerPlacement::bottomRight);
+                    addPatch(-1, 0, CornerPlacement::bottomLeft);
+                }
             }
         }
 
@@ -120,7 +157,16 @@ namespace mescal
 
     void MeshGradient::applyTransform([[maybe_unused]] juce::AffineTransform const& transform)
     {
-        jassertfalse;
+        for (auto& patch : patches)
+        {
+            for (auto& point : patch->points)
+            {
+                if (point.has_value())
+                {
+                    point = point->transformedBy(transform);
+                }
+            }
+        }
     }
 
     MeshGradient::Patch::Patch(MeshGradient& owner_, int row_, int column_) :
@@ -153,14 +199,14 @@ namespace mescal
 
         {
             juce::Line diagonal{ rect.getTopLeft(), rect.getBottomRight() };
-            setInteriorControlPointPosition(mescal::MeshGradient::CornerPlacement::topLeft, diagonal.getPointAlongLineProportionally(0.33f));
-            setInteriorControlPointPosition(mescal::MeshGradient::CornerPlacement::bottomRight, diagonal.getPointAlongLineProportionally(0.66f));
+            setInteriorControlPointPosition(mescal::MeshGradient::CornerPlacement::topLeft, diagonal.getPointAlongLineProportionally(0.25f));
+            setInteriorControlPointPosition(mescal::MeshGradient::CornerPlacement::bottomRight, diagonal.getPointAlongLineProportionally(0.75f));
         }
 
         {
             juce::Line diagonal{ rect.getTopRight(), rect.getBottomLeft() };
-            setInteriorControlPointPosition(mescal::MeshGradient::CornerPlacement::topRight, diagonal.getPointAlongLineProportionally(0.33f));
-            setInteriorControlPointPosition(mescal::MeshGradient::CornerPlacement::bottomLeft, diagonal.getPointAlongLineProportionally(0.66f));
+            setInteriorControlPointPosition(mescal::MeshGradient::CornerPlacement::topRight, diagonal.getPointAlongLineProportionally(0.25f));
+            setInteriorControlPointPosition(mescal::MeshGradient::CornerPlacement::bottomLeft, diagonal.getPointAlongLineProportionally(0.75f));
         }
     }
 
@@ -339,6 +385,11 @@ namespace mescal
                 **colorIterator = toCOLOR_F(color);
                 colorIterator++;
             }
+
+            d2dPatch.bottomEdgeMode = (D2D1_PATCH_EDGE_MODE)patch->edgeModes[(size_t)EdgePlacement::bottom];
+            d2dPatch.topEdgeMode = (D2D1_PATCH_EDGE_MODE)patch->edgeModes[(size_t)EdgePlacement::top];
+            d2dPatch.leftEdgeMode = (D2D1_PATCH_EDGE_MODE)patch->edgeModes[(size_t)EdgePlacement::left];
+            d2dPatch.rightEdgeMode= (D2D1_PATCH_EDGE_MODE)patch->edgeModes[(size_t)EdgePlacement::right];
         }
 
         pimpl->createResources();
@@ -351,9 +402,10 @@ namespace mescal
 
             if (pimpl->gradientMesh)
             {
-                if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData().get()))
+                if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
                 {
-                    if (auto bitmap = pixelData->getFirstPageForDevice(pimpl->resources->adapter->direct2DDevice))
+                    //if (auto bitmap = pixelData->getFirstPageForDevice(pimpl->resources->adapter->direct2DDevice))
+                    if (auto bitmap = pixelData->getFirstPageForContext(deviceContext))
                     {
                         deviceContext->SetTarget(bitmap);
                         deviceContext->BeginDraw();
@@ -392,6 +444,20 @@ namespace mescal
     Color128 Color128::grayLevel(float level) noexcept
     {
         return Color128{ level, level, level, 1.0f };
+    }
+
+
+    juce::Rectangle<float> MeshGradient::getBounds() const noexcept
+    {
+        juce::Rectangle<float> bounds;
+        for (auto const& patch : patches)
+        {
+            bounds = bounds
+                .getUnion({ patch->getCornerPosition(CornerPlacement::topLeft), patch->getCornerPosition(CornerPlacement::bottomRight) })
+                .getUnion({ patch->getCornerPosition(CornerPlacement::topRight), patch->getCornerPosition(CornerPlacement::bottomLeft) });
+        }
+
+        return bounds;
     }
 
 } // namespace mescal

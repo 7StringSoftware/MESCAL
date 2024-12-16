@@ -10,29 +10,34 @@
 
 #include "ContentComponent.h"
 
-ContentComponent::ContentComponent()
+ContentComponent::ContentComponent(mescal::Effect::Ptr effectIn) : effect(effectIn)
 {
-    addAndMakeVisible(widgets);
-    addAndMakeVisible(effectGraph);
+    //addAndMakeVisible(widgets);
+    addAndMakeVisible(rotarySlider);
+    //addAndMakeVisible(effectGraphComponent);
 
     setSize(1024, 800);
 
     juce::MessageManager::callAsync([this]
         {
-            effectGraph.resized();
+            effectGraphComponent.resized();
             repaint();
         });
 
-    effectGraph.onPropertyChange = [this]
+    effectGraphComponent.onEffectPropertyChange = [this]
         {
-            widgets.repaint();
+            rotarySlider.repaint();
+            //widgets.repaint();
         };
+
+    startTimer(200);
 }
 
 void ContentComponent::resized()
 {
     auto r = getLocalBounds();
-    auto widgetsBounds = r.removeFromLeft(r.getWidth() / 2);
-    widgets.setBounds(widgetsBounds);
-    effectGraph.setBounds(r);
+    auto widgetsBounds = r;
+    //widgets.setBounds(widgetsBounds);
+    rotarySlider.setBounds(widgetsBounds);
+    effectGraphComponent.setBounds(r);
 }

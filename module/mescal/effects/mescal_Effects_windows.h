@@ -594,6 +594,12 @@ public:
     void addInput(Ptr otherEffect);
 
     /**
+    * Estimate the size of the output data from this effect
+    *
+    */
+    juce::Rectangle<float> getOutputImageSize();
+
+    /**
     * Run this Effect and paint the output from this Effect onto outputImage.
     *
     * If any of the inputs to this Effect are also Effect objects, then this effect will walk up the chain

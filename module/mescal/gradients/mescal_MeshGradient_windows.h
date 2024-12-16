@@ -32,6 +32,25 @@ struct Color128
 
     static Color128 fromHSV(float hue, float saturation, float value, float alpha) noexcept;
     static Color128 grayLevel(float level) noexcept;
+
+    auto operator*(float scalar)
+    {
+        return Color128{ red * scalar, green * scalar, blue * scalar, alpha * scalar };
+    }
+
+    auto operator +(Color128 const& other)
+    {
+        return Color128{ red + other.red, green + other.green, blue + other.blue, alpha + other.alpha };
+    }
+
+    auto operator += (Color128 const& other)
+    {
+        red += other.red;
+        green += other.green;
+        blue += other.blue;
+        alpha += other.alpha;
+        return *this;
+    }
 };
 
 /**
@@ -103,7 +122,7 @@ public:
 
     static constexpr std::array<std::pair<size_t, size_t>, 4> edgeBezierControlPointIndices
     {
-        std::pair<int, int>{ 4 * 1 + 0, 4 * 2 + 0 }, 
+        std::pair<int, int>{ 4 * 1 + 0, 4 * 2 + 0 },
         { 4 * 3 + 1, 4 * 3 + 2 },
         { 4 * 2 + 3, 4 * 1 + 3 },
         { 4 * 0 + 2, 4 * 0 + 1 }
@@ -127,6 +146,19 @@ public:
         ControlPointPair bezierControlPoints;
         ControlPointPair internalControlPoints;
         juce::Point<float> head;
+
+        enum
+        {
+            aliased,
+            antialiased,
+            aliasedAndInflated
+        } mode = antialiased;
+    };
+
+    struct Patch;
+    struct SharedVertex
+    {
+        std::vector<std::weak_ptr<Patch>> patches;
     };
 
     struct Patch
@@ -160,6 +192,8 @@ public:
 
         std::array<std::optional<juce::Point<float>>, 16> points;
         std::array<Color128, 4> colors;
+        std::array<std::weak_ptr<SharedVertex>, 4> sharedVertices;
+        std::array<int, 4> edgeModes{ Edge::antialiased, Edge::antialiased, Edge::antialiased, Edge::antialiased };
 
         static constexpr size_t numMatrixColumns = 4;
 
@@ -196,6 +230,9 @@ public:
 
     std::shared_ptr<Patch> getPatch(int row, int column)
     {
+        if (row < 0 || row >= numRows || column < 0 || column >= numColumns)
+            return nullptr;
+
         return patches[row * numColumns + column];
     }
 
@@ -210,6 +247,7 @@ private:
     int const numColumns;
 
     std::vector<std::shared_ptr<Patch>> patches;
+    std::vector<std::shared_ptr<SharedVertex>> sharedVertices;
 
     struct Pimpl;
     std::unique_ptr<Pimpl> pimpl;

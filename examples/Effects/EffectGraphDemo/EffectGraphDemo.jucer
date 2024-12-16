@@ -22,6 +22,8 @@
       <FILE id="z8zkXI" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
       <FILE id="T9kDWI" name="PropertyComponents.h" compile="0" resource="0"
             file="Source/PropertyComponents.h"/>
+      <FILE id="Flk84t" name="VanGogh-starry_night.jpg" compile="0" resource="1"
+            file="../Assets/VanGogh-starry_night.jpg"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

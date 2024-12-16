@@ -12,14 +12,16 @@ namespace mescal
             resources->create();
         }
 
-        void draw(juce::Span<Stop> stops, juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor)
+        void draw(juce::Span<Stop> stops, juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor, bool replaceContents)
         {
             auto toPOINT_2F = [](juce::Point<float> p)
                 {
                     return D2D1_POINT_2F{ p.x, p.y };
                 };
 
-            jassert(stops.size() >= 2);
+            if (stops.size() < 2)
+                return;
+
             auto patches = std::vector<D2D1_GRADIENT_MESH_PATCH>{ stops.size() - 1 };
 
             jassert(owner.radiusRange.getLength() > 0.0f);
@@ -27,7 +29,7 @@ namespace mescal
             float outerRadius = owner.radiusRange.getEnd();
             float innerRadius = owner.radiusRange.getStart();
             juce::Point<float> center{ 0.0f, 0.0f };
-            auto bottomEdgeMode = innerRadius >= 0.0f ? D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ANTIALIASED : D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ALIASED;
+            auto bottomEdgeMode = innerRadius > 0.0f ? D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ANTIALIASED : D2D1_PATCH_EDGE_MODE::D2D1_PATCH_EDGE_MODE_ALIASED;
 
             for (size_t index = 0; index < patches.size(); ++index)
             {
@@ -139,14 +141,19 @@ namespace mescal
 
                 if (gradientMesh)
                 {
-                    if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData().get()))
+                    //if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData().get()))
+                    if (auto pixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
                     {
-                        if (auto bitmap = pixelData->getFirstPageForDevice(resources->adapter->direct2DDevice))
+                        //if (auto bitmap = pixelData->getFirstPageForDevice(pimpl->resources->adapter->direct2DDevice))
+                        if (auto bitmap = pixelData->getFirstPageForContext(deviceContext))
                         {
                             deviceContext->SetTarget(bitmap);
                             deviceContext->BeginDraw();
                             deviceContext->SetTransform(D2D1::Matrix3x2F::Identity());
-                            deviceContext->Clear(juce::D2DUtilities::toCOLOR_F(backgroundColor));
+                            if (replaceContents)
+                            {
+                                deviceContext->Clear(juce::D2DUtilities::toCOLOR_F(backgroundColor));
+                            }
 
                             deviceContext->DrawGradientMesh(gradientMesh.get());
 
@@ -192,9 +199,9 @@ namespace mescal
         sortStops();
     }
 
-    void ConicGradient::draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor)
+    void ConicGradient::draw(juce::Image image, juce::AffineTransform transform, juce::Colour backgroundColor, bool replaceContents)
     {
-        pimpl->draw(stops, image, transform, backgroundColor);
+        pimpl->draw(stops, image, transform, backgroundColor, replaceContents);
     }
 
     void ConicGradient::sortStops()

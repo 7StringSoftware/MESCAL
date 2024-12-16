@@ -57,7 +57,7 @@ void EffectGraph::paintMetallicKnobImage(float angle)
 {
     if (sourceImages.size() == 0)
     {
-        sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, 1000, 1000, true });
+        sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, 200, 200, true });
     }
 
     auto sourceImage = sourceImages.front();
@@ -69,14 +69,15 @@ void EffectGraph::paintMetallicKnobImage(float angle)
     auto center = sourceImage.getBounds().toFloat().getCentre();
 
     g.setColour(juce::Colours::black.withAlpha(0.2f));
-    g.fillEllipse(sourceImage.getBounds().toFloat().withSizeKeepingCentre(800.0f, 800.0f));
+    g.fillEllipse(sourceImage.getBounds().toFloat().withSizeKeepingCentre((float)sourceImage.getWidth() * 0.8f, (float)sourceImage.getHeight() * 0.8f));
 
     g.setColour(juce::Colours::black.withAlpha(0.6f));
     juce::Path p;
-    p.addStar(center, 10, 360.0f, 400.0f, (float)angle);
+    float radius = (float)sourceImage.getWidth() * 0.4f;
+    p.addStar(center, 10, radius, radius * 1.1f, (float)angle);
     g.fillPath(p);
 
-    juce::Line<float> line{ center, center.getPointOnCircumference(330.0f, (float)angle) };
+    juce::Line<float> line{ center, center.getPointOnCircumference(radius, (float)angle) };
     g.setColour(juce::Colours::black);
     g.drawLine(line, 30.0f);
     g.setColour(juce::Colours::white);
@@ -113,19 +114,18 @@ void EffectGraph::createMetallicKnobEffectGraph()
         so the entire graph will be retained until no longer needed.
 
     */
-    auto& sourceImage = sourceImages.front();
+    //auto& sourceImage = sourceImages.front();
 
-    auto blurEffect = mescal::Effect::GaussianBlur::create(10.0f) << sourceImage;
+    auto blurEffect = mescal::Effect::GaussianBlur::create(10.0f);
 
     auto lightingEffect = mescal::Effect::SpotSpecularLighting::create()
-        .withLightPosition((float)sourceImage.getWidth() * 0.1f, (float)sourceImage.getHeight() * 0.1f, 250.0f)
-        .withPointsAt((float)sourceImage.getWidth() * 0.5f, (float)sourceImage.getHeight() * 0.5f, 0.0f)
+        .withLightPosition((float)100.0f, (float)100.0f, 250.0f)
+        .withPointsAt((float)500.0f, (float)500.0f, 0.0f)
         .withSurfaceScale(30.0f)
         .withColor(juce::Colours::cyan)
         << blurEffect;
 
     auto shadowEffect = new mescal::Effect{ mescal::Effect::Type::shadow };
-    shadowEffect->setInput(0, sourceImage);
     shadowEffect->setPropertyValue(mescal::Effect::Shadow::blurStandardDeviation, 10.0f);
     shadowEffect->setPropertyValue(mescal::Effect::Shadow::color, mescal::colourToVector4(juce::Colours::black.withAlpha(0.5f)));
 
@@ -136,12 +136,10 @@ void EffectGraph::createMetallicKnobEffectGraph()
     auto compositeEffect = new mescal::Effect{ mescal::Effect::Type::composite };
     compositeEffect->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::destinationAtop);
     compositeEffect->setInput(0, lightingEffect);
-    compositeEffect->setInput(1, sourceImage);
 
     auto arithmeticCompositeEffect = new mescal::Effect{ mescal::Effect::Type::arithmeticComposite };
     arithmeticCompositeEffect->setPropertyValue(mescal::Effect::ArithmeticComposite::coefficients, mescal::Vector4{ 0.0f, 2.0f, 1.0f, 0.0f });
     arithmeticCompositeEffect->setInput(0, compositeEffect);
-    arithmeticCompositeEffect->setInput(1, sourceImage);
 
     auto shadowCompositeEffect = new mescal::Effect{ mescal::Effect::Type::composite };
     shadowCompositeEffect->setPropertyValue(mescal::Effect::Composite::mode, mescal::Effect::Composite::sourceOver);
@@ -169,7 +167,7 @@ void EffectGraph::paint3DButtonImages()
 
     */
 
-    int imageWidth = 60;
+    int imageWidth = 300;
     sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, imageWidth, imageWidth, true });
     sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, imageWidth, imageWidth, true });
     sourceImages.emplace_back(juce::Image{ juce::Image::ARGB, imageWidth, imageWidth, true });
@@ -280,6 +278,18 @@ void EffectGraph::create3DButtonEffectGraph()
     blend->setInput(1, chromaKey);
 
     outputEffect = blend;
+}
+
+void EffectGraph::buildComponentEffectGraph()
+{
+    auto transform3D = mescal::Effect::create(mescal::Effect::Type::perspectiveTransform3D);
+
+    auto composite = mescal::Effect::ArithmeticComposite::create(0.0f, 0.5f, 0.5f, 0.0f);
+    auto image = juce::ImageCache::getFromMemory(BinaryData::VanGoghstarry_night_jpg, BinaryData::VanGoghstarry_night_jpgSize);
+    composite << image;
+    composite << transform3D;
+
+    outputEffect = composite;
 }
 
 mescal::Effect::Ptr EffectGraph::createInnerShadow(juce::Image const& sourceImage, juce::Colour const& shadowColor, float shadowSize, juce::AffineTransform transform)

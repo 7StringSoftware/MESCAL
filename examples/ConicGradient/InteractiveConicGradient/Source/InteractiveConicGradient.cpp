@@ -96,7 +96,6 @@ void InteractiveConicGradient::resized()
 
     updateSliders();
 
-    if (radiiSlider.getMaxValue() == 0.0)
     {
         auto range = conicGradient.getRadiusRange();
         radiiSlider.setRange({ 0.0, outerRadius }, juce::dontSendNotification);

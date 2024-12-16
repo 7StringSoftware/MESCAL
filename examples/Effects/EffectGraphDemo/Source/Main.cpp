@@ -12,12 +12,16 @@ public:
 
     void initialise (const juce::String&) override
     {
+        lnf = std::make_unique<juce::LookAndFeel_V4>();
+        lnf->setColourScheme(lnf->getLightColourScheme());
+        juce::LookAndFeel::setDefaultLookAndFeel(lnf.get());
         mainWindow = std::make_unique<MainWindow> (getApplicationName());
     }
 
     void shutdown() override
     {
         mainWindow = nullptr;
+        juce::LookAndFeel::setDefaultLookAndFeel(nullptr);
     }
 
     void systemRequestedQuit() override
@@ -58,6 +62,7 @@ public:
     };
 
 private:
+    std::unique_ptr<juce::LookAndFeel_V4> lnf;
     std::unique_ptr<MainWindow> mainWindow;
 };
 

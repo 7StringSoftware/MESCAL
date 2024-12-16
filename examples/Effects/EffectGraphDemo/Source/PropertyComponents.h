@@ -66,6 +66,9 @@ public:
 		for (auto const& name : sliderNames_)
 		{
 			auto slider = std::make_unique<juce::Slider>(juce::Slider::LinearBar, juce::Slider::TextBoxLeft);
+            if (sliderRange_.isEmpty())
+                continue;
+
 			slider->setRange(sliderRange_.getStart(), sliderRange_.getEnd(), 0.01);
 			slider->setValue(sliderDefaultValues[index++], juce::dontSendNotification);
 
@@ -231,8 +234,8 @@ public:
 		{
 			for (int column = 0; column < 3; ++column)
 			{
-				(*it)->setBounds(contentBounds.getX() + column * w, 
-					contentBounds.getY() + row * h, 
+				(*it)->setBounds(contentBounds.getX() + column * w,
+					contentBounds.getY() + row * h,
 					w, h);
 				++it;
 			}

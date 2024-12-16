@@ -26,9 +26,9 @@ private:
 
     struct InteriorControlComponent : public juce::Component
     {
-        void mouseDown(const juce::MouseEvent& e) override {}
-        void mouseDrag(const juce::MouseEvent& e) override {}
-        void paint(juce::Graphics& g) override {}
+        void mouseDown(const juce::MouseEvent& e) override;
+        void mouseDrag(const juce::MouseEvent& e) override;
+        void paint(juce::Graphics& g) override;
 
         juce::ComponentDragger dragger;
         std::weak_ptr<mescal::MeshGradient::Patch> patch;
@@ -46,7 +46,39 @@ private:
         juce::ComponentDragger dragger;
         std::weak_ptr<mescal::MeshGradient::Patch> patch;
         mescal::MeshGradient::CornerPlacement placement = mescal::MeshGradient::CornerPlacement::unknown;
-        std::function<void(VertexComponent&)> onChange;
+        std::function<void(VertexComponent&)> onPositionChange;
+        std::function<void(VertexComponent&)> onColorChange;
+        juce::Colour color;
+
+        struct ColorCallout : public juce::ChangeListener, public juce::Component
+        {
+            static void show(juce::Colour color, juce::Rectangle<int> targetArea, VertexComponent& owner)
+            {
+                juce::CallOutBox::launchAsynchronously(std::make_unique<ColorCallout>(color, owner), targetArea, nullptr);
+            }
+
+            ColorCallout(juce::Colour color, VertexComponent& ownerIn) :
+                owner(ownerIn)
+            {
+                addAndMakeVisible(colorSelector);
+                setSize(200, 200);
+                colorSelector.setBounds(getLocalBounds());
+                colorSelector.setCurrentColour(color);
+                colorSelector.addChangeListener(this);
+            }
+
+            void changeListenerCallback(juce::ChangeBroadcaster*) override
+            {
+                owner.color = colorSelector.getCurrentColour();
+                if (owner.onColorChange)
+                {
+                    owner.onColorChange(owner);
+                }
+            }
+
+            juce::ColourSelector colorSelector;
+            VertexComponent& owner;
+        };
     };
 
     struct PatchComponent : public juce::Component
@@ -102,12 +134,13 @@ private:
     juce::Slider rowCountSlider{ juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft };
     juce::Slider columnCountSlider{ juce::Slider::IncDecButtons, juce::Slider::TextBoxLeft };
     juce::ToggleButton showControlsToggle{ "Show control points" };
+    std::optional<std::pair<int, int>> selectedPatch;
 
     void createMesh();
     void createComponents();
     void updatePatchComponents();
     void paintMesh(juce::Graphics& g);
-    void selectPatch(PatchComponent* patch);
+    void selectPatch(std::optional<std::pair<int, int>>);
     VertexComponent& getVertexComponent(int row, int column);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InteractiveMeshGradient)

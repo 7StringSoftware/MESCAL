@@ -3,9 +3,11 @@
 class MescalImageEffectFilter : public juce::ImageEffectFilter
 {
 public:
+    MescalImageEffectFilter();
     MescalImageEffectFilter(mescal::Effect::Ptr effect_);
     ~MescalImageEffectFilter();
 
+    void setEffect(mescal::Effect::Ptr effect_);
     void applyEffect(juce::Image& sourceImage, juce::Graphics& destContext, float scaleFactor, float alpha) override;
 
 protected:

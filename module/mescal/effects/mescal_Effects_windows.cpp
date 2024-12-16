@@ -385,9 +385,10 @@ namespace mescal
                     auto image = std::get<juce::Image>(input);
                     if (image.isValid())
                     {
-                        if (juce::Direct2DPixelData::Ptr inputPixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData().get()))
+                        if (juce::Direct2DPixelData::Ptr inputPixelData = dynamic_cast<juce::Direct2DPixelData*>(image.getPixelData()))
                         {
-                            if (auto bitmap = inputPixelData->getFirstPageForDevice(pimpl->resources->adapter->direct2DDevice))
+                                //if (auto bitmap = pixelData->getFirstPageForDevice(pimpl->resources->adapter->direct2DDevice))
+                            if (auto bitmap = inputPixelData->getFirstPageForContext(pimpl->resources->deviceContext))
                             {
                                 pimpl->d2dEffect->SetInput((uint32_t)index, bitmap);
                             }
@@ -400,6 +401,27 @@ namespace mescal
                     pimpl->d2dEffect->SetInputEffect((uint32_t)index, otherEffect->pimpl->d2dEffect.get());
 
                     setInputsRecursive(otherEffect->pimpl.get());
+                }
+            }
+        }
+
+        static void getOutputImageSize(Pimpl* pimpl, juce::Rectangle<float>& size)
+        {
+            for (size_t index = 0; index < pimpl->inputs.size(); ++index)
+            {
+                auto& input = pimpl->inputs[index];
+                if (std::holds_alternative<juce::Image>(input))
+                {
+                    auto image = std::get<juce::Image>(input);
+                    if (image.isValid())
+                    {
+                        size = size.getUnion(image.getBounds().toFloat());
+                    }
+                }
+                else if (std::holds_alternative<Effect::Ptr>(input))
+                {
+                    auto otherEffect = std::get<Effect::Ptr>(input);
+                    getOutputImageSize(otherEffect->pimpl.get(), size);
                 }
             }
         }
@@ -578,6 +600,13 @@ namespace mescal
         return pimpl->getPropertyInfo(index);
     }
 
+    juce::Rectangle<float> Effect::getOutputImageSize()
+    {
+        juce::Rectangle<float> bounds;
+        Pimpl::getOutputImageSize(pimpl.get(), bounds);
+        return bounds;
+    }
+
     void Effect::applyEffect(juce::Image& outputImage, const juce::AffineTransform& transform, bool clearDestination)
     {
         pimpl->createD2DEffect();
@@ -586,7 +615,7 @@ namespace mescal
             return;
         }
 
-        juce::Direct2DPixelData::Ptr outputPixelData = dynamic_cast<juce::Direct2DPixelData*>(outputImage.getPixelData().get());
+        juce::Direct2DPixelData::Ptr outputPixelData = dynamic_cast<juce::Direct2DPixelData*>(outputImage.getPixelData());
         if (!outputPixelData)
         {
             return;
@@ -594,7 +623,8 @@ namespace mescal
 
         Pimpl::setInputsRecursive(pimpl.get());
 
-        pimpl->resources->deviceContext->SetTarget(outputPixelData->getFirstPageForDevice(pimpl->resources->adapter->direct2DDevice));
+        //pimpl->resources->deviceContext->SetTarget(outputPixelData->getFirstPageForDevice(pimpl->resources->adapter->direct2DDevice));
+        pimpl->resources->deviceContext->SetTarget(outputPixelData->getFirstPageForContext(pimpl->resources->deviceContext));
         pimpl->resources->deviceContext->BeginDraw();
         if (clearDestination)
             pimpl->resources->deviceContext->Clear();
