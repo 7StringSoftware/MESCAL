@@ -2,7 +2,7 @@
 
 <JUCERPROJECT id="oFIjb4" name="Direct2DMetrics" projectType="guiapp" useAppConfig="0"
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" defines="JUCE_DIRECT2D_METRICS=1"
-              version="1.0.1">
+              version="1.0.2">
   <MAINGROUP id="sjUOSU" name="Direct2DMetrics">
     <GROUP id="{61CA4CCB-00DB-2D34-1C76-6B3AF398483A}" name="Source">
       <FILE id="ztgvxk" name="PipeClient.h" compile="0" resource="0" file="Source/PipeClient.h"/>

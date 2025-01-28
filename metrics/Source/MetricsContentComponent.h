@@ -15,7 +15,7 @@ public:
             {
                 if (pipeClient)
                 {
-                    pipeClient->resetAllMetrics(getSelectedWindowHandle());
+                    pipeClient->resetAllMetrics();
                 }
             };
         addAndMakeVisible(statTable);
@@ -32,7 +32,7 @@ public:
                     addClient(pipeComboBox.getText());
             };
 
-        addAndMakeVisible(windowHandleComboBox);
+        //addAndMakeVisible(windowHandleComboBox);
     }
 
     ~MetricsContentComponent() override
@@ -43,6 +43,7 @@ public:
     {
         g.fillAll(juce::Colour{ 0xff111111 });
 
+#if 0
         g.setColour(juce::Colours::white);
         if (statTable.isEnabled() && statTable.isVisible())
         {
@@ -69,6 +70,7 @@ public:
         {
             g.drawText("No metrics available", getLocalBounds(), juce::Justification::centred);
         }
+#endif
     }
 
     int getDesiredWidth()
@@ -83,9 +85,9 @@ public:
 
     void resized() override
     {
-        statTable.setBounds(getLocalBounds().withTrimmedTop(50));
+        statTable.setBounds(getLocalBounds().withTrimmedTop(25));
         pipeComboBox.setBounds(0, 0, getWidth(), 25);
-        windowHandleComboBox.setBounds(0, pipeComboBox.getBottom(), getWidth(), 25);
+        //windowHandleComboBox.setBounds(0, pipeComboBox.getBottom(), getWidth(), 25);
     }
 
     void timerCallback() override
@@ -100,7 +102,8 @@ public:
         {
             auto pipeName = juce::String{ findData.cFileName, juce::numElementsInArray(findData.cFileName) };
 
-            auto pipeProcessID = pipeName.getTrailingIntValue();
+            auto suffix = pipeName.getLastCharacters(4);
+            auto pipeProcessID = suffix.getHexValue32();
             if (pipeProcessID != processID)
                 foundPipeNames.add(pipeName);
 
@@ -126,10 +129,12 @@ public:
             }
         }
 
+#if 0
         if (pipeComboBox.getNumItems() == 0)
         {
             windowHandleComboBox.clear(juce::dontSendNotification);
         }
+#endif
 
         if (pipeComboBox.getSelectedId() == 0 && foundPipeNames.size() > 0 || pipeClient == nullptr)
         {
@@ -139,7 +144,7 @@ public:
         if (pipeClient)
         {
             pipeClient->getWindowHandles();
-            pipeClient->getMetricsValues(getSelectedWindowHandle());
+            pipeClient->getMetricsValues();
         }
 
         statTable.setEnabled(true);
@@ -165,6 +170,7 @@ public:
                 repaint();
             };
 
+#if 0
         pipeClient->onGetWindowHandlesResponse = [this](juce::Direct2DMetricsHub::GetWindowHandlesResponse* response)
             {
                 bool changed = false;
@@ -218,13 +224,16 @@ public:
 
                 windowHandleComboBox.setSelectedId(id, juce::dontSendNotification);
             };
+#endif
     }
 
+#if 0
     void* getSelectedWindowHandle()
     {
         auto id = windowHandleComboBox.getSelectedId();
         return id < 0 ? nullptr : (void*)(juce::pointer_sized_int)id;
     }
+#endif
 
 private:
     std::unique_ptr<PipeClient> pipeClient;
@@ -232,7 +241,7 @@ private:
     std::vector<void*> windowHandles;
     StatTable statTable;
     juce::ComboBox pipeComboBox;
-    juce::ComboBox windowHandleComboBox;
+    //juce::ComboBox windowHandleComboBox;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MetricsContentComponent)
 };

@@ -26,28 +26,27 @@ struct PipeClient : public juce::InterprocessConnection, public juce::ReferenceC
         if (onConnectionLost) onConnectionLost();
     }
 
-    void sendRequest(int requestType, void *windowHandle)
+    void sendRequest(int requestType/*, void *windowHandle*/)
     {
-        juce::MemoryBlock block{ sizeof(juce::Direct2DMetricsHub::Request) };
-        auto message = (juce::Direct2DMetricsHub::Request*)block.getData();
-        message->requestType = requestType;
-        message->windowHandle = windowHandle;
+        juce::MemoryBlock block{ sizeof(int) };
+        auto message = (int*)block.getData();
+        *message = requestType;
         sendMessage(block);
     }
 
-    void getMetricsValues(void* windowHandle)
+    void getMetricsValues()
     {
-        sendRequest(juce::Direct2DMetricsHub::getValuesRequest, windowHandle);
+        sendRequest(juce::Direct2DMetricsHub::getValuesRequest);
     }
 
-    void resetAllMetrics(void* windowHandle)
+    void resetAllMetrics()
     {
-        sendRequest(juce::Direct2DMetricsHub::resetValuesRequest, windowHandle);
+        sendRequest(juce::Direct2DMetricsHub::resetValuesRequest);
     }
 
     void getWindowHandles()
     {
-        sendRequest(juce::Direct2DMetricsHub::getWindowHandlesRequest, nullptr);
+        //sendRequest(juce::Direct2DMetricsHub::getWindowHandlesRequest, nullptr);
     }
 
     void messageReceived(const juce::MemoryBlock& message) override
@@ -67,18 +66,20 @@ struct PipeClient : public juce::InterprocessConnection, public juce::ReferenceC
             break;
         }
 
+#if 0
         case juce::Direct2DMetricsHub::getWindowHandlesRequest:
         {
             auto response = (juce::Direct2DMetricsHub::GetWindowHandlesResponse*)message.getData();
             if (onGetWindowHandlesResponse) onGetWindowHandlesResponse(response);
             break;
         }
+#endif
         }
     }
 
     juce::String const pipeName;
     std::function<void(juce::Direct2DMetricsHub::GetValuesResponse* response)> onAllMetricsResponse;
-    std::function<void(juce::Direct2DMetricsHub::GetWindowHandlesResponse* response)> onGetWindowHandlesResponse;
+    //std::function<void(juce::Direct2DMetricsHub::GetWindowHandlesResponse* response)> onGetWindowHandlesResponse;
     std::function<void()> onConnectionLost;
 
     juce::Time lastUpdateTime = juce::Time::getCurrentTime();

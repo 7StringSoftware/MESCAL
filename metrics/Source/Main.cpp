@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <Psapi.h>
 #include <JuceHeader.h>
 #include "PipeClient.h"
 #include "StatTable.h"
