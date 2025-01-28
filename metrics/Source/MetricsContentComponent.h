@@ -29,7 +29,10 @@ public:
                 }
 
                 if (!pipeClient && pipeComboBox.getText().isNotEmpty())
-                    addClient(pipeComboBox.getText());
+                {
+                    auto pipeName = pipeComboBox.getText().fromLastOccurrenceOf(" ", false, false);
+                    addClient(pipeName);
+                }
             };
 
         //addAndMakeVisible(windowHandleComboBox);
@@ -90,29 +93,64 @@ public:
         //windowHandleComboBox.setBounds(0, pipeComboBox.getBottom(), getWidth(), 25);
     }
 
+    juce::String getProcessName(DWORD processID)
+    {
+        char processName[MAX_PATH] = "<unknown>";
+
+        // Get a handle to the process.
+        HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
+
+        // Get the process name.
+        if (hProcess != NULL)
+        {
+            HMODULE hMod;
+            DWORD cbNeeded;
+
+            if (EnumProcessModules(hProcess, &hMod, sizeof(hMod), &cbNeeded))
+            {
+                GetModuleBaseNameA(hProcess, hMod, processName, sizeof(processName) / sizeof(char));
+            }
+        }
+
+        // Release the handle to the process.
+        CloseHandle(hProcess);
+
+        return juce::String{ processName };
+    }
+
     void timerCallback() override
     {
         auto now = juce::Time::getCurrentTime();
 
         WIN32_FIND_DATA findData{};
-        auto processID = (int)GetCurrentProcessId();
+        auto selfProcessID = (int)GetCurrentProcessId();
 
+        juce::StringArray processNames;
         juce::StringArray foundPipeNames;
+        juce::String const prefix{ "JUCEDirect2DMetricsHub" };
         if (auto pipeHandle = FindFirstFileA("\\\\.\\pipe\\JUCEDirect2DMetrics*", &findData); pipeHandle != INVALID_HANDLE_VALUE)
         {
             auto pipeName = juce::String{ findData.cFileName, juce::numElementsInArray(findData.cFileName) };
 
-            auto suffix = pipeName.getLastCharacters(4);
+            auto suffix = pipeName.substring(prefix.length());
             auto pipeProcessID = suffix.getHexValue32();
-            if (pipeProcessID != processID)
+            if (pipeProcessID != selfProcessID)
+            {
                 foundPipeNames.add(pipeName);
+                processNames.add(getProcessName(pipeProcessID));
+            }
 
             while (FindNextFile(pipeHandle, &findData))
             {
                 pipeName = juce::String{ findData.cFileName, juce::numElementsInArray(findData.cFileName) };
-                pipeProcessID = pipeName.getTrailingIntValue();
-                if (pipeProcessID != processID)
+                suffix = pipeName.substring(prefix.length());
+                pipeProcessID = suffix.getHexValue32();
+
+                if (pipeProcessID != selfProcessID)
+                {
                     foundPipeNames.add(pipeName);
+                    processNames.add(getProcessName(pipeProcessID));
+                }
             }
 
             FindClose(pipeHandle);
@@ -123,9 +161,10 @@ public:
             pipeNames = foundPipeNames;
             pipeComboBox.clear(juce::dontSendNotification);
             int id = 1;
-            for (auto const& pipeName : foundPipeNames)
+
+            for (int i = 0; i < processNames.size(); ++i)
             {
-                pipeComboBox.addItem(pipeName, id++);
+                pipeComboBox.addItem(processNames[i] + " - " + foundPipeNames[i], id++);
             }
         }
 
