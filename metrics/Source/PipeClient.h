@@ -26,7 +26,7 @@ struct PipeClient : public juce::InterprocessConnection, public juce::ReferenceC
         if (onConnectionLost) onConnectionLost();
     }
 
-    void sendRequest(int requestType/*, void *windowHandle*/)
+    void sendRequest(int requestType)
     {
         juce::MemoryBlock block{ sizeof(int) };
         auto message = (int*)block.getData();
@@ -44,9 +44,18 @@ struct PipeClient : public juce::InterprocessConnection, public juce::ReferenceC
         sendRequest(juce::Direct2DMetricsHub::resetValuesRequest);
     }
 
-    void getWindowHandles()
+    void getMaximumTextureMemory()
     {
-        //sendRequest(juce::Direct2DMetricsHub::getWindowHandlesRequest, nullptr);
+        sendRequest(juce::Direct2DMetricsHub::getMaximumTextureMemoryRequest);
+    }
+
+    void setMaximumTextureMemory(uint64_t bytes)
+    {
+        juce::MemoryBlock block{ sizeof(juce::Direct2DMetricsHub::SetMaximumTextureMemoryRequest) };
+        auto message = (juce::Direct2DMetricsHub::SetMaximumTextureMemoryRequest*)block.getData();
+        message->requestType = juce::Direct2DMetricsHub::setMaximumTextureMemoryRequest;
+        message->maximumTextureMemory = bytes;
+        sendMessage(block);
     }
 
     void messageReceived(const juce::MemoryBlock& message) override
@@ -66,20 +75,21 @@ struct PipeClient : public juce::InterprocessConnection, public juce::ReferenceC
             break;
         }
 
-#if 0
-        case juce::Direct2DMetricsHub::getWindowHandlesRequest:
+        case juce::Direct2DMetricsHub::getMaximumTextureMemoryRequest:
         {
-            auto response = (juce::Direct2DMetricsHub::GetWindowHandlesResponse*)message.getData();
-            if (onGetWindowHandlesResponse) onGetWindowHandlesResponse(response);
+            auto response = (juce::Direct2DMetricsHub::GetMaximumTextureMemoryResponse*)message.getData();
+
+            if (onMaxTextureMemoryResponse) onMaxTextureMemoryResponse(response);
+
             break;
         }
-#endif
+
         }
     }
 
     juce::String const pipeName;
     std::function<void(juce::Direct2DMetricsHub::GetValuesResponse* response)> onAllMetricsResponse;
-    //std::function<void(juce::Direct2DMetricsHub::GetWindowHandlesResponse* response)> onGetWindowHandlesResponse;
+    std::function<void(juce::Direct2DMetricsHub::GetMaximumTextureMemoryResponse* response)> onMaxTextureMemoryResponse;
     std::function<void()> onConnectionLost;
 
     juce::Time lastUpdateTime = juce::Time::getCurrentTime();

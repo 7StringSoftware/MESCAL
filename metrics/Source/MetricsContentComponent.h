@@ -35,7 +35,27 @@ public:
                 }
             };
 
-        //addAndMakeVisible(windowHandleComboBox);
+        requestedMaximumTextureMemoryLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+        requestedMaximumTextureMemoryLabel.attachToComponent(&maximumTextureMemorySlider, true);
+        addAndMakeVisible(requestedMaximumTextureMemoryLabel);
+
+        actualMaximumTextureMemoryLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+        addAndMakeVisible(actualMaximumTextureMemoryLabel);
+        actualMaximumTextureMemoryLabel.attachToComponent(&actualMaximumTextureMemoryReadout, true);
+
+        actualMaximumTextureMemoryReadout.setColour(juce::Label::textColourId, juce::Colours::white);
+        addAndMakeVisible(actualMaximumTextureMemoryReadout);
+
+        maximumTextureMemorySlider.setRange({ 1.0 / 1024.0, 16.0 }, 1.0 / 1024.0);
+        maximumTextureMemorySlider.setTextValueSuffix(" GB");
+        maximumTextureMemorySlider.setNumDecimalPlacesToDisplay(3);
+        maximumTextureMemorySlider.setChangeNotificationOnlyOnRelease(true);
+        maximumTextureMemorySlider.onValueChange = [this]
+            {
+                auto bytes = (uint64_t)(maximumTextureMemorySlider.getValue() * 1024.0 * 1024.0 * 1024.0);
+                pipeClient->setMaximumTextureMemory(bytes);
+            };
+        addChildComponent(maximumTextureMemorySlider);
     }
 
     ~MetricsContentComponent() override
@@ -88,9 +108,10 @@ public:
 
     void resized() override
     {
-        statTable.setBounds(getLocalBounds().withTrimmedTop(25));
+        statTable.setBounds(getLocalBounds().reduced(0, 50).withTrimmedBottom(25));
         pipeComboBox.setBounds(0, 0, getWidth(), 25);
-        //windowHandleComboBox.setBounds(0, pipeComboBox.getBottom(), getWidth(), 25);
+        maximumTextureMemorySlider.setBounds(150, statTable.getBottom(), getWidth() - 150, 25);
+        actualMaximumTextureMemoryReadout.setBounds(maximumTextureMemorySlider.getX(), maximumTextureMemorySlider.getBottom(), maximumTextureMemorySlider.getWidth(), 25);
     }
 
     juce::String getProcessName(DWORD processID)
@@ -166,14 +187,9 @@ public:
             {
                 pipeComboBox.addItem(processNames[i] + " - " + foundPipeNames[i], id++);
             }
-        }
 
-#if 0
-        if (pipeComboBox.getNumItems() == 0)
-        {
-            windowHandleComboBox.clear(juce::dontSendNotification);
+            maximumTextureMemorySlider.setVisible(false);
         }
-#endif
 
         if (pipeComboBox.getSelectedId() == 0 && foundPipeNames.size() > 0 || pipeClient == nullptr)
         {
@@ -182,7 +198,7 @@ public:
 
         if (pipeClient)
         {
-            pipeClient->getWindowHandles();
+            pipeClient->getMaximumTextureMemory();
             pipeClient->getMetricsValues();
         }
 
@@ -207,6 +223,27 @@ public:
 
                 statTable.update();
                 repaint();
+            };
+
+        pipeClient->onMaxTextureMemoryResponse = [this](juce::Direct2DMetricsHub::GetMaximumTextureMemoryResponse* response)
+            {
+                if (!maximumTextureMemorySlider.isVisible() && response->numAdapters > 0)
+                {
+                    auto gigabytes = (double)response->maximumTextureMemoryPerAdapter[0] / (1024.0 * 1024.0 * 1024.0);
+                    maximumTextureMemorySlider.setValue(gigabytes, juce::dontSendNotification);
+                    maximumTextureMemorySlider.setVisible(true);
+                }
+
+                juce::String text;
+                for (int i = 0; i < response->numAdapters; i++)
+                {
+                    auto gigabytes = (double)response->maximumTextureMemoryPerAdapter[i] / (1024.0 * 1024.0 * 1024.0);
+                    text << juce::String{ gigabytes, 3 } << " GB";
+                    if (i < response->numAdapters - 1)
+                        text << ", ";
+                }
+
+                actualMaximumTextureMemoryReadout.setText(text, juce::dontSendNotification);
             };
 
 #if 0
@@ -280,7 +317,10 @@ private:
     std::vector<void*> windowHandles;
     StatTable statTable;
     juce::ComboBox pipeComboBox;
-    //juce::ComboBox windowHandleComboBox;
+    juce::Label requestedMaximumTextureMemoryLabel{ "Requested VRAM", "Requested VRAM" };
+    juce::Label actualMaximumTextureMemoryLabel{ "Actual VRAM", "Actual VRAM" };
+    juce::Label actualMaximumTextureMemoryReadout{ "Actual VRAM", "Actual VRAM" };
+    juce::Slider maximumTextureMemorySlider{ juce::Slider::LinearBar, juce::Slider::TextBoxLeft };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MetricsContentComponent)
 };
