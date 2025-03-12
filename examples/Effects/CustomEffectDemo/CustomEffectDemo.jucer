@@ -4,6 +4,8 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
   <MAINGROUP id="VYSsCw" name="CustomEffectDemo">
     <GROUP id="{8B15FD36-06CF-DAD8-A43B-75B5A35F0253}" name="Source">
+      <FILE id="pSgE8z" name="CompileShader.cmd" compile="0" resource="0"
+            file="Source/CompileShader.cmd"/>
       <FILE id="aDUdOf" name="CustomPixelShader.hlsl" compile="0" resource="0"
             file="Source/CustomPixelShader.hlsl"/>
       <FILE id="ijwRsm" name="CustomEffect.cpp" compile="1" resource="0"
@@ -29,7 +31,8 @@
   <EXPORTFORMATS>
     <VS2022 targetFolder="Builds/VisualStudio2022">
       <CONFIGURATIONS>
-        <CONFIGURATION isDebug="1" name="Debug" targetName="CustomEffectDemo"/>
+        <CONFIGURATION isDebug="1" name="Debug" targetName="CustomEffectDemo" prebuildCommand="../../Source/CompileShader.cmd &quot;$(WindowsSDK_IncludePath)&quot; $(ProjectDir)"
+                       headerPath="$(ProjectDir)"/>
         <CONFIGURATION isDebug="0" name="Release" targetName="CustomEffectDemo" useRuntimeLibDLL="0"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
