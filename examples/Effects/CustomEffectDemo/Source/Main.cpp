@@ -62,4 +62,4 @@ private:
     std::unique_ptr<MainWindow> mainWindow;
 };
 
-START_JUCE_APPLICATION (DemoApplication)
+ START_JUCE_APPLICATION (DemoApplication)

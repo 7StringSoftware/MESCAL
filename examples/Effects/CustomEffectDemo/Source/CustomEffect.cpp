@@ -1,27 +1,92 @@
 
-#include <d2d1_1.h>
-#include <d2d1effectauthor.h>
+#include <windows.h>
+#include <winrt/Windows.Foundation.h>
+#include <d2d1_3helper.h>
+#include <d3d11_3.h>
+#include <d2d1_3.h>
 #include <d2d1effecthelpers.h>
+#include <initguid.h>
 #define JUCE_CORE_INCLUDE_COM_SMART_PTR 1
 #include <JuceHeader.h>
+#include <juce_core/juce_core.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_graphics/native/juce_Direct2DMetrics_windows.h>
+#include <juce_graphics/native/juce_EventTracing.h>
+#include <juce_graphics/native/juce_DirectX_windows.h>
+#include <juce_graphics/native/juce_Direct2DPixelDataPage_windows.h>
+#include <juce_graphics/native/juce_Direct2DImage_windows.h>
+#include <juce_graphics/native/juce_Direct2DGraphicsContext_windows.h>
+#include <juce_graphics/native/juce_Direct2DImageContext_windows.h>
 #include "CustomEffect.h"
 #include "CustomPixelShader.h"
 
-// {3EE07F1C-50EE-4B72-A9AC-7C47BD08A65E}
 DEFINE_GUID(CLSID_CustomEffect, 0x3ee07f1c, 0x50ee, 0x4b72, 0xa9, 0xac, 0x7c, 0x47, 0xbd, 0x8, 0xa6, 0x5e);
+DEFINE_GUID(CLSID_CustomEffectPixelShader, 0xbae25466, 0xc066, 0x4086, 0x82, 0x22, 0xf0, 0x1d, 0xf7, 0xf3, 0x9f, 0xd3);
 
-DEFINE_GUID(CLSID_CustomEffectPixelShader,
-    0xbae25466, 0xc066, 0x4086, 0x82, 0x22, 0xf0, 0x1d, 0xf7, 0xf3, 0x9f, 0xd3);
+static constexpr std::wstring_view xml =
+LR"(<?xml version='1.0' encoding='UTF-16' ?>
+<Effect>
+<Property name='DisplayName' type='string' value='Ripple' />
+<Property name='Author' type='string' value='Microsoft Corporation' />
+<Property name='Category' type='string' value='Stylize' />
+<Property name='Description' type='string' value='Adds a ripple effect that can be animated'/>
+<Inputs>
+<Input name='Source'/>
+</Inputs>
+</Effect>
+)";
 
 class CustomEffect::Pimpl
 {
 public:
-    struct Interface : public juce::ComBaseClassHelper<ID2D1EffectImpl>, public juce::ComBaseClassHelper<ID2D1DrawTransform>
+    Pimpl()
     {
+    }
+
+    ~Pimpl()
+    {
+    }
+
+    struct Interface : public juce::ComBaseClassHelper<ID2D1EffectImpl, ID2D1DrawTransform>
+    {
+        Interface()
+        {
+            juce::SharedResourcePointer<juce::DirectX> directX;
+
+            auto hr = directX->getD2DFactory()->RegisterEffectFromString(CLSID_CustomEffect, xml.data(), nullptr, 0, CreateEffect);
+            jassert(SUCCEEDED(hr));
+        }
+
+        ~Interface()
+        {
+            DBG("");
+        }
+
+        JUCE_COMRESULT QueryInterface(REFIID refId, void** result) override
+        {
+            if (refId == __uuidof (ID2D1Transform))
+                return castToType<ID2D1Transform>(result);
+
+            return juce::ComBaseClassHelper<ID2D1EffectImpl, ID2D1DrawTransform>::QueryInterface(refId, result);
+        }
+
+
         STDOVERRIDEMETHODIMP Initialize(_In_ ID2D1EffectContext* effectContext, _In_ ID2D1TransformGraph* transformGraph) override
         {
             HRESULT hr = effectContext->LoadPixelShader(CLSID_CustomEffectPixelShader, g_main, sizeof(g_main));
             jassert(SUCCEEDED(hr));
+
+            if (SUCCEEDED(hr))
+            {
+                // The graph consists of a single transform. In fact, this class is the transform,
+                // reducing the complexity of implementing an effect when all we need to
+                // do is use a single pixel shader.
+                auto drawTransform = static_cast<ID2D1DrawTransform*>(this);
+                hr = transformGraph->SetSingleTransformNode(this);
+                jassert(SUCCEEDED(hr));
+            }
+
+            return hr;
         }
 
         STDOVERRIDEMETHODIMP PrepareForRender(D2D1_CHANGE_TYPE changeType) override
@@ -34,42 +99,49 @@ public:
             return E_NOTIMPL;
         }
 
-        STDOVERRIDEMETHODIMP MapInputRectsToOutputRect(_In_reads_(inputRectCount) const D2D1_RECT_L* inputRects, _In_reads_(inputRectCount) const D2D1_RECT_L* inputOpaqueSubRects, UINT32 inputRectCount, _Out_writes_(inputRectCount) D2D1_RECT_L* outputRects, _Out_writes_(inputRectCount) D2D1_RECT_L* outputOpaqueSubRects) override
+        static HRESULT __stdcall CreateEffect(_Outptr_ IUnknown** ppEffectImpl)
         {
-            if (inputRectCount != 0)
+            // This code assumes that the effect class initializes its reference count to 1.
+            *ppEffectImpl = static_cast<ID2D1EffectImpl*>(new Interface{});
+            if (*ppEffectImpl == nullptr)
             {
-                return E_INVALIDARG;
+                return E_OUTOFMEMORY;
             }
-
-            return S_OK;
-        }
-
-        STDOVERRIDEMETHODIMP MapOutputRectToInputRects(_In_ CONST D2D1_RECT_L* outputRect, _Out_writes_(inputRectsCount) D2D1_RECT_L* inputRects, UINT32 inputRectsCount) CONST
-        {
-            if (inputRectsCount != 0)
-            {
-                return E_INVALIDARG;
-            }
-
-            return S_OK;
-        }
-
-        STDOVERRIDEMETHODIMP MapInvalidRect(UINT32 inputIndex, D2D1_RECT_L invalidInputRect, _Out_ D2D1_RECT_L* invalidOutputRect) CONST
-        {
-            if (inputIndex != 0)
-            {
-                return E_INVALIDARG;
-            }
-
-            // Pass the invalid input rectangle through to the output
-            *invalidOutputRect = invalidInputRect;
-
             return S_OK;
         }
 
         STDOVERRIDEMETHODIMP_(UINT32) GetInputCount() CONST
         {
-            return 0;
+            return 1;
+        }
+
+        STDOVERRIDEMETHODIMP MapOutputRectToInputRects(_In_ CONST D2D1_RECT_L* outputRect, _Out_writes_(inputRectCount) D2D1_RECT_L* inputRects, UINT32 inputRectCount) CONST
+        {
+            if (inputRectCount != 1)
+            {
+                return E_INVALIDARG;
+            }
+
+            inputRects[0] = *outputRect;
+            return S_OK;
+        }
+
+        STDOVERRIDEMETHODIMP MapInputRectsToOutputRect(_In_reads_(inputRectCount) CONST D2D1_RECT_L* inputRects, _In_reads_(inputRectCount) CONST D2D1_RECT_L* inputOpaqueSubRects, UINT32 inputRectCount, _Out_ D2D1_RECT_L* outputRect, _Out_ D2D1_RECT_L* outputOpaqueSubRect)
+        {
+            if (inputRectCount != 1)
+            {
+                return E_INVALIDARG;
+            }
+
+            *outputRect = inputRects[0];
+            *outputOpaqueSubRect = inputOpaqueSubRects[0];
+            return S_OK;
+        }
+
+        STDOVERRIDEMETHODIMP MapInvalidRect(UINT32 inputIndex, D2D1_RECT_L invalidInputRect, _Out_ D2D1_RECT_L* invalidOutputRect) const
+        {
+            *invalidOutputRect = invalidInputRect;
+            return S_OK;
         }
 
         STDOVERRIDEMETHODIMP SetDrawInfo(_In_ ID2D1DrawInfo* drawInfo)
@@ -83,28 +155,112 @@ public:
 
             return S_OK;
         }
-    };
 
-    HRESULT __stdcall CreateEffect(_Outptr_ IUnknown** ppEffectImpl)
+    } effectInterface;
+
+    struct Resources
     {
-        // This code assumes that the effect class initializes its reference count to 1.
-        *ppEffectImpl = static_cast<ID2D1EffectImpl*>(new Interface{});
-        if (*ppEffectImpl == nullptr)
+        HRESULT create()
         {
-            return E_OUTOFMEMORY;
+            if (!adapter)
+            {
+                adapter = directX->adapters.getDefaultAdapter();
+            }
+
+            if (adapter && !deviceContext)
+            {
+                juce::ComSmartPtr<ID2D1DeviceContext1> deviceContext1;
+                if (const auto hr = adapter->direct2DDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_ENABLE_MULTITHREADED_OPTIMIZATIONS,
+                    deviceContext1.resetAndGetPointerAddress());
+                    FAILED(hr))
+                {
+                    jassertfalse;
+                    return hr;
+                }
+
+                deviceContext1->QueryInterface<ID2D1DeviceContext2>(deviceContext.resetAndGetPointerAddress());
+            }
+
+            return S_OK;
         }
-        return S_OK;
+
+        void release()
+        {
+            deviceContext = nullptr;
+            adapter = nullptr;
+        }
+
+        juce::SharedResourcePointer<juce::DirectX> directX;
+        juce::DxgiAdapter::Ptr adapter;
+        juce::ComSmartPtr<ID2D1DeviceContext2> deviceContext;
+    };
+    juce::SharedResourcePointer<Resources> resources;
+    juce::ComSmartPtr<ID2D1Effect> customD2DEffect;
+    juce::ComSmartPtr<ID2D1Effect> floodEffect;
+
+    void createD2DEffect()
+    {
+        if (auto hr = resources->create(); FAILED(hr))
+        {
+            jassertfalse;
+            return;
+        }
+
+        if (!customD2DEffect)
+        {
+            if (const auto hr = resources->deviceContext->CreateEffect(CLSID_CustomEffect, customD2DEffect.resetAndGetPointerAddress()); FAILED(hr))
+            {
+                jassertfalse;
+            }
+        }
+
+        if (!floodEffect)
+        {
+            if (const auto hr = resources->deviceContext->CreateEffect(CLSID_D2D1Flood, floodEffect.resetAndGetPointerAddress()); FAILED(hr))
+            {
+                jassertfalse;
+            }
+        }
+    }
+};
+
+CustomEffect::CustomEffect()
+    : pimpl{ std::make_unique<Pimpl>() }
+{
+}
+
+CustomEffect::~CustomEffect()
+{
+}
+
+void CustomEffect::applyEffect(juce::Image& outputImage, const juce::AffineTransform& transform, bool clearDestination)
+{
+    pimpl->createD2DEffect();
+    if (!pimpl->customD2DEffect || !pimpl->floodEffect)
+    {
+        return;
     }
 
-    static constexpr char const* const registrationXml =
-        "< ? xml version = '1.0' ? >"
-        "<Effect>"
-        "<!--System Properties-->"
-        "<Property name = 'DisplayName' type = 'string' value = 'CustomEffect' / >"
-        "<Property name = 'Author' type = 'string' value = 'Seven String Software' / >"
-        "<Property name = 'Category' type = 'string' value = 'Sample' / >"
-        "<Property name = 'Description' type = 'string' value = 'This is a demo effect.' / >"
-        "<Inputs/>"
-        "<!--Custom Properties go here. -->"
-        "</Effect>";
-};
+    juce::Direct2DPixelData::Ptr outputPixelData = dynamic_cast<juce::Direct2DPixelData*>(outputImage.getPixelData().get());
+    if (!outputPixelData)
+    {
+        return;
+    }
+
+    pimpl->resources->deviceContext->SetTarget(outputPixelData->getFirstPageForDevice(pimpl->resources->adapter->direct2DDevice));
+    pimpl->resources->deviceContext->BeginDraw();
+    if (clearDestination)
+        pimpl->resources->deviceContext->Clear();
+
+    D2D1_COLOR_F c = D2D1::ColorF(D2D1::ColorF::BlueViolet);
+    pimpl->resources->deviceContext->Clear(&c);
+
+    if (!transform.isIdentity())
+        pimpl->resources->deviceContext->SetTransform(juce::D2DUtilities::transformToMatrix(transform));
+
+    pimpl->customD2DEffect->SetInputEffect(0, pimpl->floodEffect.get());
+    pimpl->floodEffect->SetValue(D2D1_FLOOD_PROP_COLOR, D2D1::ColorF(D2D1::ColorF::Red));
+    pimpl->resources->deviceContext->DrawImage(pimpl->customD2DEffect.get());
+    [[maybe_unused]] auto hr = pimpl->resources->deviceContext->EndDraw();
+    jassert(SUCCEEDED(hr));
+}

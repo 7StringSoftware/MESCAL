@@ -1,8 +1,12 @@
 #pragma once
 
-class CustomEffect : public juce::ComBaseClassHelper<ID2D1EffectImpl>
+class CustomEffect
 {
 public:
+    CustomEffect();
+    ~CustomEffect();
+
+    void applyEffect(juce::Image& outputImage, const juce::AffineTransform& transform, bool clearDestination);
 
 private:
     class Pimpl;
