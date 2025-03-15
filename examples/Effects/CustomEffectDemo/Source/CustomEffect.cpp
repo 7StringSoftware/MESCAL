@@ -125,15 +125,18 @@ public:
 
         STDOVERRIDEMETHODIMP_(UINT32) GetInputCount() CONST
         {
-            return 1;
+            return numInputs;
         }
 
         STDOVERRIDEMETHODIMP MapOutputRectToInputRects(_In_ CONST D2D1_RECT_L* outputRect, _Out_writes_(inputRectCount) D2D1_RECT_L* inputRects, UINT32 inputRectCount) CONST
         {
-            if (inputRectCount != 1)
+            if (inputRectCount > numInputs)
             {
                 return E_INVALIDARG;
             }
+
+            if (numInputs == 0)
+                return S_OK;
 
             inputRects[0] = *outputRect;
             return S_OK;
@@ -141,10 +144,13 @@ public:
 
         STDOVERRIDEMETHODIMP MapInputRectsToOutputRect(_In_reads_(inputRectCount) CONST D2D1_RECT_L* inputRects, _In_reads_(inputRectCount) CONST D2D1_RECT_L* inputOpaqueSubRects, UINT32 inputRectCount, _Out_ D2D1_RECT_L* outputRect, _Out_ D2D1_RECT_L* outputOpaqueSubRect)
         {
-            if (inputRectCount != 1)
+            if (inputRectCount > numInputs)
             {
                 return E_INVALIDARG;
             }
+
+            if (numInputs == 0)
+                return S_OK;
 
             *outputRect = inputRects[0];
             *outputOpaqueSubRect = inputOpaqueSubRects[0];
@@ -153,6 +159,14 @@ public:
 
         STDOVERRIDEMETHODIMP MapInvalidRect(UINT32 inputIndex, D2D1_RECT_L invalidInputRect, _Out_ D2D1_RECT_L* invalidOutputRect) const
         {
+            if (inputIndex > numInputs)
+            {
+                return E_INVALIDARG;
+            }
+
+            if (numInputs == 0)
+                return S_OK;
+
             *invalidOutputRect = invalidInputRect;
             return S_OK;
         }
@@ -193,6 +207,8 @@ public:
             *dimensionZ = 1;
             return S_OK;
         }
+
+        int numInputs = 1;
 
 } effectInterface;
 
@@ -295,7 +311,7 @@ void CustomEffect::applyEffect(juce::Image& outputImage, const juce::AffineTrans
     if (clearDestination)
         pimpl->resources->deviceContext->Clear();
 
-    D2D1_COLOR_F c = D2D1::ColorF(D2D1::ColorF::BlueViolet);
+    D2D1_COLOR_F c = D2D1::ColorF(D2D1::ColorF::LightGray);
     pimpl->resources->deviceContext->Clear(&c);
 
     if (!transform.isIdentity())
