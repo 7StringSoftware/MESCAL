@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="XEbnPK" name="CustomEffectDemo" projectType="guiapp" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" headerPath="$(OutDir)">
   <MAINGROUP id="VYSsCw" name="CustomEffectDemo">
     <GROUP id="{8B15FD36-06CF-DAD8-A43B-75B5A35F0253}" name="Source">
+      <FILE id="FysYjg" name="ComputeShader.hlsl" compile="1" resource="0"
+            file="Source/ComputeShader.hlsl"/>
       <FILE id="pSgE8z" name="CompileShader.cmd" compile="0" resource="0"
             file="Source/CompileShader.cmd"/>
       <FILE id="aDUdOf" name="CustomPixelShader.hlsl" compile="0" resource="0"

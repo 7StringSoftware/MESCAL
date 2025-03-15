@@ -18,15 +18,23 @@
 #include <juce_graphics/native/juce_Direct2DGraphicsContext_windows.h>
 #include <juce_graphics/native/juce_Direct2DImageContext_windows.h>
 #include "CustomEffect.h"
+namespace CustomPixelShader
+{
 #include "CustomPixelShader.h"
+}
+namespace CustomComputeShader
+{
+#include "ComputeShader.h"
+}
 
 DEFINE_GUID(CLSID_CustomEffect, 0x3ee07f1c, 0x50ee, 0x4b72, 0xa9, 0xac, 0x7c, 0x47, 0xbd, 0x8, 0xa6, 0x5e);
 DEFINE_GUID(CLSID_CustomEffectPixelShader, 0xbae25466, 0xc066, 0x4086, 0x82, 0x22, 0xf0, 0x1d, 0xf7, 0xf3, 0x9f, 0xd3);
+DEFINE_GUID(CLSID_ComputeShader,0x4febef1a, 0xd634, 0x4a46, 0xbb, 0xbd, 0xe1, 0x88, 0xb8, 0x2c, 0x91, 0x5b);
 
 static constexpr std::wstring_view xml =
 LR"(<?xml version='1.0' encoding='UTF-16' ?>
 <Effect>
-<Property name='DisplayName' type='string' value='Ripple' />
+<Property name='DisplayName' type='string' value='compute shader test' />
 <Property name='Author' type='string' value='Microsoft Corporation' />
 <Property name='Category' type='string' value='Stylize' />
 <Property name='Description' type='string' value='Adds a ripple effect that can be animated'/>
@@ -47,7 +55,7 @@ public:
     {
     }
 
-    struct Interface : public juce::ComBaseClassHelper<ID2D1EffectImpl, ID2D1DrawTransform>
+    struct Interface : public juce::ComBaseClassHelper<ID2D1EffectImpl, ID2D1ComputeTransform>
     {
         Interface()
         {
@@ -67,13 +75,14 @@ public:
             if (refId == __uuidof (ID2D1Transform))
                 return castToType<ID2D1Transform>(result);
 
-            return juce::ComBaseClassHelper<ID2D1EffectImpl, ID2D1DrawTransform>::QueryInterface(refId, result);
+            return juce::ComBaseClassHelper<ID2D1EffectImpl, ID2D1ComputeTransform>::QueryInterface(refId, result);
         }
 
 
         STDOVERRIDEMETHODIMP Initialize(_In_ ID2D1EffectContext* effectContext, _In_ ID2D1TransformGraph* transformGraph) override
         {
-            HRESULT hr = effectContext->LoadPixelShader(CLSID_CustomEffectPixelShader, g_main, sizeof(g_main));
+            //HRESULT hr = effectContext->LoadPixelShader(CLSID_CustomEffectPixelShader, g_main, sizeof(g_main));
+            HRESULT hr = effectContext->LoadComputeShader(CLSID_ComputeShader, CustomComputeShader::g_main, sizeof(CustomComputeShader::g_main));
             jassert(SUCCEEDED(hr));
 
             if (SUCCEEDED(hr))
@@ -81,8 +90,12 @@ public:
                 // The graph consists of a single transform. In fact, this class is the transform,
                 // reducing the complexity of implementing an effect when all we need to
                 // do is use a single pixel shader.
-                auto drawTransform = static_cast<ID2D1DrawTransform*>(this);
+                //auto drawTransform = static_cast<ID2D1ComputeTransform*>(this);
                 hr = transformGraph->SetSingleTransformNode(this);
+                //transformGraph->Clear();
+                //hr = transformGraph->AddNode(this);
+                //jassert(SUCCEEDED(hr));
+                //hr = transformGraph->SetOutputNode(this);
                 jassert(SUCCEEDED(hr));
             }
 
@@ -156,7 +169,32 @@ public:
             return S_OK;
         }
 
-    } effectInterface;
+        // Inherited via ID2D1ComputeTransform
+        HRESULT __stdcall SetComputeInfo(ID2D1ComputeInfo* computeInfo) override
+        {
+            HRESULT hr = computeInfo->SetComputeShader(CLSID_ComputeShader);
+            if (FAILED(hr))
+            {
+                return hr;
+            }
+
+            return S_OK;
+        }
+
+        HRESULT __stdcall CalculateThreadgroups(const D2D1_RECT_L* outputRect, UINT32* dimensionX, UINT32* dimensionY, UINT32* dimensionZ) override
+        {
+            static const int CS5_numThreadsX = 32;
+            static const int CS5_numThreadsY = 32;
+
+            auto width = outputRect->right - outputRect->left;
+            auto height = outputRect->bottom - outputRect->top;
+            *dimensionX = (width + CS5_numThreadsX - 1) & ~(CS5_numThreadsX - 1);
+            *dimensionY = (height + CS5_numThreadsY - 1) & ~(CS5_numThreadsY - 1);
+            *dimensionZ = 1;
+            return S_OK;
+        }
+
+} effectInterface;
 
     struct Resources
     {
@@ -212,6 +250,11 @@ public:
             {
                 jassertfalse;
             }
+
+            if (customD2DEffect)
+            {
+               //const auto hr = customD2DEffect->SetInputCount(0);
+            }
         }
 
         if (!floodEffect)
@@ -259,7 +302,7 @@ void CustomEffect::applyEffect(juce::Image& outputImage, const juce::AffineTrans
         pimpl->resources->deviceContext->SetTransform(juce::D2DUtilities::transformToMatrix(transform));
 
     pimpl->customD2DEffect->SetInputEffect(0, pimpl->floodEffect.get());
-    pimpl->floodEffect->SetValue(D2D1_FLOOD_PROP_COLOR, D2D1::ColorF(D2D1::ColorF::Red));
+    //pimpl->floodEffect->SetValue(D2D1_FLOOD_PROP_COLOR, D2D1::ColorF(D2D1::ColorF::Blue));
     pimpl->resources->deviceContext->DrawImage(pimpl->customD2DEffect.get());
     [[maybe_unused]] auto hr = pimpl->resources->deviceContext->EndDraw();
     jassert(SUCCEEDED(hr));
