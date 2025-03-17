@@ -14,14 +14,12 @@
 // done in parallel on the GPU - they don't have to be these particular values.
 // However for Shader Model 5, z <= 64 and x*y*z <= 1024.
 #define NUMTHREADS_X 32
-#define NUMTHREADS_Y 32
+#define NUMTHREADS_Y 1 //32
 #define NUMTHREADS_Z 1
 
 #define PI 3.14159265358979
 
 Texture2D<float4> InputTexture : register(t0);
-SamplerState InputSampler : register(s0);
-
 RWTexture2D<float4> OutputTexture;
 
 // These are default constants passed by D2D. See PixelShader and VertexShader
@@ -32,6 +30,11 @@ cbuffer systemConstants : register(b0)
     int2 outputOffset;
     float2 sceneToInput0X;
     float2 sceneToInput0Y;
+};
+
+cbuffer constants : register(b1)
+{
+    int numRectangles;
 };
 
 // The image does not necessarily begin at (0,0) on InputTexture. The shader needs
@@ -52,63 +55,68 @@ float2 ConvertInput0SceneToTexelSpace(float2 inputScenePosition)
 void main(
     // dispatchThreadId - Uniquely identifies a given execution of the shader, most commonly used parameter.
     // Definition: (groupId.x * NUM_THREADS_X + groupThreadId.x, groupId.y * NUMTHREADS_Y + groupThreadId.y, groupId.z * NUMTHREADS_Z + groupThreadId.z)
-    uint3 dispatchThreadId  : SV_DispatchThreadID,
+    uint3 dispatchThreadId : SV_DispatchThreadID,
 
     // groupThreadId - Identifies an individual thread within a thread group.
     // Range: (0 to NUMTHREADS_X - 1, 0 to NUMTHREADS_Y - 1, 0 to NUMTHREADS_Z - 1)
-    uint3 groupThreadId     : SV_GroupThreadID,
+    uint3 groupThreadId : SV_GroupThreadID,
 
     // groupId - Identifies which thread group the individual thread is being executed in.
     // Range defined in DFTHorizontalTransform::CalculateThreadgroups
-    uint3 groupId           : SV_GroupID,
+    uint3 groupId : SV_GroupID,
 
     // One dimensional indentifier of a compute shader thread within a thread group.
     // Range: (0 to NUMTHREADS_X * NUMTHREADS_Y * NUMTHREADS_Z - 1)
-    uint  groupIndex        : SV_GroupIndex
+    uint groupIndex : SV_GroupIndex
     )
 {
-    uint width = resultRect[2] - resultRect[0];
-    uint height = resultRect[3] - resultRect[1];
+    int width = resultRect[2] - resultRect[0];
+    int height = resultRect[3] - resultRect[1];
 
     // It is likely that the compute shader will execute beyond the bounds of the input image, since the shader is executed in chunks sized by
     // the threadgroup size defined in DFTHorizontalTransform::CalculateThreadgroups. For this reason each shader should ensure the current
     // dispatchThreadId is within the bounds of the input image before proceeding.
-    if (dispatchThreadId.x >= width || dispatchThreadId.y >= height)
+    if ((int) dispatchThreadId.x >= width || (int) dispatchThreadId.y >= height)
     {
         return;
     }
 
-    #if 0
-    // This code represents the inner summation in the Discrete Fourier Transform (DFT) equation.
-    float2 value = float2(0,0);
-    for (uint n = 0; n < width; n++)
+    int textureWidth = 256;
+    int textureHeight = 256;
+
+    float4 color = float4(1.0, 0.0, 0.0, 1.0);
+    int rectangleIndex = (int) dispatchThreadId.x;
+    float4 rectangle = InputTexture.Load(int3(rectangleIndex, 0, 0));
+    for (int x = (int) rectangle.x; x < (int) rectangle.z; ++x)
     {
-        // The dispatchThreadId coordinates should be offset by the top left corner of the resultRect
-        // to account for cases when the image does not begin at [0,0] (if the image has been translated
-        // before being passed into the effect).
-        float4 color = InputTexture.SampleLevel(
-                InputSampler,
-                ConvertInput0SceneToTexelSpace(float2(n+0.5, dispatchThreadId.y + 0.5) + resultRect.xy), // Add 0.5 to hit the center of the pixel.
-                0);
+        for (int y = (int) rectangle.y; y < (int) rectangle.w; ++y)
+        {
+            color = float4(0.0f, 1.0f, 1.0f, 1.0f);
+            OutputTexture[uint2(x, y)] = color;
+        }
+    }
 
-        float lum = color.r * 0.2125 +
-                    color.g * 0.7154 +
-                    color.b * 0.0721;
+#if 0
+    for (int rectangleIndex = 0; rectangleIndex < numRectangles; ++rectangleIndex)
+    {
+        int inputX = rectangleIndex & 255;
+        int inputY = rectangleIndex >> 8;
+        float4 rectangle = InputTexture.Load(int3(inputX, inputY, 0));
 
-        float arg = -2.0 * PI * (float)dispatchThreadId.x * (float)n / (float)width;
-        float sinArg, cosArg;
-        sincos(arg,sinArg,cosArg);
-        value += lum * float2(cosArg,sinArg);
+        int left = (int) rectangle.x;
+        int top = (int) rectangle.y;
+        int right = (int) rectangle.z;
+        int bottom = (int) rectangle.w;
+        if ((int) dispatchThreadId.x >= left &&
+            (int) dispatchThreadId.x < right &&
+            (int) dispatchThreadId.y >= top &&
+            (int) dispatchThreadId.y < bottom)
+        {
+            color = float4(0.0f, 1.0f, 1.0f, 1.0f);
+            break;
+        }
     }
 #endif
 
-    // The x value here represents the real component of the calculation while the y value represents the
-    // imaginary. The ordering doesn't matter, as long as it is consistent between the horizontal and
-    // vertical shaders. Since alpha not used, it is set to '1' to enable internal opacity optimizations in Direct2D
-    float scale = 1.0f / 1024.0f;
-    float r = (float) dispatchThreadId.x * scale;
-    r = min(r, 1.0f);
-    OutputTexture[dispatchThreadId.xy + outputOffset.xy + resultRect.xy] = float4(0, 1, 1, 1);
-
-    //float4(value.x, value.y, 0, 1);
+        //OutputTexture[dispatchThreadId.xy + outputOffset.xy + resultRect.xy] = color;
 }

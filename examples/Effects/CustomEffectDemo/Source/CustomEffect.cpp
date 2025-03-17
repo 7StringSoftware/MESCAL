@@ -18,10 +18,6 @@
 #include <juce_graphics/native/juce_Direct2DGraphicsContext_windows.h>
 #include <juce_graphics/native/juce_Direct2DImageContext_windows.h>
 #include "CustomEffect.h"
-namespace CustomPixelShader
-{
-#include "CustomPixelShader.h"
-}
 namespace CustomComputeShader
 {
 #include "ComputeShader.h"
@@ -41,6 +37,9 @@ LR"(<?xml version='1.0' encoding='UTF-16' ?>
 <Inputs>
 <Input name='Source'/>
 </Inputs>
+<Property name='Count' type='int32'>
+    <Property name='DisplayName' type='string' value='Count'/>
+</Property>
 </Effect>
 )";
 
@@ -57,17 +56,33 @@ public:
 
     struct Interface : public juce::ComBaseClassHelper<ID2D1EffectImpl, ID2D1ComputeTransform>
     {
+        HRESULT setRectangleCount(int count)
+        {
+            constants.numRectangles = count;
+            return S_OK;
+        }
+
+        int getRectangleCount() const
+        {
+            return constants.numRectangles;
+        }
+
         Interface()
         {
             juce::SharedResourcePointer<juce::DirectX> directX;
 
-            auto hr = directX->getD2DFactory()->RegisterEffectFromString(CLSID_CustomEffect, xml.data(), nullptr, 0, CreateEffect);
+            const D2D1_PROPERTY_BINDING bindings[] =
+            {
+                D2D1_VALUE_TYPE_BINDING(L"Count", &Interface::setRectangleCount, &Interface::getRectangleCount)
+            };
+
+            auto hr = directX->getD2DFactory()->RegisterEffectFromString(CLSID_CustomEffect, xml.data(), bindings, 1, CreateEffect);
             jassert(SUCCEEDED(hr));
         }
 
         ~Interface()
         {
-            DBG("");
+            computeInfo.resetAndGetPointerAddress();
         }
 
         JUCE_COMRESULT QueryInterface(REFIID refId, void** result) override
@@ -104,7 +119,13 @@ public:
 
         STDOVERRIDEMETHODIMP PrepareForRender(D2D1_CHANGE_TYPE changeType) override
         {
-            return S_OK;
+            if (computeInfo)
+            {
+                computeInfo->SetComputeShaderConstantBuffer(reinterpret_cast<BYTE*>(&constants), sizeof(constants));
+                return S_OK;
+            }
+
+            return E_INVALIDARG;
         }
 
         STDOVERRIDEMETHODIMP SetGraph(_In_ ID2D1TransformGraph* transformGraph) override
@@ -135,10 +156,7 @@ public:
                 return E_INVALIDARG;
             }
 
-            if (numInputs == 0)
-                return S_OK;
-
-            inputRects[0] = *outputRect;
+            inputRects[0] = { 0, 0, 256, 256 };
             return S_OK;
         }
 
@@ -149,11 +167,16 @@ public:
                 return E_INVALIDARG;
             }
 
-            if (numInputs == 0)
-                return S_OK;
+            outputRect->left = 0;
+            outputRect->top = 0;
+            outputRect->right = outputWidth;
+            outputRect->bottom = outputHeight;
 
-            *outputRect = inputRects[0];
-            *outputOpaqueSubRect = inputOpaqueSubRects[0];
+            outputOpaqueSubRect->left = 0;
+            outputOpaqueSubRect->top = 0;
+            outputOpaqueSubRect->right = outputWidth;
+            outputOpaqueSubRect->bottom = outputHeight;
+
             return S_OK;
         }
 
@@ -164,10 +187,10 @@ public:
                 return E_INVALIDARG;
             }
 
-            if (numInputs == 0)
-                return S_OK;
-
-            *invalidOutputRect = invalidInputRect;
+            invalidOutputRect->left = 0;
+            invalidOutputRect->top = 0;
+            invalidOutputRect->right = outputWidth;
+            invalidOutputRect->bottom = outputHeight;
             return S_OK;
         }
 
@@ -184,13 +207,16 @@ public:
         }
 
         // Inherited via ID2D1ComputeTransform
-        HRESULT __stdcall SetComputeInfo(ID2D1ComputeInfo* computeInfo) override
+        HRESULT __stdcall SetComputeInfo(ID2D1ComputeInfo* computeInfoIn) override
         {
-            HRESULT hr = computeInfo->SetComputeShader(CLSID_ComputeShader);
+            HRESULT hr = computeInfoIn->SetComputeShader(CLSID_ComputeShader);
             if (FAILED(hr))
             {
                 return hr;
             }
+
+            *computeInfo.resetAndGetPointerAddress() = computeInfoIn;
+            computeInfo->AddRef();
 
             return S_OK;
         }
@@ -204,13 +230,21 @@ public:
             auto height = outputRect->bottom - outputRect->top;
             *dimensionX = (width + CS5_numThreadsX - 1) & ~(CS5_numThreadsX - 1);
             *dimensionY = (height + CS5_numThreadsY - 1) & ~(CS5_numThreadsY - 1);
+            *dimensionX = 32;
+            *dimensionY = 1;
             *dimensionZ = 1;
             return S_OK;
         }
 
-        int numInputs = 1;
+        uint32_t numInputs = 1;
+        uint32_t outputWidth = 1024, outputHeight = 1024;
+        juce::ComSmartPtr<ID2D1ComputeInfo> computeInfo;
+        struct Constants
+        {
+            int numRectangles = 0;
+        } constants;
 
-} effectInterface;
+    } effectInterface;
 
     struct Resources
     {
@@ -248,9 +282,11 @@ public:
         juce::DxgiAdapter::Ptr adapter;
         juce::ComSmartPtr<ID2D1DeviceContext2> deviceContext;
     };
+
     juce::SharedResourcePointer<Resources> resources;
     juce::ComSmartPtr<ID2D1Effect> customD2DEffect;
-    juce::ComSmartPtr<ID2D1Effect> floodEffect;
+    juce::ComSmartPtr<ID2D1Bitmap> rectangleBitmap;
+    juce::HeapBlock<D2D1_VECTOR_4F> rectangles{ 256 * 256, true };
 
     void createD2DEffect()
     {
@@ -270,12 +306,18 @@ public:
             if (customD2DEffect)
             {
                //const auto hr = customD2DEffect->SetInputCount(0);
+               //jassert(SUCCEEDED(hr));
             }
         }
 
-        if (!floodEffect)
+        if (!rectangleBitmap)
         {
-            if (const auto hr = resources->deviceContext->CreateEffect(CLSID_D2D1Flood, floodEffect.resetAndGetPointerAddress()); FAILED(hr))
+            D2D1_BITMAP_PROPERTIES bitmapProperties;
+            bitmapProperties.pixelFormat = D2D1::PixelFormat(DXGI_FORMAT_R32G32B32A32_FLOAT, D2D1_ALPHA_MODE_IGNORE);
+            bitmapProperties.dpiX = USER_DEFAULT_SCREEN_DPI;
+            bitmapProperties.dpiY = USER_DEFAULT_SCREEN_DPI;
+            D2D1_SIZE_U size{ 256, 256 };
+            if (const auto hr = resources->deviceContext->CreateBitmap(size, bitmapProperties, rectangleBitmap.resetAndGetPointerAddress()); FAILED(hr))
             {
                 jassertfalse;
             }
@@ -286,20 +328,45 @@ public:
 CustomEffect::CustomEffect()
     : pimpl{ std::make_unique<Pimpl>() }
 {
+    int numRectangles = 256;
+    juce::Random random;
+    for (int i = 0; i < numRectangles; ++i)
+    {
+        auto x = random.nextFloat() * 1024.0f;
+        auto y = random.nextFloat() * 1024.0f;
+        auto w = random.nextFloat() * 32.0f;
+        auto h = random.nextFloat() * 32.0f;
+        pimpl->rectangles[i] = { x, y, x + w, y + h };
+    }
 }
 
 CustomEffect::~CustomEffect()
 {
 }
 
+
+static void getLastError()
+{
+    wchar_t messageBuffer[256] = {};
+
+    FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr,
+        GetLastError(),
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        messageBuffer,
+        (DWORD)juce::numElementsInArray(messageBuffer) - 1,
+        nullptr);
+
+    DBG(messageBuffer);
+    jassertfalse;
+}
 void CustomEffect::applyEffect(juce::Image& outputImage, const juce::AffineTransform& transform, bool clearDestination)
 {
     pimpl->createD2DEffect();
-    if (!pimpl->customD2DEffect || !pimpl->floodEffect)
+    if (!pimpl->customD2DEffect)
     {
         return;
     }
-
     juce::Direct2DPixelData::Ptr outputPixelData = dynamic_cast<juce::Direct2DPixelData*>(outputImage.getPixelData().get());
     if (!outputPixelData)
     {
@@ -308,17 +375,28 @@ void CustomEffect::applyEffect(juce::Image& outputImage, const juce::AffineTrans
 
     pimpl->resources->deviceContext->SetTarget(outputPixelData->getFirstPageForDevice(pimpl->resources->adapter->direct2DDevice));
     pimpl->resources->deviceContext->BeginDraw();
-    if (clearDestination)
-        pimpl->resources->deviceContext->Clear();
-
-    D2D1_COLOR_F c = D2D1::ColorF(D2D1::ColorF::LightGray);
-    pimpl->resources->deviceContext->Clear(&c);
+    pimpl->resources->deviceContext->Clear();
 
     if (!transform.isIdentity())
         pimpl->resources->deviceContext->SetTransform(juce::D2DUtilities::transformToMatrix(transform));
 
-    pimpl->customD2DEffect->SetInputEffect(0, pimpl->floodEffect.get());
-    //pimpl->floodEffect->SetValue(D2D1_FLOOD_PROP_COLOR, D2D1::ColorF(D2D1::ColorF::Blue));
+    for (int i = 0; i < 256; ++i)
+    {
+        auto& r = pimpl->rectangles[i];
+        r.x += 1.0f;
+        if (r.x >= 1024.0f)
+            r.x = 0.0f;
+    }
+
+    pimpl->rectangleBitmap->CopyFromMemory(nullptr, pimpl->rectangles.getData(), 256 * sizeof(D2D1_VECTOR_4F));
+
+    pimpl->customD2DEffect->SetInput(0, pimpl->rectangleBitmap.get());
+
+    {
+        auto valueHr = pimpl->customD2DEffect->SetValue(0, 256);
+        jassert(SUCCEEDED(valueHr));
+    }
+
     pimpl->resources->deviceContext->DrawImage(pimpl->customD2DEffect.get());
     [[maybe_unused]] auto hr = pimpl->resources->deviceContext->EndDraw();
     jassert(SUCCEEDED(hr));

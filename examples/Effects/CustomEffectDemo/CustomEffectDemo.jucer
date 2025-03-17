@@ -4,6 +4,10 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" headerPath="$(OutDir)">
   <MAINGROUP id="VYSsCw" name="CustomEffectDemo">
     <GROUP id="{8B15FD36-06CF-DAD8-A43B-75B5A35F0253}" name="Source">
+      <FILE id="mN38g3" name="SignedDistanceField.cpp" compile="1" resource="0"
+            file="Source/SignedDistanceField.cpp"/>
+      <FILE id="anUIau" name="SignedDistanceField.h" compile="0" resource="0"
+            file="Source/SignedDistanceField.h"/>
       <FILE id="FysYjg" name="ComputeShader.hlsl" compile="1" resource="0"
             file="Source/ComputeShader.hlsl"/>
       <FILE id="pSgE8z" name="CompileShader.cmd" compile="0" resource="0"
