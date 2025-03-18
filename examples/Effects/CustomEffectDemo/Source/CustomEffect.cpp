@@ -230,9 +230,6 @@ public:
             auto height = outputRect->bottom - outputRect->top;
             *dimensionX = (width + CS5_numThreadsX - 1) & ~(CS5_numThreadsX - 1);
             *dimensionY = (height + CS5_numThreadsY - 1) & ~(CS5_numThreadsY - 1);
-            *dimensionX = 32;
-            *dimensionY = 1;
-            *dimensionZ = 1;
             return S_OK;
         }
 
@@ -313,10 +310,10 @@ public:
         if (!rectangleBitmap)
         {
             D2D1_BITMAP_PROPERTIES bitmapProperties;
-            bitmapProperties.pixelFormat = D2D1::PixelFormat(DXGI_FORMAT_R32G32B32A32_FLOAT, D2D1_ALPHA_MODE_IGNORE);
+            bitmapProperties.pixelFormat = D2D1::PixelFormat(DXGI_FORMAT_R8G8B8A8_UNORM, D2D1_ALPHA_MODE_IGNORE);
             bitmapProperties.dpiX = USER_DEFAULT_SCREEN_DPI;
             bitmapProperties.dpiY = USER_DEFAULT_SCREEN_DPI;
-            D2D1_SIZE_U size{ 256, 256 };
+            D2D1_SIZE_U size{ 1024, 1024 };
             if (const auto hr = resources->deviceContext->CreateBitmap(size, bitmapProperties, rectangleBitmap.resetAndGetPointerAddress()); FAILED(hr))
             {
                 jassertfalse;
@@ -360,7 +357,7 @@ static void getLastError()
     DBG(messageBuffer);
     jassertfalse;
 }
-void CustomEffect::applyEffect(juce::Image& outputImage, const juce::AffineTransform& transform, bool clearDestination)
+void CustomEffect::applyEffect(juce::Image const& sourceImage, juce::Image& outputImage, const juce::AffineTransform& transform, bool clearDestination)
 {
     pimpl->createD2DEffect();
     if (!pimpl->customD2DEffect)
@@ -380,6 +377,7 @@ void CustomEffect::applyEffect(juce::Image& outputImage, const juce::AffineTrans
     if (!transform.isIdentity())
         pimpl->resources->deviceContext->SetTransform(juce::D2DUtilities::transformToMatrix(transform));
 
+        #if 0
     for (int i = 0; i < 256; ++i)
     {
         auto& r = pimpl->rectangles[i];
@@ -389,6 +387,12 @@ void CustomEffect::applyEffect(juce::Image& outputImage, const juce::AffineTrans
     }
 
     pimpl->rectangleBitmap->CopyFromMemory(nullptr, pimpl->rectangles.getData(), 256 * sizeof(D2D1_VECTOR_4F));
+    #endif
+
+    {
+        juce::Image::BitmapData bd{ sourceImage, juce::Image::BitmapData::readOnly };
+        pimpl->rectangleBitmap->CopyFromMemory(nullptr, bd.data, bd.lineStride);
+    }
 
     pimpl->customD2DEffect->SetInput(0, pimpl->rectangleBitmap.get());
 

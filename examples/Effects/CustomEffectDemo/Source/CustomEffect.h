@@ -6,7 +6,7 @@ public:
     CustomEffect();
     ~CustomEffect();
 
-    void applyEffect(juce::Image& outputImage, const juce::AffineTransform& transform, bool clearDestination);
+    void applyEffect(juce::Image const& sourceImage, juce::Image& outputImage, const juce::AffineTransform& transform, bool clearDestination);
 
 private:
     class Pimpl;

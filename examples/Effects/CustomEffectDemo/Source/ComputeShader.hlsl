@@ -21,6 +21,7 @@
 
 Texture2D<float4> InputTexture : register(t0);
 RWTexture2D<float4> OutputTexture;
+SamplerState inputSampler : register(s0);
 
 // These are default constants passed by D2D. See PixelShader and VertexShader
 // projects for how to pass custom values into a shader.
@@ -80,7 +81,22 @@ void main(
     {
         return;
     }
+    
+    float2 uv = float2(dispatchThreadId.xy) / float2(width, height);
+    float4 sample = InputTexture.SampleLevel(inputSampler, uv, .0);
+    float alpha = sample.w;
+    if (alpha >= 0.5f)
+    {
+        float smoothed = smoothstep(0.5f - 0.01f, 0.5f + 0.01f, alpha);
+        smoothed = (smoothed - 0.5f) * 2.0f;
+        OutputTexture[dispatchThreadId.xy + outputOffset.xy + resultRect.xy] = float4(alpha, 0.0, 0.0f, alpha);
+        return;
+    }
+        
+    OutputTexture[dispatchThreadId.xy + outputOffset.xy + resultRect.xy] = float4(0.0, 0.0, 0.0, 0.0);
+    return;
 
+    #if 0
     int textureWidth = 256;
     int textureHeight = 256;
 
@@ -95,6 +111,7 @@ void main(
             OutputTexture[uint2(x, y)] = color;
         }
     }
+#endif
 
 #if 0
     for (int rectangleIndex = 0; rectangleIndex < numRectangles; ++rectangleIndex)
