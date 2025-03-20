@@ -14,7 +14,7 @@
 // done in parallel on the GPU - they don't have to be these particular values.
 // However for Shader Model 5, z <= 64 and x*y*z <= 1024.
 #define NUMTHREADS_X 32
-#define NUMTHREADS_Y 1 //32
+#define NUMTHREADS_Y 32
 #define NUMTHREADS_Z 1
 
 #define PI 3.14159265358979
@@ -81,7 +81,7 @@ void main(
     {
         return;
     }
-    
+
     float2 uv = float2(dispatchThreadId.xy) / float2(width, height);
     float4 sample = InputTexture.SampleLevel(inputSampler, uv, .0);
     float alpha = sample.w;
@@ -92,7 +92,7 @@ void main(
         OutputTexture[dispatchThreadId.xy + outputOffset.xy + resultRect.xy] = float4(alpha, 0.0, 0.0f, alpha);
         return;
     }
-        
+
     OutputTexture[dispatchThreadId.xy + outputOffset.xy + resultRect.xy] = float4(0.0, 0.0, 0.0, 0.0);
     return;
 

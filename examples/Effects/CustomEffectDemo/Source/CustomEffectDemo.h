@@ -22,11 +22,11 @@ public:
         //
         // Paint the output image
         //
-        //g.drawImageAt(outputImage, 0, 0);
-        //g.fillAll(juce::Colours::black);
         g.setColour(juce::Colours::black);
         g.fillAll();
         g.drawImageAt(outputImage, 0, 0, false);
+        //g.fillAll(juce::Colours::black);
+        //g.drawImageAt(outputImage, 0, 0, false);
         //g.setColour(juce::Colours::orange);
         //g.fillRectList(rectangles);
     }

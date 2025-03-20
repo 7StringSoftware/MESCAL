@@ -156,7 +156,7 @@ public:
                 return E_INVALIDARG;
             }
 
-            inputRects[0] = { 0, 0, 256, 256 };
+            inputRects[0] = *outputRect;
             return S_OK;
         }
 
@@ -230,6 +230,7 @@ public:
             auto height = outputRect->bottom - outputRect->top;
             *dimensionX = (width + CS5_numThreadsX - 1) & ~(CS5_numThreadsX - 1);
             *dimensionY = (height + CS5_numThreadsY - 1) & ~(CS5_numThreadsY - 1);
+            *dimensionZ = 1;
             return S_OK;
         }
 
@@ -299,12 +300,6 @@ public:
             {
                 jassertfalse;
             }
-
-            if (customD2DEffect)
-            {
-               //const auto hr = customD2DEffect->SetInputCount(0);
-               //jassert(SUCCEEDED(hr));
-            }
         }
 
         if (!rectangleBitmap)
@@ -325,22 +320,11 @@ public:
 CustomEffect::CustomEffect()
     : pimpl{ std::make_unique<Pimpl>() }
 {
-    int numRectangles = 256;
-    juce::Random random;
-    for (int i = 0; i < numRectangles; ++i)
-    {
-        auto x = random.nextFloat() * 1024.0f;
-        auto y = random.nextFloat() * 1024.0f;
-        auto w = random.nextFloat() * 32.0f;
-        auto h = random.nextFloat() * 32.0f;
-        pimpl->rectangles[i] = { x, y, x + w, y + h };
-    }
 }
 
 CustomEffect::~CustomEffect()
 {
 }
-
 
 static void getLastError()
 {
@@ -377,29 +361,12 @@ void CustomEffect::applyEffect(juce::Image const& sourceImage, juce::Image& outp
     if (!transform.isIdentity())
         pimpl->resources->deviceContext->SetTransform(juce::D2DUtilities::transformToMatrix(transform));
 
-        #if 0
-    for (int i = 0; i < 256; ++i)
-    {
-        auto& r = pimpl->rectangles[i];
-        r.x += 1.0f;
-        if (r.x >= 1024.0f)
-            r.x = 0.0f;
-    }
-
-    pimpl->rectangleBitmap->CopyFromMemory(nullptr, pimpl->rectangles.getData(), 256 * sizeof(D2D1_VECTOR_4F));
-    #endif
-
     {
         juce::Image::BitmapData bd{ sourceImage, juce::Image::BitmapData::readOnly };
         pimpl->rectangleBitmap->CopyFromMemory(nullptr, bd.data, bd.lineStride);
     }
 
-    pimpl->customD2DEffect->SetInput(0, pimpl->rectangleBitmap.get());
-
-    {
-        auto valueHr = pimpl->customD2DEffect->SetValue(0, 256);
-        jassert(SUCCEEDED(valueHr));
-    }
+    pimpl->customD2DEffect->SetInput(0, pimpl->rectangleBitmap);
 
     pimpl->resources->deviceContext->DrawImage(pimpl->customD2DEffect.get());
     [[maybe_unused]] auto hr = pimpl->resources->deviceContext->EndDraw();
