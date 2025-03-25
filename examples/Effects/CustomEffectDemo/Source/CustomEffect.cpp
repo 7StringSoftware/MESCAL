@@ -35,7 +35,7 @@ LR"(<?xml version='1.0' encoding='UTF-16' ?>
 <Property name='Category' type='string' value='Stylize' />
 <Property name='Description' type='string' value='Adds a ripple effect that can be animated'/>
 <Inputs>
-<Input name='Source'/>
+<Input name='SignedDistanceField'/>
 </Inputs>
 <Property name='Count' type='int32'>
     <Property name='DisplayName' type='string' value='Count'/>
@@ -284,7 +284,8 @@ public:
     juce::SharedResourcePointer<Resources> resources;
     juce::ComSmartPtr<ID2D1Effect> customD2DEffect;
     juce::ComSmartPtr<ID2D1Bitmap> rectangleBitmap;
-    juce::HeapBlock<D2D1_VECTOR_4F> rectangles{ 256 * 256, true };
+    juce::HeapBlock<D2D1_VECTOR_4F> rectangles4f{ 256 * 256, true };
+    juce::HeapBlock<float> rectangles1f{ 256 * 256, true };
 
     void createD2DEffect()
     {
@@ -297,19 +298,6 @@ public:
         if (!customD2DEffect)
         {
             if (const auto hr = resources->deviceContext->CreateEffect(CLSID_CustomEffect, customD2DEffect.resetAndGetPointerAddress()); FAILED(hr))
-            {
-                jassertfalse;
-            }
-        }
-
-        if (!rectangleBitmap)
-        {
-            D2D1_BITMAP_PROPERTIES bitmapProperties;
-            bitmapProperties.pixelFormat = D2D1::PixelFormat(DXGI_FORMAT_R8G8B8A8_UNORM, D2D1_ALPHA_MODE_IGNORE);
-            bitmapProperties.dpiX = USER_DEFAULT_SCREEN_DPI;
-            bitmapProperties.dpiY = USER_DEFAULT_SCREEN_DPI;
-            D2D1_SIZE_U size{ 1024, 1024 };
-            if (const auto hr = resources->deviceContext->CreateBitmap(size, bitmapProperties, rectangleBitmap.resetAndGetPointerAddress()); FAILED(hr))
             {
                 jassertfalse;
             }
@@ -341,7 +329,7 @@ static void getLastError()
     DBG(messageBuffer);
     jassertfalse;
 }
-void CustomEffect::applyEffect(juce::Image const& sourceImage, juce::Image& outputImage, const juce::AffineTransform& transform, bool clearDestination)
+void CustomEffect::applyEffect(juce::Image const& distanceFieldImage, juce::Image& outputImage, const juce::AffineTransform& transform, bool clearDestination)
 {
     pimpl->createD2DEffect();
     if (!pimpl->customD2DEffect)
@@ -361,9 +349,29 @@ void CustomEffect::applyEffect(juce::Image const& sourceImage, juce::Image& outp
     if (!transform.isIdentity())
         pimpl->resources->deviceContext->SetTransform(juce::D2DUtilities::transformToMatrix(transform));
 
+    D2D1_SIZE_U rectangleBitmapSize{};
+    if (pimpl->rectangleBitmap)
     {
-        juce::Image::BitmapData bd{ sourceImage, juce::Image::BitmapData::readOnly };
-        pimpl->rectangleBitmap->CopyFromMemory(nullptr, bd.data, bd.lineStride);
+        rectangleBitmapSize = pimpl->rectangleBitmap->GetPixelSize();
+    }
+
+    if (rectangleBitmapSize.width != (uint32_t)distanceFieldImage.getWidth() || rectangleBitmapSize.height != (uint32_t)distanceFieldImage.getHeight())
+    {
+        D2D1_BITMAP_PROPERTIES bitmapProperties;
+        bitmapProperties.pixelFormat = D2D1::PixelFormat(DXGI_FORMAT_R8G8B8A8_UNORM, D2D1_ALPHA_MODE_IGNORE);
+        bitmapProperties.dpiX = USER_DEFAULT_SCREEN_DPI;
+        bitmapProperties.dpiY = USER_DEFAULT_SCREEN_DPI;
+        D2D1_SIZE_U size{ (uint32_t)distanceFieldImage.getWidth(), (uint32_t)distanceFieldImage.getHeight() };
+        if (const auto hr = pimpl->resources->deviceContext->CreateBitmap(size, bitmapProperties, pimpl->rectangleBitmap.resetAndGetPointerAddress()); FAILED(hr))
+        {
+            jassertfalse;
+        }
+    }
+
+    {
+        //juce::Image::BitmapData bd{ distanceFieldImage, juce::Image::BitmapData::readOnly };
+
+        //pimpl->rectangleBitmap->CopyFromMemory(nullptr, bd.data, bd.lineStride);
     }
 
     pimpl->customD2DEffect->SetInput(0, pimpl->rectangleBitmap);

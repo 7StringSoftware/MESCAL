@@ -71,6 +71,7 @@ void main(
     uint groupIndex : SV_GroupIndex
     )
 {
+    #if 0
     int width = resultRect[2] - resultRect[0];
     int height = resultRect[3] - resultRect[1];
 
@@ -83,57 +84,18 @@ void main(
     }
 
     float2 uv = float2(dispatchThreadId.xy) / float2(width, height);
+    //uv *= 32.0f / 16.0f;
     float4 sample = InputTexture.SampleLevel(inputSampler, uv, .0);
     float alpha = sample.w;
     if (alpha >= 0.5f)
     {
         float smoothed = smoothstep(0.5f - 0.01f, 0.5f + 0.01f, alpha);
         smoothed = (smoothed - 0.5f) * 2.0f;
-        OutputTexture[dispatchThreadId.xy + outputOffset.xy + resultRect.xy] = float4(alpha, 0.0, 0.0f, alpha);
+        OutputTexture[dispatchThreadId.xy + outputOffset.xy + resultRect.xy] = float4(1.0f, 0.0, 0.0f, alpha);
         return;
     }
 
-    OutputTexture[dispatchThreadId.xy + outputOffset.xy + resultRect.xy] = float4(0.0, 0.0, 0.0, 0.0);
-    return;
-
-    #if 0
-    int textureWidth = 256;
-    int textureHeight = 256;
-
-    float4 color = float4(1.0, 0.0, 0.0, 1.0);
-    int rectangleIndex = (int) dispatchThreadId.x;
-    float4 rectangle = InputTexture.Load(int3(rectangleIndex, 0, 0));
-    for (int x = (int) rectangle.x; x < (int) rectangle.z; ++x)
-    {
-        for (int y = (int) rectangle.y; y < (int) rectangle.w; ++y)
-        {
-            color = float4(0.0f, 1.0f, 1.0f, 1.0f);
-            OutputTexture[uint2(x, y)] = color;
-        }
-    }
+    //OutputTexture[dispatchThreadId.xy + outputOffset.xy + resultRect.xy] = float4(0.0, 0.0, 0.0, 0.0);
+    //return;
 #endif
-
-#if 0
-    for (int rectangleIndex = 0; rectangleIndex < numRectangles; ++rectangleIndex)
-    {
-        int inputX = rectangleIndex & 255;
-        int inputY = rectangleIndex >> 8;
-        float4 rectangle = InputTexture.Load(int3(inputX, inputY, 0));
-
-        int left = (int) rectangle.x;
-        int top = (int) rectangle.y;
-        int right = (int) rectangle.z;
-        int bottom = (int) rectangle.w;
-        if ((int) dispatchThreadId.x >= left &&
-            (int) dispatchThreadId.x < right &&
-            (int) dispatchThreadId.y >= top &&
-            (int) dispatchThreadId.y < bottom)
-        {
-            color = float4(0.0f, 1.0f, 1.0f, 1.0f);
-            break;
-        }
-    }
-#endif
-
-        //OutputTexture[dispatchThreadId.xy + outputOffset.xy + resultRect.xy] = color;
 }
