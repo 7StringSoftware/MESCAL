@@ -13,6 +13,13 @@ public:
         //
         // Paint the gradient
         //
+        auto blue = (float)std::sin(phase) * 0.5f + 0.5f;
+        auto patch = meshGradient->getPatch(0, 0);
+        for (auto& color : patch->colors)
+        {
+            color.blue = blue;
+        }
+
         meshGradient->draw(outputImage, {});
 
         //
@@ -31,6 +38,25 @@ public:
 private:
     juce::Image outputImage;
     std::unique_ptr<mescal::MeshGradient> meshGradient;
+
+    juce::VBlankAttachment vblank
+    {
+        this,
+        [this]
+        {
+            auto msec = juce::Time::getMillisecondCounterHiRes();
+            auto elapsedMsec = msec - lastMsec;
+            lastMsec = msec;
+
+            phase += elapsedMsec * 0.001 * 0.1 * juce::MathConstants<double>::twoPi;
+            while (phase >= juce::MathConstants<double>::twoPi)
+                phase -= juce::MathConstants<double>::twoPi;
+
+            repaint();
+        }
+    };
+    double lastMsec = juce::Time::getMillisecondCounterHiRes();
+    double phase = 0.0;
 
     void createMeshGradient()
     {
